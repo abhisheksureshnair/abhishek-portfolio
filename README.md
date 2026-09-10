@@ -66,13 +66,11 @@ public/
 
 ## 🔒 Security Note
 
-The personal photo is **not committed to this repository** and is served via a secured Next.js API route (`/api/photo`) with:
-- Referrer validation (same-origin only)
-- Canvas-based rendering (blocks right-click save)
-- `Cache-Control: no-store` headers
-- Excluded from git via `.gitignore`
+The portfolio uses the optimized public portrait at `/profile.webp` throughout the hero, about, resume, and cinematic experience sections. It is rendered through the canvas-based `ProtectedImage` component for the existing visual treatment.
+- The original high-resolution source remains local and excluded by `.gitignore`.
+- The public derivative is intentionally downloadable like any displayed web image.
 
-For deployment, the photo is uploaded separately via Vercel CLI.
+The committed derivative is `public/profile.webp`.
 
 ---
 

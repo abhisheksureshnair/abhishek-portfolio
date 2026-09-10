@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Compass,
   Volume2,
@@ -249,8 +250,17 @@ export const CinematicExperience: React.FC = () => {
         
         {/* Left: Player Identity & Live Status */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center font-mono font-extrabold text-sm text-amber-400 shadow-lg shadow-amber-500/20">
-            AN
+          <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-amber-500/40 shadow-lg shadow-amber-500/20 flex-shrink-0 bg-zinc-950">
+            <Image
+              src="/avatar.webp"
+              alt="Abhishek S Nair"
+              width={80}
+              height={80}
+              sizes="40px"
+              quality={95}
+              priority
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -579,12 +589,15 @@ export const CinematicExperience: React.FC = () => {
 
                   {/* Photo Dossier Card */}
                   <div className="md:col-span-4 rounded-3xl bg-black/75 backdrop-blur-xl border border-cyan-500/40 p-5 flex flex-col items-center text-center space-y-4 shadow-2xl">
-                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-2 border-cyan-500/50 shadow-xl shadow-cyan-500/20">
-                      <ProtectedImage
+                    <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-2 border-cyan-500/50 shadow-xl shadow-cyan-500/20 flex-shrink-0 bg-zinc-950">
+                      <Image
+                        src="/avatar.webp"
                         alt="Abhishek S Nair"
-                        className="w-full h-full"
-                        objectFit="cover"
-                        objectPosition="top"
+                        width={256}
+                        height={256}
+                        sizes="(max-width: 640px) 112px, 128px"
+                        quality={95}
+                        className="w-full h-full object-cover"
                       />
                     </div>
                     <div>

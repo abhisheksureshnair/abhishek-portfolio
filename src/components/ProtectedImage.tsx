@@ -21,13 +21,13 @@ interface ProtectedImageProps {
  * Why canvas?
  * - Right-click "Save Image As" only shows canvas options, not the original file
  * - Drag-and-drop is blocked
- * - The real image URL (/api/photo) requires same-origin referrer
- * - No <img> src is exposed in the DOM for scrapers to harvest
+ * - The optimized public portrait stays sharp across larger layouts
+ * - Canvas keeps the existing cinematic presentation and interaction behavior
  */
 export const ProtectedImage: React.FC<ProtectedImageProps> = ({
   alt,
   className = '',
-  src = '/api/photo',
+  src = '/avatar.webp',
   width,
   height,
   objectFit = 'cover',
@@ -49,11 +49,15 @@ export const ProtectedImage: React.FC<ProtectedImageProps> = ({
       // Use container dimensions if width/height not explicitly provided
       const cw = width  ?? container.clientWidth;
       const ch = height ?? container.clientHeight;
-      canvas.width  = cw;
-      canvas.height = ch;
+      const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+
+      canvas.width  = Math.round(cw * dpr);
+      canvas.height = Math.round(ch * dpr);
 
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
+
+      ctx.scale(dpr, dpr);
 
       // --- Cover / Contain calculation ---
       const imgAspect = img.width / img.height;

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Menu, X, Command, Compass } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface NavbarProps {
   onOpenResume: () => void;
@@ -16,9 +17,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenResume, onOpenCommandK }) 
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 40);
+      setScrolled(window.scrollY > 80);
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -41,14 +42,47 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenResume, onOpenCommandK }) 
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          {/* Logo / Monogram */}
+          {/* Logo / Monogram (initial) or Profile Avatar (on scroll) */}
           <a
             href="#"
             className="flex items-center gap-3 group"
             data-cursor="pointer"
           >
-            <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-extrabold text-sm tracking-tighter group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-inner">
-              AN
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-indigo-500/30 group-hover:border-indigo-400 transition-all duration-300 flex-shrink-0 bg-zinc-950">
+              <AnimatePresence mode="wait">
+                {!scrolled ? (
+                  <motion.div
+                    key="monogram"
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.85 }}
+                    transition={{ duration: 0.2 }}
+                    className="w-full h-full bg-indigo-600/20 flex items-center justify-center text-indigo-400 font-extrabold text-sm tracking-tighter group-hover:bg-indigo-600 group-hover:text-white transition-colors shadow-inner"
+                  >
+                    AN
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="avatar"
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.85 }}
+                    transition={{ duration: 0.2 }}
+                    className="w-full h-full"
+                  >
+                    <Image
+                      src="/avatar.webp"
+                      alt="Abhishek S Nair"
+                      width={80}
+                      height={80}
+                      sizes="40px"
+                      quality={95}
+                      priority
+                      className="w-full h-full object-cover"
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-lg tracking-tight text-white group-hover:text-indigo-400 transition-colors">

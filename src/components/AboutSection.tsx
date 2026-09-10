@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ProtectedImage } from './ProtectedImage';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Sparkles, Code2, Smartphone, Cpu } from 'lucide-react';
 import { PERSONAL_INFO } from '../data/portfolioData';
@@ -45,12 +45,15 @@ export const AboutSection: React.FC = () => {
               
               {/* Profile Image & Name Bar */}
               <div className="flex items-center gap-4 border-b border-zinc-800 pb-6">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-indigo-500/50 shadow-xl shadow-indigo-500/20 flex-shrink-0">
-                  <ProtectedImage
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-indigo-500/50 shadow-xl shadow-indigo-500/20 flex-shrink-0 bg-zinc-950">
+                  <Image
+                    src="/avatar.webp"
                     alt="Abhishek S Nair Profile"
-                    className="w-full h-full"
-                    objectFit="cover"
-                    objectPosition="top"
+                    width={160}
+                    height={160}
+                    sizes="(max-width: 640px) 64px, 80px"
+                    quality={95}
+                    className="w-full h-full object-cover"
                   />
                 </div>
                 <div>

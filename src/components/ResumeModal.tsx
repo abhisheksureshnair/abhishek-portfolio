@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ProtectedImage } from './ProtectedImage';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, FileText, CheckCircle, ExternalLink, Briefcase, GraduationCap, Award, Mail, Phone, MapPin } from 'lucide-react';
 import { LinkedinIcon, GithubIcon } from './Icons';
@@ -16,7 +16,12 @@ export const ResumeModal: React.FC<ResumeModalProps> = ({ isOpen, onClose }) => 
   if (!isOpen) return null;
 
   const handleDownload = () => {
-    window.open(PERSONAL_INFO.resumePath, '_blank');
+    const link = document.createElement('a');
+    link.href = PERSONAL_INFO.resumePath;
+    link.setAttribute('download', 'Abhishek_S_Nair_Resume.pdf');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -79,6 +84,7 @@ export const ResumeModal: React.FC<ResumeModalProps> = ({ isOpen, onClose }) => 
                 </p>
                 <div className="flex flex-wrap items-center gap-4 mt-4 text-xs font-mono text-zinc-400">
                   <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-indigo-400" /> {PERSONAL_INFO.email}</span>
+                  <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-indigo-400" /> {PERSONAL_INFO.phone}</span>
                   <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-indigo-400" /> India</span>
                   <span className="flex items-center gap-1.5"><GithubIcon className="w-3.5 h-3.5 text-indigo-400" /> github.com/abhisheksureshnair</span>
                   <span className="flex items-center gap-1.5"><LinkedinIcon className="w-3.5 h-3.5 text-indigo-400" /> linkedin.com/in/abhisheksnair</span>
@@ -86,12 +92,15 @@ export const ResumeModal: React.FC<ResumeModalProps> = ({ isOpen, onClose }) => 
               </div>
 
               {/* Headshot Thumbnail */}
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-indigo-500/40 shadow-xl flex-shrink-0">
-                <ProtectedImage
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-indigo-500/40 shadow-xl flex-shrink-0 bg-zinc-950">
+                <Image
+                  src="/avatar.webp"
                   alt="Abhishek S Nair"
-                  className="w-full h-full"
-                  objectFit="cover"
-                  objectPosition="top"
+                  width={192}
+                  height={192}
+                  sizes="(max-width: 640px) 80px, 96px"
+                  quality={95}
+                  className="w-full h-full object-cover"
                 />
               </div>
             </div>

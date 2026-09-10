@@ -57,9 +57,10 @@ export const PERSONAL_INFO = {
   location: 'India',
   availability: 'Available for full-stack engineering roles & product teams',
   email: 'nairsabhishek@gmail.com',
+  phone: '+91 9778018037',
   github: 'https://github.com/abhisheksureshnair',
   linkedin: 'https://linkedin.com/in/abhisheksnair',
-  resumePath: '/resume.pdf',
+  resumePath: '/api/resume',
   stats: [
     { label: 'Years Experience', value: '3+', isNumeric: true },
     { label: 'Production Mobile Apps', value: '5+', isNumeric: true },

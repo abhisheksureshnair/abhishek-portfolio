@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ProtectedImage } from './ProtectedImage';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ArrowUpRight, Mail } from 'lucide-react';
 import { PERSONAL_INFO } from '../data/portfolioData';
@@ -28,12 +28,16 @@ export const HeroSection: React.FC = () => {
           className="flex flex-wrap items-center gap-4 mb-6"
         >
           {/* Headshot Thumbnail Badge */}
-          <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-indigo-500/40 shadow-xl shadow-indigo-500/20 flex-shrink-0">
-            <ProtectedImage
+          <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-indigo-500/40 shadow-xl shadow-indigo-500/20 flex-shrink-0 bg-zinc-950">
+            <Image
+              src="/avatar.webp"
               alt="Abhishek S Nair"
-              className="w-full h-full"
-              objectFit="cover"
-              objectPosition="top"
+              width={112}
+              height={112}
+              sizes="(max-width: 640px) 48px, 56px"
+              quality={95}
+              priority
+              className="w-full h-full object-cover"
             />
           </div>
 
