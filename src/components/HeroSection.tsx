@@ -123,32 +123,94 @@ export const HeroSection: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Quick Engineering Proof Numbers Bar */}
+        {/* Mission-status / engineering proof strip */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.5 }}
-          className="mt-16 pt-8 border-t border-white/5 w-full flex flex-wrap items-center gap-8"
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.35 }}
+          transition={{ duration: 0.75, delay: 0.15, ease: 'easeOut' }}
+          className="relative mt-16 w-full overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/70 shadow-[0_24px_80px_-28px_rgba(79,70,229,0.6)] backdrop-blur-xl"
         >
-          {PERSONAL_INFO.stats.filter(s => s.isNumeric).map((stat, idx) => (
-            <div key={idx} className="flex flex-col">
-              <span className="text-3xl sm:text-4xl font-extrabold text-white font-mono">
-                {stat.value}
-              </span>
-              <span className="text-xs text-zinc-500 font-mono uppercase tracking-wider mt-1">
-                {stat.label}
-              </span>
+          {/* Technical grid, scanline, and ambient accent details */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(34,211,238,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.07)_1px,transparent_1px)] [background-size:24px_24px]"
+          />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/70 to-transparent" />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-indigo-500/10 via-cyan-400/5 to-transparent blur-2xl" />
+          <motion.div
+            aria-hidden="true"
+            animate={{ x: ['-120%', '260%'] }}
+            transition={{ duration: 5.5, repeat: Infinity, repeatDelay: 2.5, ease: 'linear' }}
+            className="pointer-events-none absolute top-0 h-full w-24 -skew-x-12 bg-gradient-to-r from-transparent via-cyan-300/10 to-transparent"
+          />
+
+          <div className="relative flex items-center justify-between border-b border-white/10 px-5 py-3 sm:px-7">
+            <div className="flex items-center gap-2 text-[9px] font-mono font-semibold uppercase tracking-[0.24em] text-zinc-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.9)]" />
+              Mission telemetry
             </div>
-          ))}
-          <div className="hidden md:block w-px h-8 bg-white/10" />
-          {PERSONAL_INFO.stats.filter(s => !s.isNumeric).map((stat, idx) => (
-            <span
-              key={idx}
-              className="px-4 py-2 rounded-xl bg-zinc-900/80 border border-zinc-800 text-xs font-mono text-zinc-400 uppercase tracking-widest"
-            >
-              {stat.label}
-            </span>
-          ))}
+            <div className="flex items-center gap-2 text-[9px] font-mono font-semibold uppercase tracking-[0.18em] text-emerald-300/90">
+              <span className="hidden sm:inline text-zinc-600">SYSTEM STATUS //</span>
+              Active
+            </div>
+          </div>
+
+          <div className="relative grid grid-cols-1 md:grid-cols-[0.9fr_0.9fr_1.5fr]">
+            {PERSONAL_INFO.stats.filter((stat) => stat.isNumeric).map((stat, idx) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.2 + idx * 0.12 }}
+                className={`group relative px-5 py-6 sm:px-7 sm:py-8 ${idx > 0 ? 'border-t border-white/10 md:border-l md:border-t-0' : ''}`}
+              >
+                <div className="mb-4 flex items-center justify-between text-[9px] font-mono font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                  <span>{idx === 0 ? 'Experience' : 'Production'}</span>
+                  <span className="text-cyan-300/70">0{idx + 1}</span>
+                </div>
+                <div className="flex items-end gap-3">
+                  <span className="font-mono text-6xl font-black leading-none tracking-[-0.1em] text-white drop-shadow-[0_0_24px_rgba(99,102,241,0.35)] sm:text-7xl">
+                    {stat.value}
+                  </span>
+                  <span className="mb-1 max-w-24 text-[10px] font-mono uppercase leading-relaxed tracking-[0.14em] text-zinc-400">
+                    {stat.label}
+                  </span>
+                </div>
+                <div className="mt-5 h-px w-full overflow-hidden bg-white/10">
+                  <motion.div
+                    animate={{ x: ['-100%', '220%'] }}
+                    transition={{ duration: 3.5 + idx, repeat: Infinity, repeatDelay: 1.5, ease: 'linear' }}
+                    className="h-px w-1/2 bg-gradient-to-r from-transparent via-cyan-300 to-transparent"
+                  />
+                </div>
+              </motion.div>
+            ))}
+
+            {PERSONAL_INFO.stats.filter((stat) => !stat.isNumeric).map((stat) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.44 }}
+                className="relative border-t border-white/10 px-5 py-6 md:border-l md:border-t-0 sm:px-7 sm:py-8"
+              >
+                <div className="mb-5 flex items-center justify-between text-[9px] font-mono font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                  <span>Specialization</span>
+                  <span className="text-purple-300/80">03</span>
+                </div>
+                <p className="max-w-md font-mono text-base font-semibold uppercase leading-relaxed tracking-[0.16em] text-zinc-200 sm:text-lg">
+                  {stat.label}
+                </p>
+                <div className="mt-6 flex items-center gap-2 text-[9px] font-mono uppercase tracking-[0.2em] text-cyan-200/80">
+                  <span className="h-px w-8 bg-cyan-300/70" />
+                  Multi-platform systems
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </motion.div>
 
       </div>
