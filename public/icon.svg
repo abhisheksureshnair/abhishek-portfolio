@@ -1,0 +1,79 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Dark obsidian background with subtle depth -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0b12"/>
+      <stop offset="50%" stop-color="#07070a"/>
+      <stop offset="100%" stop-color="#030305"/>
+    </linearGradient>
+
+    <!-- Vibrant cyan -> indigo -> violet tech gradient -->
+    <linearGradient id="brandAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="50%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+
+    <!-- Subtle inner rim light -->
+    <linearGradient id="rimGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#818cf8" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#c084fc" stop-opacity="0.1"/>
+    </linearGradient>
+
+    <!-- Subtle background radial glow -->
+    <radialGradient id="centerGlow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Container Squircle Background -->
+  <rect x="16" y="16" width="480" height="480" rx="108" ry="108" fill="url(#bgGrad)"/>
+  <rect x="16" y="16" width="480" height="480" rx="108" ry="108" fill="url(#centerGlow)"/>
+
+  <!-- Sleek Glowing Border -->
+  <rect x="16" y="16" width="480" height="480" rx="108" ry="108" fill="none" stroke="url(#rimGrad)" stroke-width="14"/>
+
+  <!-- Bold Geometric 'A' Path -->
+  <!-- Outer legs: apex (184, 116), left base (96, 376), right base (272, 376) -->
+  <!-- Crossbar: y=278 to 318 -->
+  <!-- Inner counter: apex (184, 188), left (146, 266), right (222, 266) -->
+  <path d="M 184 116 
+           L 272 376 
+           L 216 376 
+           L 199 320 
+           L 133 320 
+           L 116 376 
+           L 60 376 
+           Z 
+           M 147 274 
+           L 185 174 
+           L 221 274 
+           Z" 
+        fill="#ffffff" />
+
+  <!-- Bold Modern 'S' Path -->
+  <!-- Upper arc, center spine, lower arc -->
+  <path d="M 436 182 
+           C 436 138 398 116 348 116 
+           C 298 116 264 140 264 186 
+           C 264 226 294 246 342 258 
+           C 386 268 402 280 402 304 
+           C 402 328 380 344 346 344 
+           C 304 344 282 324 280 292 
+           L 228 292 
+           C 230 348 274 382 346 382 
+           C 418 382 456 346 456 300 
+           C 456 256 424 236 374 224 
+           C 334 214 318 202 318 182 
+           C 318 162 336 152 356 152 
+           C 378 152 390 162 392 182 
+           Z" 
+        fill="#ffffff" />
+
+  <!-- Cyan/Violet Accent Slash/Dot -->
+  <circle cx="436" cy="376" r="16" fill="url(#brandAccent)" />
+  <circle cx="436" cy="376" r="28" fill="#22d3ee" opacity="0.3" filter="blur(4px)" />
+</svg>
