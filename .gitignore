@@ -42,9 +42,10 @@ next-env.d.ts
 
 # ── PRIVATE ASSETS ────────────────────────────────────────────────────────────
 # Personal photo — must NOT be committed to git.
-# For Vercel: upload via Vercel dashboard File Uploads or set PHOTO_BASE64 env var.
+# For Vercel: add PHOTO_B64_1 … PHOTO_B64_4 as Environment Variables in Vercel dashboard.
 /public/abhisheksnair.jpg
 /src/private-assets/photo.jpg
+/src/private-assets/*.txt
 /src/private-assets/
 
 # Personal notes / deployment guides
