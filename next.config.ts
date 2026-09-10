@@ -21,8 +21,6 @@ const nextConfig: NextConfig = {
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive, nosnippet' },
-          // Only same-origin scripts can fetch this
-          { key: 'Access-Control-Allow-Origin', value: 'self' },
         ],
       },
     ];
