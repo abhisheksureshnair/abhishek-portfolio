@@ -608,12 +608,12 @@ export const CinematicExperience: React.FC = () => {
                         <p className="text-zinc-500 text-[10px] mt-0.5">Production Apps</p>
                       </div>
                       <div className="p-2.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
-                        <span className="text-2xl font-extrabold text-amber-400">15+</span>
-                        <p className="text-zinc-500 text-[10px] mt-0.5">Repositories</p>
+                        <span className="text-xs font-extrabold text-amber-400">WEB · MOBILE</span>
+                        <p className="text-zinc-500 text-[10px] mt-0.5">Platforms</p>
                       </div>
                       <div className="p-2.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
-                        <span className="text-2xl font-extrabold text-emerald-400">6+</span>
-                        <p className="text-zinc-500 text-[10px] mt-0.5">Domains</p>
+                        <span className="text-xs font-extrabold text-emerald-400">BACKEND · AI</span>
+                        <p className="text-zinc-500 text-[10px] mt-0.5">Specialisms</p>
                       </div>
                     </div>
 

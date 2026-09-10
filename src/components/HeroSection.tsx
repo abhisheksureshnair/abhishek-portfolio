@@ -128,9 +128,9 @@ export const HeroSection: React.FC = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.5 }}
-          className="mt-16 pt-8 border-t border-white/5 w-full grid grid-cols-2 md:grid-cols-4 gap-6"
+          className="mt-16 pt-8 border-t border-white/5 w-full flex flex-wrap items-center gap-8"
         >
-          {PERSONAL_INFO.stats.map((stat, idx) => (
+          {PERSONAL_INFO.stats.filter(s => s.isNumeric).map((stat, idx) => (
             <div key={idx} className="flex flex-col">
               <span className="text-3xl sm:text-4xl font-extrabold text-white font-mono">
                 {stat.value}
@@ -139,6 +139,15 @@ export const HeroSection: React.FC = () => {
                 {stat.label}
               </span>
             </div>
+          ))}
+          <div className="hidden md:block w-px h-8 bg-white/10" />
+          {PERSONAL_INFO.stats.filter(s => !s.isNumeric).map((stat, idx) => (
+            <span
+              key={idx}
+              className="px-4 py-2 rounded-xl bg-zinc-900/80 border border-zinc-800 text-xs font-mono text-zinc-400 uppercase tracking-widest"
+            >
+              {stat.label}
+            </span>
           ))}
         </motion.div>
 

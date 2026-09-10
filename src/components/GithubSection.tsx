@@ -37,8 +37,8 @@ export const GithubSection: React.FC = () => {
         {/* Profile Stats Summary Box */}
         <div className="p-8 rounded-3xl bg-zinc-900/60 border border-zinc-800 mb-12 grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800">
-            <span className="text-xs font-mono text-zinc-500 block mb-1">Public Repositories</span>
-            <span className="text-3xl font-extrabold text-white font-mono">15+</span>
+            <span className="text-xs font-mono text-zinc-500 block mb-1">Repositories</span>
+            <span className="text-xl font-extrabold text-white font-mono">Open Source</span>
           </div>
           <div className="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800">
             <span className="text-xs font-mono text-zinc-500 block mb-1">Primary Languages</span>

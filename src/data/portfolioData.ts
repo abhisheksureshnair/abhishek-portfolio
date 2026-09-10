@@ -61,10 +61,9 @@ export const PERSONAL_INFO = {
   linkedin: 'https://linkedin.com/in/abhisheksnair',
   resumePath: '/resume.pdf',
   stats: [
-    { label: 'Years Experience', value: '3+' },
-    { label: 'Production Mobile Apps', value: '5+' },
-    { label: 'Full-Stack Repositories', value: '15+' },
-    { label: 'Domains Delivered', value: '6+' },
+    { label: 'Years Experience', value: '3+', isNumeric: true },
+    { label: 'Production Mobile Apps', value: '5+', isNumeric: true },
+    { label: 'Full-Stack · Web · Mobile · AI', value: null, isNumeric: false },
   ]
 };
 
