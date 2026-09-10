@@ -68,21 +68,16 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Forbidden', { status: 403 });
   }
 
-  // ── 2a. Vercel production: reassemble from chunked env vars ───────────────
-  //  Add PHOTO_B64_1 … PHOTO_B64_4 as Environment Variables in your Vercel
-  //  project dashboard (Settings → Environment Variables).
-  const chunk1 = process.env.PHOTO_B64_1;
-  const chunk2 = process.env.PHOTO_B64_2;
-  const chunk3 = process.env.PHOTO_B64_3;
-  const chunk4 = process.env.PHOTO_B64_4;
+  // ── 2a. Vercel production: optimized, private single-variable image ──────
+  // PHOTO_B64 contains the base64-encoded 512px production derivative. It is
+  // intentionally stored only in Vercel Production environment variables.
+  const photoBase64 = process.env.PHOTO_B64;
 
-  if (chunk1) {
-    // Reassemble full base64 from however many chunks are present
-    const fullBase64 = [chunk1, chunk2, chunk3, chunk4]
-      .filter(Boolean)
-      .join('');
+  if (photoBase64) {
     try {
-      const imageBuffer = Buffer.from(fullBase64, 'base64');
+      const imageBuffer = Buffer.from(photoBase64, 'base64');
+      if (imageBuffer.length === 0) throw new Error('Empty photo payload');
+
       return new NextResponse(new Uint8Array(imageBuffer), {
         status: 200,
         headers: getHeaders(request),
