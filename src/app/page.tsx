@@ -1,16 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { SmoothScroll } from '@/components/SmoothScroll';
+import { CinematicLoader } from '@/components/CinematicLoader';
 import { CustomCursor } from '@/components/CustomCursor';
 import { Navbar } from '@/components/Navbar';
 import { HeroSection } from '@/components/HeroSection';
-import { SelectedWorkSection } from '@/components/SelectedWorkSection';
-import { ExperienceSection } from '@/components/ExperienceSection';
-import { WhatIBuildSection } from '@/components/WhatIBuildSection';
-import { TechnicalToolboxSection } from '@/components/TechnicalToolboxSection';
-import { CertificationsSection } from '@/components/CertificationsSection';
-import { GithubSection } from '@/components/GithubSection';
 import { AboutSection } from '@/components/AboutSection';
+import { ExperienceSection } from '@/components/ExperienceSection';
+import { FeaturedProjectsSection } from '@/components/FeaturedProjectsSection';
+import { TechnologyUniverse } from '@/components/TechnologyUniverse';
+import { BuildingWithAISection } from '@/components/BuildingWithAISection';
+import { JourneyEducationSection } from '@/components/JourneyEducationSection';
 import { ContactSection } from '@/components/ContactSection';
 import { FlowSyncModal } from '@/components/FlowSyncModal';
 import { ResumeModal } from '@/components/ResumeModal';
@@ -34,64 +35,66 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#070709] text-[#f4f4f5] relative selection:bg-indigo-500/30 selection:text-white">
-      {/* Desktop Custom Cursor */}
-      <CustomCursor />
+    <SmoothScroll>
+      <main className="min-h-screen bg-[#030508] text-[#f8fafc] relative selection:bg-indigo-500/30 selection:text-white">
+        
+        {/* Cinematic Intro Loader */}
+        <CinematicLoader />
 
-      {/* Glassmorphism Navigation Bar */}
-      <Navbar
-        onOpenResume={() => setIsResumeOpen(true)}
-        onOpenCommandK={() => setIsCommandKOpen(true)}
-      />
+        {/* Desktop Custom Cursor with Ambient Light */}
+        <CustomCursor />
 
-      {/* 1. HERO */}
-      <HeroSection />
+        {/* Glassmorphic Navigation with Scroll Progress */}
+        <Navbar
+          onOpenResume={() => setIsResumeOpen(true)}
+          onOpenCommandK={() => setIsCommandKOpen(true)}
+        />
 
-      {/* 2. SELECTED WORK (FLAGSHIP PROJECTS) */}
-      <SelectedWorkSection
-        onOpenFlowSyncCaseStudy={() => setIsFlowSyncOpen(true)}
-      />
+        {/* 1. HERO SECTION */}
+        <HeroSection onOpenResume={() => setIsResumeOpen(true)} />
 
-      {/* 3. PROFESSIONAL EXPERIENCE (INNSPARK SOLUTIONS) */}
-      <ExperienceSection />
+        {/* 2. ABOUT SECTION (Scroll-driven Progressive Reveal) */}
+        <AboutSection />
 
-      {/* 4. WHAT I BUILD */}
-      <WhatIBuildSection />
+        {/* 3. PROFESSIONAL EXPERIENCE TIMELINE (InnSpark Solutions) */}
+        <ExperienceSection />
 
-      {/* 5. TECHNICAL TOOLBOX */}
-      <TechnicalToolboxSection />
+        {/* 4. FEATURED PROJECTS SHOWCASE (Personal Flagships + Commercial Deliveries) */}
+        <FeaturedProjectsSection
+          onOpenFlowSyncCaseStudy={() => setIsFlowSyncOpen(true)}
+        />
 
-      {/* 6. CERTIFICATIONS */}
-      <CertificationsSection />
+        {/* 5. TECHNOLOGY UNIVERSE (Interactive Ecosystem) */}
+        <TechnologyUniverse />
 
-      {/* 7. GITHUB ACTIVITY */}
-      <GithubSection />
+        {/* 6. BUILDING WITH AI (NVIDIA NIM, LLMs, Agents) */}
+        <BuildingWithAISection />
 
-      {/* 8. ABOUT */}
-      <AboutSection />
+        {/* 7. DEVELOPER JOURNEY, EDUCATION & CERTIFICATIONS */}
+        <JourneyEducationSection />
 
-      {/* 9. CONTACT */}
-      <ContactSection />
+        {/* 8. CONTACT SECTION & MONOGRAM SIGN-OFF */}
+        <ContactSection onOpenResume={() => setIsResumeOpen(true)} />
 
-      {/* Flagship FlowSync Case Study Modal */}
-      <FlowSyncModal
-        isOpen={isFlowSyncOpen}
-        onClose={() => setIsFlowSyncOpen(false)}
-      />
+        {/* Modals & Dialogs */}
+        <FlowSyncModal
+          isOpen={isFlowSyncOpen}
+          onClose={() => setIsFlowSyncOpen(false)}
+        />
 
-      {/* Resume Viewer & PDF Download Modal */}
-      <ResumeModal
-        isOpen={isResumeOpen}
-        onClose={() => setIsResumeOpen(false)}
-      />
+        <ResumeModal
+          isOpen={isResumeOpen}
+          onClose={() => setIsResumeOpen(false)}
+        />
 
-      {/* Recruiter Command Palette (Ctrl+K) */}
-      <CommandK
-        isOpen={isCommandKOpen}
-        onClose={() => setIsCommandKOpen(false)}
-        onOpenResume={() => setIsResumeOpen(true)}
-        onOpenFlowSyncCaseStudy={() => setIsFlowSyncOpen(true)}
-      />
-    </main>
+        <CommandK
+          isOpen={isCommandKOpen}
+          onClose={() => setIsCommandKOpen(false)}
+          onOpenResume={() => setIsResumeOpen(true)}
+          onOpenFlowSyncCaseStudy={() => setIsFlowSyncOpen(true)}
+        />
+
+      </main>
+    </SmoothScroll>
   );
 }

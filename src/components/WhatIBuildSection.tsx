@@ -2,11 +2,11 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Globe, Smartphone, Server, Bot, Radio, CheckCircle2 } from 'lucide-react';
+import { Globe, Smartphone, Server, Bot, Radio, Cpu } from 'lucide-react';
 import { WHAT_I_BUILD } from '../data/portfolioData';
 
 export const WhatIBuildSection: React.FC = () => {
-  const icons = [Globe, Smartphone, Server, Bot, Radio];
+  const icons = [Globe, Smartphone, Server, Bot, Radio, Cpu];
 
   return (
     <section id="what-i-build" className="py-24 bg-zinc-950 relative border-t border-white/5">
@@ -16,18 +16,18 @@ export const WhatIBuildSection: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
           <div>
             <div className="text-xs font-mono text-indigo-400 uppercase tracking-widest mb-3">
-              // Editorial Focus
+              // Engineering Capabilities
             </div>
             <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
               What I Build
             </h2>
           </div>
           <p className="max-w-md text-zinc-400 text-sm font-light leading-relaxed">
-            I build end-to-end digital software across web interfaces, cross-platform mobile apps, real-time servers, and generative AI integrations.
+            Building modern software across full-stack web platforms, cross-platform applications, real-time systems, and AI-powered workflows.
           </p>
         </div>
 
-        {/* 5 Editorial Category Cards */}
+        {/* 6 Engineering Capability Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {WHAT_I_BUILD.map((item, idx) => {
             const Icon = icons[idx] || Globe;

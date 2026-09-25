@@ -80,7 +80,7 @@ export const ResumeModal: React.FC<ResumeModalProps> = ({ isOpen, onClose }) => 
               <div>
                 <h1 className="text-3xl font-extrabold text-white tracking-tight">ABHISHEK S NAIR</h1>
                 <p className="text-base font-semibold text-indigo-400 mt-1">
-                  Full Stack React Developer | MERN | React Native | Node.js | MongoDB | Flutter
+                  Software Developer • Web • Mobile • AI Applications
                 </p>
                 <div className="flex flex-wrap items-center gap-4 mt-4 text-xs font-mono text-zinc-400">
                   <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-indigo-400" /> {PERSONAL_INFO.email}</span>
@@ -111,7 +111,7 @@ export const ResumeModal: React.FC<ResumeModalProps> = ({ isOpen, onClose }) => 
                 <CheckCircle className="w-4 h-4" /> Professional Summary
               </h3>
               <p className="text-xs sm:text-sm text-zinc-300 font-light leading-relaxed">
-                Full-Stack Software Developer with 3+ years of experience engineering production software across web, cross-platform mobile (React Native & Flutter), backend (Node.js/Express & FastAPI), real-time WebSockets telemetry, and generative AI (NVIDIA NIM APIs). Proven track record of delivering 5+ production mobile applications to app stores and architecting scalable full-stack products.
+                Software Developer with 3+ years of software development experience, building modern web, mobile, desktop and AI-powered applications. Experience spans frontend development, backend APIs, real-time systems, cross-platform applications, and AI/LLM integrations. Creator of independent full-stack platforms and intelligent desktop applications (FlowSync and Echo Desktop AI).
               </p>
             </div>
 
@@ -123,7 +123,7 @@ export const ResumeModal: React.FC<ResumeModalProps> = ({ isOpen, onClose }) => 
               <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <div>
-                    <h4 className="text-base font-bold text-white">{PROFESSIONAL_EXPERIENCE.role}</h4>
+                    <h4 className="text-base font-bold text-white">{PROFESSIONAL_EXPERIENCE.role} (Software Development)</h4>
                     <p className="text-xs font-semibold text-indigo-400">{PROFESSIONAL_EXPERIENCE.company}</p>
                   </div>
                   <span className="text-xs font-mono text-zinc-500">{PROFESSIONAL_EXPERIENCE.period}</span>
@@ -183,7 +183,7 @@ export const ResumeModal: React.FC<ResumeModalProps> = ({ isOpen, onClose }) => 
                 Core Competencies & Toolset
               </h3>
               <p className="text-xs text-zinc-300 font-mono leading-relaxed">
-                React, JavaScript (ES6+), React Native, Flutter, Dart, Node.js, Express.js, MongoDB, Mongoose, Socket.IO, WebSockets, REST APIs, FastAPI (Python), NVIDIA NIM AI, Electron, Bluetooth BLE, GPS, Geofencing, Tailwind CSS, GSAP, Git.
+                React, JavaScript (ES6+), React Native, Flutter, Node.js, Express.js, MongoDB, Mongoose, Socket.IO, WebSockets, REST APIs, NVIDIA NIM / LLM APIs, Electron, Bluetooth BLE, GPS, Geofencing, Git.
               </p>
             </div>
 

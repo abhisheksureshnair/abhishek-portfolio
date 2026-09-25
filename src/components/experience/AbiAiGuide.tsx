@@ -41,28 +41,31 @@ export const AbiAiGuide: React.FC<AbiAiGuideProps> = ({ isOpen, onClose }) => {
     const lower = qText.toLowerCase();
 
     if (lower.includes('specialize') || lower.includes('do')) {
-      replyText = `Abhishek is a Full-Stack Developer specializing in React, React Native, Flutter, Node.js, Express, MongoDB, WebSockets, REST APIs, and AI integrations (NVIDIA NIM APIs). He has 3+ years of professional experience building web, mobile, real-time telemetry, and AI systems.`;
+      replyText = `Abhishek is a Software Developer focused on building modern web, mobile, desktop and AI-powered applications. He has 3+ years of software development experience across React.js, Node.js, Express.js, MongoDB, React Native, Flutter, Electron.js, WebSockets, and NVIDIA LLM APIs.`;
     } else if (lower.includes('strongest') || lower.includes('projects')) {
-      replyText = `His flagship projects include: 
-1. FlowSync (AI-Powered MERN + NVIDIA NIM real-time task intelligence platform)
-2. Echo Desktop AI (Electron + React desktop companion & browser co-pilot)
-3. LiveSync (Monorepo family safety & GPS telemetry suite)
-4. AlphaPulse Stock AI (FastAPI Python technical analysis + multi-agent market insights)
-5. Neon Kinetic Vehicle Tracking (Flutter live GPS fleet telematics).`;
+      replyText = `His key projects include: 
+1. FlowSync (FULL STACK • WEB • REAL-TIME)
+2. Echo Desktop AI (AI • DESKTOP • LLM)
+3. Vehicle Tracking System (VTS) (APPLICATION • GPS • REAL-TIME)
+4. Telemedicine Application (APPLICATION • HEALTHCARE • REAL-TIME)
+5. SafeNet (APPLICATION • SECURITY)
+6. Bluetooth BLE Debugger (DEVELOPER TOOL • BLUETOOTH • BLE).`;
     } else if (lower.includes('ai') || lower.includes('llm') || lower.includes('nvidia')) {
-      replyText = `Abhishek's AI work includes integrating NVIDIA NIM APIs into FlowSync for automated sprint task risk scoring, building Echo Desktop AI (Electron app with custom LLM endpoints), and AlphaPulse Stock AI (Python FastAPI server with multi-agent investment reasoning).`;
+      replyText = `Abhishek's AI work includes integrating NVIDIA LLM APIs into FlowSync for automated sprint task risk scoring, and building Echo Desktop AI (cross-platform Electron application with companion browser extensions for intelligent context workflows).`;
     } else if (lower.includes('experience') || lower.includes('innspark')) {
-      replyText = `Abhishek has 3+ years of professional software engineering experience as an Analyst — Software Development at InnSpark Solutions Pvt. Ltd. (Jun 2023 – Present). He has deployed 5+ production mobile applications to the App Store and Google Play Store spanning telemedicine, fleet telematics, parental security, and Bluetooth BLE hardware IoT.`;
+      replyText = `Abhishek has 3+ years of software development experience and works as an Analyst at InnSpark Solutions Pvt. Ltd. (June 2023 – Present) in Software Development, contributing to application development, feature implementation, integrations, debugging, testing and technical problem solving.`;
     } else if (lower.includes('tech') || lower.includes('stack')) {
-      replyText = `His technical toolbox includes:
-• Frontend: React, JavaScript (ES6+), Vite, React Router, Tailwind CSS, GSAP
-• Mobile: React Native, Flutter, Dart, iOS & Android Native Releases
-• Backend: Node.js, Express.js, Socket.IO, WebSockets, FastAPI (Python), REST APIs
-• Database: MongoDB Atlas, Mongoose ORM, Firebase Firestore
-• AI: NVIDIA NIM APIs, OpenAI API, Multi-Agent Workflows
-• Connected Systems: Bluetooth BLE, GPS Telemetry, Geofencing, Electron.`;
+      replyText = `His technical stack includes:
+• Frontend: JavaScript (ES6+), React.js, Vite, HTML5, CSS3, Responsive UI
+• Backend: Node.js, Express.js, REST APIs, WebSockets, Socket.IO, JWT
+• Mobile & Cross-Platform: React Native, Flutter, Android, iOS
+• Databases: MongoDB, MySQL, Firebase Realtime Database
+• AI & GenAI: LLM Integration, NVIDIA LLM API, Prompt Engineering
+• APIs & Integrations: Google Maps API, GPS, Bluetooth BLE, Firebase Auth
+• Desktop: Electron.js
+• Tools: Git, GitHub, VS Code, Postman`;
     } else {
-      replyText = `Abhishek is a Full-Stack Developer with 3+ years experience building Web, Mobile & AI products. Feel free to explore his selected work or click 'Download Resume'!`;
+      replyText = `Abhishek is a Software Developer (Web • Mobile • AI Applications) with 3+ years of software development experience. Feel free to explore his projects or download his resume!`;
     }
 
     setMessages((prev) => [...prev, userMsg, { sender: 'bot', text: replyText }]);

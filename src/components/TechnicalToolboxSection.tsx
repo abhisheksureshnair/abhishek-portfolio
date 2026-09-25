@@ -14,13 +14,20 @@ export const TechnicalToolboxSection: React.FC = () => {
 
   const categoryIcons: Record<string, any> = {
     FRONTEND: Code,
-    MOBILE: Smartphone,
     BACKEND: Server,
+    'MOBILE & CROSS-PLATFORM': Smartphone,
+    MOBILE: Smartphone,
+    DATABASES: Database,
     DATABASE: Database,
+    'AI & GENERATIVE AI': Cpu,
     'AI & ML': Cpu,
+    'APIS & INTEGRATIONS': Radio,
     INTEGRATIONS: Radio,
+    'DESKTOP & CROSS-PLATFORM': Monitor,
     DESKTOP: Monitor,
+    TOOLS: Terminal,
     'TOOLS & DEVOPS': Terminal,
+    'AI DEVELOPMENT TOOLS': Cpu,
   };
 
   const displayedSkills =

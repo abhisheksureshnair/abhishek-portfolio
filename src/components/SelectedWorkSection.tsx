@@ -28,7 +28,7 @@ export const SelectedWorkSection: React.FC<SelectedWorkSectionProps> = ({
             </h2>
           </div>
           <p className="max-w-md text-zinc-400 text-sm font-light leading-relaxed">
-            Independent products and systems demonstrating end-to-end full-stack development, mobile engineering, WebSockets real-time sync, and AI integrations.
+            Independent products and systems demonstrating end-to-end full-stack development, application development, WebSockets real-time sync, and AI integrations.
           </p>
         </div>
 

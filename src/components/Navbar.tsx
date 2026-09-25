@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Menu, X, Command, Compass } from 'lucide-react';
+import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
+import { FileText, Menu, X, Command, Compass, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 interface NavbarProps {
   onOpenResume: () => void;
@@ -14,93 +13,77 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ onOpenResume, onOpenCommandK }) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 80);
+      setScrolled(window.scrollY > 50);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const navLinks = [
-    { name: 'Selected Work', href: '#selected-work' },
-    { name: 'Experience', href: '#experience' },
-    { name: 'What I Build', href: '#what-i-build' },
-    { name: 'Toolbox', href: '#toolbox' },
-    { name: 'Certifications', href: '#certifications' },
-    { name: 'GitHub', href: '#github' },
-    { name: 'About', href: '#about' },
-    { name: 'Contact', href: '#contact' },
+    { name: 'HOME', href: '#' },
+    { name: 'ABOUT', href: '#about' },
+    { name: 'EXPERIENCE', href: '#experience' },
+    { name: 'PROJECTS', href: '#projects' },
+    { name: 'STACK', href: '#stack' },
+    { name: 'AI', href: '#ai' },
+    { name: 'JOURNEY', href: '#journey' },
+    { name: 'CONTACT', href: '#contact' },
   ];
 
   return (
     <>
+      {/* Top Animated Scroll Progress Indicator */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-indigo-500 via-cyan-400 to-purple-500 z-50 origin-left"
+        style={{ scaleX }}
+      />
+
       <header
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-          scrolled ? 'py-3 glass-panel border-b border-white/10 shadow-2xl' : 'py-6 bg-transparent'
+          scrolled
+            ? 'py-3.5 bg-[#030508]/85 backdrop-blur-xl border-b border-white/[0.08] shadow-2xl shadow-black/80'
+            : 'py-6 bg-transparent'
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          {/* Logo / Monogram (initial) or Profile Avatar (on scroll) */}
+          
+          {/* Brand Monogram & Name */}
           <a
             href="#"
             className="flex items-center gap-3 group"
             data-cursor="pointer"
           >
-            <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-indigo-500/30 group-hover:border-indigo-400 transition-all duration-300 flex-shrink-0 bg-zinc-950">
-              <AnimatePresence mode="wait">
-                {!scrolled ? (
-                  <motion.div
-                    key="monogram"
-                    initial={{ opacity: 0, scale: 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.85 }}
-                    transition={{ duration: 0.2 }}
-                    className="w-full h-full bg-indigo-600/20 flex items-center justify-center text-indigo-400 font-extrabold text-sm tracking-tighter group-hover:bg-indigo-600 group-hover:text-white transition-colors shadow-inner"
-                  >
-                    AN
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="avatar"
-                    initial={{ opacity: 0, scale: 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.85 }}
-                    transition={{ duration: 0.2 }}
-                    className="w-full h-full"
-                  >
-                    <Image
-                      src="/avatar.webp"
-                      alt="Abhishek S Nair"
-                      width={80}
-                      height={80}
-                      sizes="40px"
-                      quality={95}
-                      priority
-                      className="w-full h-full object-cover"
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500/20 via-zinc-900 to-black border border-indigo-500/40 group-hover:border-indigo-400 transition-all flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/10">
+              <span className="font-mono text-xs font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-cyan-300 group-hover:from-white group-hover:to-indigo-200 transition-colors">
+                ASN
+              </span>
             </div>
             <div className="flex flex-col">
-              <span className="font-bold text-lg tracking-tight text-white group-hover:text-indigo-400 transition-colors">
+              <span className="font-bold text-sm tracking-tight text-white group-hover:text-indigo-300 transition-colors">
                 Abhishek S Nair
               </span>
-              <span className="text-[10px] tracking-widest text-zinc-400 uppercase font-mono">
-                Full-Stack Dev
+              <span className="text-[9px] tracking-widest text-zinc-400 uppercase font-mono">
+                Software Developer
               </span>
             </div>
           </a>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden xl:flex items-center gap-6">
+          <nav className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/60 border border-white/5 backdrop-blur-md">
             {navLinks.map((link) => (
               <a
                 key={link.name}
                 href={link.href}
-                className="text-xs font-medium text-zinc-400 hover:text-white transition-colors relative py-1 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-indigo-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:origin-left"
+                className="px-3 py-1 text-[11px] font-mono tracking-wider text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-all"
                 data-cursor="pointer"
               >
                 {link.name}
@@ -108,57 +91,60 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenResume, onOpenCommandK }) 
             ))}
           </nav>
 
-          {/* Right Action Group */}
-          <div className="hidden lg:flex items-center gap-3">
+          {/* Action Group */}
+          <div className="hidden sm:flex items-center gap-3">
             {/* Experience Mode Button */}
             <Link
               href="/experience"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 hover:text-white hover:bg-indigo-600/30 text-xs font-mono font-bold transition-all shadow-sm"
-              title="Switch to 3D Open-World Experience Mode"
+              title="Enter 3D Open-World Experience"
+              data-cursor="pointer"
             >
-              <Compass className="w-3.5 h-3.5 text-indigo-400" />
-              <span>EXPERIENCE MODE ↗</span>
+              <Compass className="w-3.5 h-3.5 text-cyan-400" />
+              <span>3D WORLD</span>
             </Link>
 
-            {/* Command K button */}
+            {/* Recruiter Quick Search Ctrl+K */}
             {onOpenCommandK && (
               <button
                 onClick={onOpenCommandK}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 text-xs font-mono transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 text-xs font-mono transition-colors"
                 title="Quick Search (Ctrl+K)"
+                data-cursor="pointer"
               >
-                <Command className="w-3.5 h-3.5" />
-                <span>K</span>
+                <Command className="w-3 h-3 text-indigo-400" />
+                <span className="text-[10px]">K</span>
               </button>
             )}
 
-            {/* Resume CTA */}
+            {/* Resume Button */}
             <button
               onClick={onOpenResume}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 hover:border-indigo-500/50 text-xs font-semibold tracking-wide transition-all shadow-sm"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-semibold text-xs tracking-wide shadow-md shadow-indigo-500/20 transition-all transform hover:-translate-y-0.5"
               data-cursor="pointer"
             >
-              <FileText className="w-4 h-4 text-indigo-400" />
+              <FileText className="w-3.5 h-3.5" />
               <span>Resume</span>
             </button>
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex xl:hidden items-center gap-2">
+          <div className="flex lg:hidden items-center gap-2">
             <Link
               href="/experience"
-              className="px-2.5 py-1.5 rounded-lg bg-indigo-950 border border-indigo-500/40 text-indigo-300 text-xs font-mono font-bold"
+              className="px-2.5 py-1.5 rounded-lg bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 text-xs font-mono font-bold"
             >
-              3D WORLD ↗
+              3D
             </Link>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white"
+              className="p-2 rounded-xl bg-zinc-900/80 border border-zinc-800 text-zinc-300 hover:text-white"
               aria-label="Toggle Navigation Menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
+
         </div>
       </header>
 
@@ -169,38 +155,40 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenResume, onOpenCommandK }) 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-x-0 top-[65px] z-30 bg-zinc-950/95 backdrop-blur-2xl border-b border-zinc-800 p-6 xl:hidden shadow-2xl"
+            className="fixed inset-x-0 top-[65px] z-30 bg-[#030508]/95 backdrop-blur-2xl border-b border-zinc-800 p-6 lg:hidden shadow-2xl"
           >
             <div className="flex flex-col gap-4">
               <Link
                 href="/experience"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-xs font-bold shadow-lg shadow-indigo-600/30"
+                className="flex items-center justify-between px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-mono text-xs font-bold shadow-lg shadow-indigo-600/30"
               >
                 <span>ENTER 3D EXPERIENCE MODE</span>
                 <Compass className="w-4 h-4" />
               </Link>
-              <nav className="flex flex-col gap-2 py-2">
+              
+              <nav className="grid grid-cols-2 gap-2 py-2">
                 {navLinks.map((link) => (
                   <a
                     key={link.name}
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-base font-medium text-zinc-300 hover:text-white py-2 border-b border-zinc-900 flex items-center justify-between"
+                    className="p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800 text-xs font-mono text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors flex items-center justify-between"
                   >
                     <span>{link.name}</span>
-                    <span className="text-zinc-600 text-xs">→</span>
+                    <ArrowUpRight className="w-3 h-3 text-zinc-600" />
                   </a>
                 ))}
               </nav>
+
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onOpenResume();
                 }}
-                className="w-full py-3 rounded-xl bg-zinc-900 border border-zinc-700 text-white font-semibold text-sm flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-zinc-900 border border-zinc-700 text-white font-semibold text-xs flex items-center justify-center gap-2 hover:bg-zinc-800 transition-colors"
               >
-                <FileText className="w-4 h-4" />
+                <FileText className="w-4 h-4 text-indigo-400" />
                 <span>View Full Resume</span>
               </button>
             </div>
