@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Star, GitFork, ArrowUpRight, Code2, CheckCircle2 } from 'lucide-react';
+import { Star, GitFork, ArrowUpRight, Code2, CheckCircle2, GitBranch, Sparkles } from 'lucide-react';
 import { GithubIcon } from './Icons';
 import { PERSONAL_INFO, SELECTED_PROJECTS } from '../data/portfolioData';
 
@@ -21,17 +22,29 @@ export const GithubSection: React.FC = () => {
               GitHub Engineering Activity
             </h2>
           </div>
-          <a
-            href={PERSONAL_INFO.github}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-indigo-500/50 text-white text-xs font-semibold tracking-wide transition-all w-fit"
-            data-cursor="pointer"
-          >
-            <GithubIcon className="w-4 h-4 text-indigo-400" />
-            <span>@abhisheksureshnair on GitHub</span>
-            <ArrowUpRight className="w-4 h-4 text-zinc-500" />
-          </a>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/github-universe"
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-600/25 w-fit hover:scale-105"
+              data-cursor="portal"
+            >
+              <GitBranch className="w-4 h-4 text-cyan-300" />
+              <span>ENTER GITHUB UNIVERSE (CODE NEXUS)</span>
+              <Sparkles className="w-3.5 h-3.5 text-white animate-pulse" />
+            </Link>
+
+            <a
+              href={PERSONAL_INFO.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-indigo-500/50 text-white text-xs font-semibold tracking-wide transition-all w-fit"
+              data-cursor="pointer"
+            >
+              <GithubIcon className="w-4 h-4 text-indigo-400" />
+              <span>@abhisheksureshnair on GitHub</span>
+              <ArrowUpRight className="w-4 h-4 text-zinc-500" />
+            </a>
+          </div>
         </div>
 
         {/* Profile Stats Summary Box */}

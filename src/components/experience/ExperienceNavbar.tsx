@@ -3,12 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Smartphone, Terminal, Sparkles, Menu, X, ArrowLeft } from 'lucide-react';
+import { Flame, Smartphone, Terminal, Sparkles, Menu, X, ArrowLeft, Compass, GitBranch } from 'lucide-react';
 import { ExperienceSoundButton } from './ExperienceSound';
 import { EXPERIENCE_DATA, ExperienceMode } from './ExperienceData';
 import { useExperienceMode } from './ExperienceModeContext';
 
-export const ExperienceNavbar: React.FC = () => {
+interface ExperienceNavbarProps {
+  currentView?: 'story' | 'world';
+  onToggleView?: (view: 'story' | 'world') => void;
+}
+
+export const ExperienceNavbar: React.FC<ExperienceNavbarProps> = ({
+  currentView = 'story',
+  onToggleView,
+}) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { mode, setMode } = useExperienceMode();
@@ -114,8 +122,34 @@ export const ExperienceNavbar: React.FC = () => {
           ))}
         </div>
 
-        {/* Controls: Audio & Contact CTA */}
-        <div className="flex items-center gap-2.5">
+        {/* Controls: 3D World Switcher, GitHub Nexus, Audio & Contact CTA */}
+        <div className="flex items-center gap-2">
+          {/* 3D Open World Switcher Button */}
+          {onToggleView && (
+            <button
+              onClick={() => onToggleView(currentView === 'world' ? 'story' : 'world')}
+              className={`flex items-center gap-1.5 rounded-full px-3.5 py-1 text-[11px] font-mono font-bold transition-all ${
+                currentView === 'world'
+                  ? 'bg-gradient-to-r from-indigo-500 to-cyan-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.5)]'
+                  : 'bg-white/10 text-cyan-300 hover:bg-white/20 hover:text-white border border-cyan-500/30'
+              }`}
+              title="Toggle between 3D Open World & Scrolly Story"
+            >
+              <Compass className="h-3.5 w-3.5 text-cyan-400 animate-spin" />
+              <span>{currentView === 'world' ? 'STORY VIEW' : '3D OPEN WORLD'}</span>
+            </button>
+          )}
+
+          {/* Direct Link to GitHub Universe */}
+          <Link
+            href="/github-universe"
+            className="hidden sm:inline-flex items-center gap-1 rounded-full border border-indigo-500/40 bg-indigo-950/60 px-3 py-1 text-[11px] font-mono text-indigo-300 hover:text-white hover:bg-indigo-900 transition-all"
+            title="Open Interactive GitHub Universe"
+          >
+            <GitBranch className="h-3 w-3 text-indigo-400" />
+            <span>Code Nexus</span>
+          </Link>
+
           <ExperienceSoundButton />
 
           <a

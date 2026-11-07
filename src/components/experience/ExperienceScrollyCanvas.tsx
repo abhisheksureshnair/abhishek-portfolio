@@ -114,14 +114,37 @@ export const ExperienceScrollyCanvas: React.FC<ScrollyCanvasProps> = ({
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    // Deep void canvas fill
-    ctx.fillStyle = '#050505';
-    ctx.fillRect(0, 0, w, h);
-
     // Smooth mouse interpolation (lerp)
     const m = mousePosRef.current;
     m.x += (m.targetX - m.x) * 0.05;
     m.y += (m.targetY - m.y) * 0.05;
+
+    // 1. Multi-plane Deep Background Grid & Atmospheric Nebulae
+    ctx.save();
+    const bgParallaxX = m.x * 6;
+    const bgParallaxY = m.y * 4;
+
+    // Stage-responsive ambient aura colors
+    let auraColor = 'rgba(245, 158, 11, 0.12)'; // Amber default
+    if (progress > 0.52 && progress <= 0.82) {
+      auraColor = 'rgba(34, 211, 238, 0.14)'; // Cyan for Full Stack
+    } else if (progress > 0.82) {
+      auraColor = 'rgba(168, 85, 247, 0.16)'; // Violet for Climax
+    }
+
+    const bgGrad = ctx.createRadialGradient(
+      w / 2 + bgParallaxX,
+      h / 2 + bgParallaxY,
+      100,
+      w / 2,
+      h / 2,
+      Math.max(w, h) * 0.7
+    );
+    bgGrad.addColorStop(0, auraColor);
+    bgGrad.addColorStop(1, '#050505');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
 
     const imgs = imagesRef.current;
     const img1 = imgs[0];

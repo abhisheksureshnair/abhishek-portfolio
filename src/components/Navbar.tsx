@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
-import { FileText, Menu, X, Command, Compass, ArrowUpRight } from 'lucide-react';
+import { FileText, Menu, X, Command, Compass, ArrowUpRight, GitBranch } from 'lucide-react';
 import Link from 'next/link';
 
 interface NavbarProps {
@@ -92,16 +92,28 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenResume, onOpenCommandK }) 
           </nav>
 
           {/* Action Group */}
-          <div className="hidden sm:flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2.5">
             {/* Experience Mode Button */}
             <Link
-              href="/experience"
+              href="/experience?view=world"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 hover:text-white hover:bg-indigo-600/30 text-xs font-mono font-bold transition-all shadow-sm"
               title="Enter 3D Open-World Experience"
               data-cursor="pointer"
             >
               <Compass className="w-3.5 h-3.5 text-cyan-400" />
               <span>3D WORLD</span>
+            </Link>
+
+            {/* GitHub Universe Nexus Button */}
+            <Link
+              href="/github-universe"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 hover:text-white hover:bg-cyan-600/30 text-xs font-mono font-bold transition-all shadow-sm"
+              title="Enter Animated GitHub Universe"
+              data-cursor="pointer"
+            >
+              <GitBranch className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden xl:inline">GITHUB UNIVERSE</span>
+              <span className="xl:hidden">NEXUS</span>
             </Link>
 
             {/* Recruiter Quick Search Ctrl+K */}
@@ -157,14 +169,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenResume, onOpenCommandK }) 
             exit={{ opacity: 0, y: -20 }}
             className="fixed inset-x-0 top-[65px] z-30 bg-[#030508]/95 backdrop-blur-2xl border-b border-zinc-800 p-6 lg:hidden shadow-2xl"
           >
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               <Link
-                href="/experience"
+                href="/experience?view=world"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center justify-between px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-mono text-xs font-bold shadow-lg shadow-indigo-600/30"
               >
-                <span>ENTER 3D EXPERIENCE MODE</span>
+                <span>ENTER 3D DEVELOPER UNIVERSE</span>
                 <Compass className="w-4 h-4" />
+              </Link>
+
+              <Link
+                href="/github-universe"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-white font-mono text-xs font-bold shadow-lg shadow-cyan-600/30"
+              >
+                <span>GITHUB CODE NEXUS BUILDER</span>
+                <GitBranch className="w-4 h-4" />
               </Link>
               
               <nav className="grid grid-cols-2 gap-2 py-2">
