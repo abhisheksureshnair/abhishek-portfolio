@@ -29,3 +29,4 @@ export interface GitHubProfileStats {
   categories: { name: string; count: number }[];
   verifiedShowcaseRepos: GitHubRepo[];
 }
+

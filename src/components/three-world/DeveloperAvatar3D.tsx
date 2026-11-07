@@ -259,3 +259,4 @@ export const DeveloperAvatar3D: React.FC<DeveloperAvatar3DProps> = ({
     </group>
   );
 };
+

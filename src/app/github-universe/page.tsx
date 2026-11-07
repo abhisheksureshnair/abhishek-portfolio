@@ -18,3 +18,4 @@ export default async function GithubUniversePage() {
   const profileData = await getGitHubProfileData();
   return <GithubUniverseView initialData={profileData} />;
 }
+

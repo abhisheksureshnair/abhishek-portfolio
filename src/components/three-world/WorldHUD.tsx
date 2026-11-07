@@ -344,3 +344,4 @@ export const WorldHUD: React.FC<WorldHUDProps> = ({
     </div>
   );
 };
+

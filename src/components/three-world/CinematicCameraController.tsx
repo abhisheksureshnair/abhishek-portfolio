@@ -211,3 +211,4 @@ export const CinematicCameraController: React.FC<CinematicCameraControllerProps>
 
   return null;
 };
+

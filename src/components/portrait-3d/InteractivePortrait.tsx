@@ -268,3 +268,4 @@ export const InteractivePortrait: React.FC<InteractivePortraitProps> = ({
     </div>
   );
 };
+
