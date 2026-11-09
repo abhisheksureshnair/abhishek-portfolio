@@ -286,7 +286,6 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
             <boxGeometry args={[0.06, 0.22, 0.02]} />
             <meshStandardMaterial color="#00f0ff" emissive="#00f0ff" emissiveIntensity={2.5} />
           </mesh>
-          <pointLight color="#00f0ff" intensity={0.8} distance={2.5} />
         </group>
       ))}
 

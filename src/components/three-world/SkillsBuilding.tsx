@@ -156,9 +156,6 @@ export const SkillsBuilding: React.FC<SkillsBuildingProps> = ({
     const beaconCycle = (Math.sin(time * 5.0) + 1) * 0.5; // 0 to 1
     const sharpFlash = Math.pow(beaconCycle, 4);
 
-    if (beaconLightRef.current) {
-      beaconLightRef.current.intensity = 0.5 + sharpFlash * 2.5;
-    }
     if (beaconMeshRef.current && beaconMeshRef.current.material) {
       const mat = beaconMeshRef.current.material as THREE.MeshStandardMaterial;
       mat.emissiveIntensity = 1.0 + sharpFlash * 4.0;
@@ -240,7 +237,6 @@ export const SkillsBuilding: React.FC<SkillsBuildingProps> = ({
           <cylinderGeometry args={[0.4, 0.3, 0.5, 8]} />
           <meshStandardMaterial color="#059669" roughness={0.7} />
         </mesh>
-        <pointLight position={[0, 0.6, 0]} color="#10b981" intensity={0.4} distance={2.5} />
       </group>
 
       <group position={[2.6, 0.25, -2.2]}>
@@ -252,7 +248,6 @@ export const SkillsBuilding: React.FC<SkillsBuildingProps> = ({
           <cylinderGeometry args={[0.4, 0.3, 0.5, 8]} />
           <meshStandardMaterial color="#059669" roughness={0.7} />
         </mesh>
-        <pointLight position={[0, 0.6, 0]} color="#10b981" intensity={0.4} distance={2.5} />
       </group>
 
       {/* ======================================================== */}
@@ -472,8 +467,6 @@ export const SkillsBuilding: React.FC<SkillsBuildingProps> = ({
             <planeGeometry args={[0.82, 3.28]} />
             <meshBasicMaterial map={verticalSignTexture} transparent />
           </mesh>
-          {/* Cyan Glow Accent light */}
-          <pointLight position={[0, 0, 0.35]} color="#00f0ff" intensity={1.1} distance={3.8} />
         </group>
 
         {/* Tier 2 Cornice / Terrace Band */}
@@ -591,14 +584,6 @@ export const SkillsBuilding: React.FC<SkillsBuildingProps> = ({
             roughness={0.1}
           />
         </mesh>
-        <pointLight
-          ref={beaconLightRef}
-          position={[0, 3.15, 0]}
-          color="#ff2255"
-          intensity={1.2}
-          distance={8.0}
-          decay={2}
-        />
 
         {/* Rooftop Satellite Dish Receiver */}
         <group position={[0.75, 0.15, 0.55]} rotation={[0.4, 0.6, -0.2]}>
@@ -684,7 +669,6 @@ export const SkillsBuilding: React.FC<SkillsBuildingProps> = ({
               emissiveIntensity={1.8}
             />
           </mesh>
-          <pointLight color="#38bdf8" intensity={1.5} distance={5.0} />
         </group>
       )}
     </group>

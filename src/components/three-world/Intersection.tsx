@@ -25,6 +25,14 @@ export interface IntersectionProps {
  * - Stylized zebra crossings at selected entry points
  * - Exact layering preventing z-fighting (asphalt y = 0.62, zebra markings y = 0.626)
  */
+const _nsStripeGeo = new THREE.PlaneGeometry(0.24, 1.3);
+const _ewStripeGeo = new THREE.PlaneGeometry(1.3, 0.24);
+const _stripeMat = new THREE.MeshStandardMaterial({
+  color: '#ffffff',
+  roughness: 0.35,
+  metalness: 0.05,
+});
+
 export const Intersection: React.FC<IntersectionProps> = ({
   position,
   sizeX,
@@ -67,11 +75,12 @@ export const Intersection: React.FC<IntersectionProps> = ({
   const halfZ = sizeZ / 2;
   const crossingStripeLength = 1.3;
 
+  const boxGeo = useMemo(() => new THREE.BoxGeometry(sizeX, 0.04, sizeZ), [sizeX, sizeZ]);
+
   return (
     <group position={position}>
       {/* 1. Main Junction Asphalt Box */}
-      <mesh position={[0, 0.62, 0]} receiveShadow={receiveShadow}>
-        <boxGeometry args={[sizeX, 0.04, sizeZ]} />
+      <mesh position={[0, 0.62, 0]} receiveShadow={receiveShadow} geometry={boxGeo}>
         <meshStandardMaterial
           map={asphaltTex}
           color="#222730"
@@ -84,10 +93,13 @@ export const Intersection: React.FC<IntersectionProps> = ({
       {crossings.north && (
         <group position={[0, 0.626, -halfZ + crossingStripeLength / 2 + 0.1]}>
           {nsStripes.map((xPos, idx) => (
-            <mesh key={idx} rotation={[-Math.PI / 2, 0, 0]} position={[xPos, 0, 0]}>
-              <planeGeometry args={[stripeWidth, crossingStripeLength]} />
-              <meshStandardMaterial color="#ffffff" roughness={0.35} metalness={0.05} />
-            </mesh>
+            <mesh
+              key={idx}
+              rotation={[-Math.PI / 2, 0, 0]}
+              position={[xPos, 0, 0]}
+              geometry={_nsStripeGeo}
+              material={_stripeMat}
+            />
           ))}
         </group>
       )}
@@ -96,10 +108,13 @@ export const Intersection: React.FC<IntersectionProps> = ({
       {crossings.south && (
         <group position={[0, 0.626, halfZ - crossingStripeLength / 2 - 0.1]}>
           {nsStripes.map((xPos, idx) => (
-            <mesh key={idx} rotation={[-Math.PI / 2, 0, 0]} position={[xPos, 0, 0]}>
-              <planeGeometry args={[stripeWidth, crossingStripeLength]} />
-              <meshStandardMaterial color="#ffffff" roughness={0.35} metalness={0.05} />
-            </mesh>
+            <mesh
+              key={idx}
+              rotation={[-Math.PI / 2, 0, 0]}
+              position={[xPos, 0, 0]}
+              geometry={_nsStripeGeo}
+              material={_stripeMat}
+            />
           ))}
         </group>
       )}
@@ -108,10 +123,13 @@ export const Intersection: React.FC<IntersectionProps> = ({
       {crossings.west && (
         <group position={[-halfX + crossingStripeLength / 2 + 0.1, 0.626, 0]}>
           {ewStripes.map((zPos, idx) => (
-            <mesh key={idx} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, zPos]}>
-              <planeGeometry args={[crossingStripeLength, stripeWidth]} />
-              <meshStandardMaterial color="#ffffff" roughness={0.35} metalness={0.05} />
-            </mesh>
+            <mesh
+              key={idx}
+              rotation={[-Math.PI / 2, 0, 0]}
+              position={[0, 0, zPos]}
+              geometry={_ewStripeGeo}
+              material={_stripeMat}
+            />
           ))}
         </group>
       )}
@@ -120,10 +138,13 @@ export const Intersection: React.FC<IntersectionProps> = ({
       {crossings.east && (
         <group position={[halfX - crossingStripeLength / 2 - 0.1, 0.626, 0]}>
           {ewStripes.map((zPos, idx) => (
-            <mesh key={idx} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, zPos]}>
-              <planeGeometry args={[crossingStripeLength, stripeWidth]} />
-              <meshStandardMaterial color="#ffffff" roughness={0.35} metalness={0.05} />
-            </mesh>
+            <mesh
+              key={idx}
+              rotation={[-Math.PI / 2, 0, 0]}
+              position={[0, 0, zPos]}
+              geometry={_ewStripeGeo}
+              material={_stripeMat}
+            />
           ))}
         </group>
       )}

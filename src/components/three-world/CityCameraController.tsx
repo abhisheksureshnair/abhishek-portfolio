@@ -28,6 +28,8 @@ interface CityCameraControllerProps {
 const _targetCamPos = new THREE.Vector3();
 const _targetLookAt = new THREE.Vector3();
 const _lerpCamPos = new THREE.Vector3();
+const _scratchVec1 = new THREE.Vector3();
+const _scratchVec2 = new THREE.Vector3();
 const _defaultCamPos = new THREE.Vector3(18, 16, 22);
 const _defaultLookAt = new THREE.Vector3(0, 0, 0);
 
@@ -138,13 +140,14 @@ export const CityCameraController: React.FC<CityCameraControllerProps> = ({
         const pz = playerPosRef?.current?.z ?? 14;
 
         camera.position.set(camX, camY, camZ);
-        _targetLookAt.lerpVectors(
-          new THREE.Vector3(0, 2.5, 0),
-          new THREE.Vector3(px, py + 1.0, pz),
-          easeT
-        );
+        _scratchVec1.set(0, 2.5, 0);
+        _scratchVec2.set(px, py + 1.0, pz);
+        _targetLookAt.lerpVectors(_scratchVec1, _scratchVec2, easeT);
         controls.target.copy(_targetLookAt);
+        const prevDamping = controls.enableDamping;
+        controls.enableDamping = false;
         controls.update();
+        controls.enableDamping = prevDamping;
         return;
       }
     }
@@ -248,7 +251,10 @@ export const CityCameraController: React.FC<CityCameraControllerProps> = ({
 
       camera.position.lerp(_lerpCamPos, factor);
       controls.target.lerp(_targetLookAt, factor);
+      const prevDamping = controls.enableDamping;
+      controls.enableDamping = false;
       controls.update();
+      controls.enableDamping = prevDamping;
 
       // Only finish transition if not continuously tracking moving player
       if (cameraMode !== 'follow' || activeSelection !== null) {

@@ -562,8 +562,6 @@ export const ExperienceBuilding: React.FC<ExperienceBuildingProps> = ({
               <planeGeometry args={[1.74, 0.54]} />
               <meshBasicMaterial map={experienceSignTex} transparent />
             </mesh>
-            {/* Illuminated Accent PointLight */}
-            <pointLight position={[0, 0.9, -0.4]} color="#38bdf8" intensity={1.2} distance={3.5} />
           </group>
         </group>
       </group>
@@ -676,7 +674,6 @@ export const ExperienceBuilding: React.FC<ExperienceBuildingProps> = ({
               emissiveIntensity={1.8}
             />
           </mesh>
-          <pointLight color="#38bdf8" intensity={1.5} distance={5.0} />
         </group>
       )}
     </group>

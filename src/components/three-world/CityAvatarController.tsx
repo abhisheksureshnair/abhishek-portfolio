@@ -108,8 +108,20 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
   onSelectBuilding,
   isModalOpen,
 }) => {
-  const [nearbyBuilding, setNearbyBuilding] = useState<BuildingZone | null>(null);
   const clickTargetMeshRef = useRef<THREE.Mesh>(null);
+  const promptGroupRef = useRef<THREE.Group>(null);
+  const promptTextRef = useRef<any>(null);
+  const borderMatRef = useRef<THREE.LineBasicMaterial>(null);
+  const activeNearZoneRef = useRef<BuildingZone | null>(null);
+
+  // Statically allocated and memoized geometries/materials (Zero GC heap churn)
+  const pillGeo = useMemo(() => new THREE.PlaneGeometry(1.75, 0.38), []);
+  const edgesGeo = useMemo(() => new THREE.EdgesGeometry(pillGeo), [pillGeo]);
+  const pillMat = useMemo(
+    () => new THREE.MeshBasicMaterial({ color: '#090d16', transparent: true, opacity: 0.92 }),
+    []
+  );
+  const borderMat = useMemo(() => new THREE.LineBasicMaterial({ color: '#00f0ff', linewidth: 2 }), []);
 
   // Check collision against all obstacles & city perimeter
   const checkCollision = (x: number, z: number): boolean => {
@@ -143,6 +155,7 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
     // If modal is active, halt character motion
     if (isModalOpen) {
       isMovingRef.current = false;
+      if (promptGroupRef.current) promptGroupRef.current.visible = false;
       return;
     }
 
@@ -232,15 +245,26 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
 
     // Smoothly lerp height to avoid sharp vertical snapping
     playerPosRef.current.y += (targetY - playerPosRef.current.y) * Math.min(1, delta * 12);
+    const py = playerPosRef.current.y;
 
-    // Pulse click-to-walk ring animation
-    if (clickTargetMeshRef.current && targetWalkPosRef.current) {
-      const time = performance.now() * 0.001;
-      const scale = 0.35 + Math.sin(time * 6) * 0.05;
-      clickTargetMeshRef.current.scale.set(scale, scale, scale);
+    // Pulse click-to-walk ring animation without React state updates
+    if (clickTargetMeshRef.current) {
+      if (targetWalkPosRef.current) {
+        clickTargetMeshRef.current.visible = true;
+        clickTargetMeshRef.current.position.set(
+          targetWalkPosRef.current.x,
+          targetWalkPosRef.current.y + 0.02,
+          targetWalkPosRef.current.z
+        );
+        const time = performance.now() * 0.001;
+        const scale = 0.35 + Math.sin(time * 6) * 0.05;
+        clickTargetMeshRef.current.scale.set(scale, scale, scale);
+      } else {
+        clickTargetMeshRef.current.visible = false;
+      }
     }
 
-    // Check proximity to building entrances/zones (every frame for responsive prompt)
+    // Check proximity to building entrances/zones (every frame, zero-rerender)
     let foundNear: BuildingZone | null = null;
     let minEntranceDist = 4.8;
 
@@ -256,70 +280,73 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
       }
     }
 
-    if (foundNear?.id !== nearbyBuilding?.id) {
-      setNearbyBuilding(foundNear);
+    if (promptGroupRef.current) {
+      if (foundNear && !isModalOpen) {
+        promptGroupRef.current.visible = true;
+        promptGroupRef.current.position.set(px, py + 1.85, pz);
+
+        if (activeNearZoneRef.current?.id !== foundNear.id) {
+          activeNearZoneRef.current = foundNear;
+          if (promptTextRef.current) {
+            promptTextRef.current.text = `[E] ${foundNear.label}`;
+          }
+          if (borderMatRef.current) {
+            borderMatRef.current.color.set(foundNear.color);
+          }
+        }
+      } else {
+        promptGroupRef.current.visible = false;
+        activeNearZoneRef.current = null;
+      }
     }
   });
 
   return (
     <>
-      {/* Click-to-Walk Destination Target Pulse Ring */}
-      {targetWalkPosRef.current && (
-        <mesh
-          ref={clickTargetMeshRef}
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[
-            targetWalkPosRef.current.x,
-            targetWalkPosRef.current.y + 0.02,
-            targetWalkPosRef.current.z,
-          ]}
-        >
-          <ringGeometry args={[0.25, 0.35, 32]} />
-          <meshBasicMaterial color="#00f0ff" transparent opacity={0.75} side={THREE.DoubleSide} />
-        </mesh>
-      )}
+      {/* Click-to-Walk Destination Target Pulse Ring (Zero-rerender visibility toggle) */}
+      <mesh
+        ref={clickTargetMeshRef}
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0, 0]}
+        visible={false}
+      >
+        <ringGeometry args={[0.25, 0.35, 32]} />
+        <meshBasicMaterial color="#00f0ff" transparent opacity={0.75} side={THREE.DoubleSide} />
+      </mesh>
 
-      {/* Floating 3D Interaction Indicator Pill over Avatar when Near Building */}
-      {nearbyBuilding && !isModalOpen && (
-        <group
-          position={[
-            playerPosRef.current.x,
-            playerPosRef.current.y + 1.85,
-            playerPosRef.current.z,
-          ]}
-        >
-          <Billboard follow lockX={false} lockY={false} lockZ={false}>
-            {/* Clickable Pill Badge */}
-            <mesh
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectBuilding(nearbyBuilding.id);
-              }}
-              position={[0, 0, 0]}
-            >
-              <planeGeometry args={[1.75, 0.38]} />
-              <meshBasicMaterial color="#090d16" transparent opacity={0.92} />
-            </mesh>
+      {/* Floating 3D Interaction Indicator Pill over Avatar (Permanent node, zero-rerender visibility) */}
+      <group ref={promptGroupRef} position={[0, 0, 0]} visible={false}>
+        <Billboard follow lockX={false} lockY={false} lockZ={false}>
+          {/* Clickable Pill Badge */}
+          <mesh
+            onClick={(e) => {
+              e.stopPropagation();
+              if (activeNearZoneRef.current) {
+                onSelectBuilding(activeNearZoneRef.current.id);
+              }
+            }}
+            geometry={pillGeo}
+            material={pillMat}
+          />
 
-            {/* Glowing Accent Border */}
-            <lineSegments position={[0, 0, 0.01]}>
-              <edgesGeometry args={[new THREE.PlaneGeometry(1.75, 0.38)]} />
-              <lineBasicMaterial color={nearbyBuilding.color} linewidth={2} />
-            </lineSegments>
+          {/* Glowing Accent Border */}
+          <lineSegments geometry={edgesGeo}>
+            <lineBasicMaterial ref={borderMatRef} color="#00f0ff" linewidth={2} />
+          </lineSegments>
 
-            {/* Prompt Text */}
-            <Text
-              position={[0, 0.01, 0.02]}
-              fontSize={0.115}
-              color="#ffffff"
-              anchorX="center"
-              anchorY="middle"
-            >
-              {`[E] ${nearbyBuilding.label}`}
-            </Text>
-          </Billboard>
-        </group>
-      )}
+          {/* Prompt Text */}
+          <Text
+            ref={promptTextRef}
+            position={[0, 0.01, 0.02]}
+            fontSize={0.115}
+            color="#ffffff"
+            anchorX="center"
+            anchorY="middle"
+          >
+            [E] ENTER
+          </Text>
+        </Billboard>
+      </group>
     </>
   );
 };

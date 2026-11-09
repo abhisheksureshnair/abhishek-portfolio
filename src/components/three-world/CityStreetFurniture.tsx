@@ -42,14 +42,37 @@ function createDirectionalSignTexture(direction: string, destination: string): T
   return texture;
 }
 
+// ========================================================
+// SHARED GEOMETRIES & MATERIALS (Zero GPU Heap Duplication)
+// ========================================================
+const _treeTrunkGeo = new THREE.CylinderGeometry(0.1, 0.16, 1.2, 6);
+const _treeTrunkMat = new THREE.MeshStandardMaterial({ color: '#643b1e', roughness: 0.8 });
+
+const _coneGeo1 = new THREE.ConeGeometry(0.8, 1.1, 7);
+const _coneGeo2 = new THREE.ConeGeometry(0.62, 0.95, 7);
+const _coneGeo3 = new THREE.ConeGeometry(0.42, 0.75, 7);
+
+const _leafMatDark = new THREE.MeshStandardMaterial({ color: '#16a34a', roughness: 0.6 });
+const _leafMatMid = new THREE.MeshStandardMaterial({ color: '#22c55e', roughness: 0.6 });
+const _leafMatLight = new THREE.MeshStandardMaterial({ color: '#4ade80', roughness: 0.5 });
+
+const _dodecGeo1 = new THREE.DodecahedronGeometry(0.75, 0);
+const _dodecGeo2 = new THREE.DodecahedronGeometry(0.5, 0);
+const _dodecMatDark = new THREE.MeshStandardMaterial({ color: '#15803d', roughness: 0.6 });
+const _dodecMatMid = new THREE.MeshStandardMaterial({ color: '#22c55e', roughness: 0.5 });
+
+const _bushGeo1 = new THREE.DodecahedronGeometry(0.35, 0);
+const _bushGeo2 = new THREE.DodecahedronGeometry(0.26, 0);
+
 /**
- * Low-Poly Stylized Tree
+ * Low-Poly Stylized Tree using Shared Geometries and Materials
  */
 interface TreeProps {
   position: [number, number, number];
   scale?: number;
   type?: 'conical' | 'spherical';
   rotation?: number;
+  onFoliageMount?: (el: THREE.Group | null, posX: number, posZ: number) => void;
 }
 
 const StylizedTree: React.FC<TreeProps> = ({
@@ -57,52 +80,30 @@ const StylizedTree: React.FC<TreeProps> = ({
   scale = 1.0,
   type = 'conical',
   rotation = 0,
+  onFoliageMount,
 }) => {
-  const foliageRef = useRef<THREE.Group>(null);
-
-  // Subtle ambient wind sway
-  useFrame(() => {
-    if (foliageRef.current) {
-      const t = performance.now() * 0.001;
-      foliageRef.current.rotation.z = Math.sin(t * 1.6 + position[0] * 0.4 + position[2] * 0.3) * 0.032;
-      foliageRef.current.rotation.x = Math.cos(t * 1.3 + position[0] * 0.3) * 0.022;
-    }
-  });
-
   return (
     <group position={position} scale={[scale, scale, scale]} rotation={[0, rotation, 0]}>
       {/* Trunk */}
-      <mesh position={[0, 0.6, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.1, 0.16, 1.2, 6]} />
-        <meshStandardMaterial color="#643b1e" roughness={0.8} />
-      </mesh>
+      <mesh position={[0, 0.6, 0]} geometry={_treeTrunkGeo} material={_treeTrunkMat} />
 
-      {/* Foliage with ambient sway */}
+      {/* Foliage with ambient sway registered with parent */}
       {type === 'conical' ? (
-        <group ref={foliageRef} position={[0, 1.2, 0]}>
-          <mesh position={[0, 0, 0]} castShadow>
-            <coneGeometry args={[0.8, 1.1, 7]} />
-            <meshStandardMaterial color="#16a34a" roughness={0.6} />
-          </mesh>
-          <mesh position={[0, 0.6, 0]} castShadow>
-            <coneGeometry args={[0.62, 0.95, 7]} />
-            <meshStandardMaterial color="#22c55e" roughness={0.6} />
-          </mesh>
-          <mesh position={[0, 1.15, 0]} castShadow>
-            <coneGeometry args={[0.42, 0.75, 7]} />
-            <meshStandardMaterial color="#4ade80" roughness={0.5} />
-          </mesh>
+        <group
+          ref={(el) => onFoliageMount?.(el, position[0], position[2])}
+          position={[0, 1.2, 0]}
+        >
+          <mesh position={[0, 0, 0]} castShadow geometry={_coneGeo1} material={_leafMatDark} />
+          <mesh position={[0, 0.6, 0]} castShadow geometry={_coneGeo2} material={_leafMatMid} />
+          <mesh position={[0, 1.15, 0]} castShadow geometry={_coneGeo3} material={_leafMatLight} />
         </group>
       ) : (
-        <group ref={foliageRef} position={[0, 1.5, 0]}>
-          <mesh castShadow>
-            <dodecahedronGeometry args={[0.75, 0]} />
-            <meshStandardMaterial color="#15803d" roughness={0.6} />
-          </mesh>
-          <mesh position={[0.15, 0.25, -0.1]} castShadow>
-            <dodecahedronGeometry args={[0.5, 0]} />
-            <meshStandardMaterial color="#22c55e" roughness={0.5} />
-          </mesh>
+        <group
+          ref={(el) => onFoliageMount?.(el, position[0], position[2])}
+          position={[0, 1.5, 0]}
+        >
+          <mesh castShadow geometry={_dodecGeo1} material={_dodecMatDark} />
+          <mesh position={[0.15, 0.25, -0.1]} castShadow geometry={_dodecGeo2} material={_dodecMatMid} />
         </group>
       )}
     </group>
@@ -117,14 +118,8 @@ const StylizedBush: React.FC<{ position: [number, number, number]; scale?: numbe
   scale = 1.0,
 }) => (
   <group position={position} scale={[scale, scale, scale]}>
-    <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
-      <dodecahedronGeometry args={[0.35, 0]} />
-      <meshStandardMaterial color="#16a34a" roughness={0.7} />
-    </mesh>
-    <mesh position={[0.2, 0.2, 0.1]} castShadow>
-      <dodecahedronGeometry args={[0.26, 0]} />
-      <meshStandardMaterial color="#22c55e" roughness={0.6} />
-    </mesh>
+    <mesh position={[0, 0.25, 0]} geometry={_bushGeo1} material={_leafMatDark} />
+    <mesh position={[0.2, 0.2, 0.1]} geometry={_bushGeo2} material={_leafMatMid} />
   </group>
 );
 
@@ -179,12 +174,12 @@ const ModernStreetlight: React.FC<StreetlightProps> = ({
       />
     </mesh>
 
-    {/* Optional Warm Accent Downlight (Capped to preserve mobile performance) */}
-    {hasLight && (
+    {/* Optional Warm Accent Downlight (Only active at night to keep daytime fragment shaders lean) */}
+    {hasLight && isNight && (
       <pointLight
         position={[0.85, 2.8, 0]}
         color="#fef08a"
-        intensity={isNight ? 2.2 : 1.0}
+        intensity={2.2}
         distance={6.5}
         decay={2}
       />
@@ -457,6 +452,25 @@ export const CityStreetFurniture: React.FC<CityStreetFurnitureProps> = ({
   timeOfDay = 'day',
 }) => {
   const isNight = timeOfDay === 'night';
+  const foliageListRef = useRef<{ el: THREE.Group; posX: number; posZ: number }[]>([]);
+
+  const handleFoliageMount = (el: THREE.Group | null, posX: number, posZ: number) => {
+    if (!el) return;
+    foliageListRef.current.push({ el, posX, posZ });
+  };
+
+  // Single unified useFrame for all 16 trees (replaces 16 separate frame hooks)
+  useFrame(() => {
+    const t = performance.now() * 0.001;
+    const list = foliageListRef.current;
+    for (let i = 0; i < list.length; i++) {
+      const item = list[i];
+      if (item.el) {
+        item.el.rotation.z = Math.sin(t * 1.6 + item.posX * 0.4 + item.posZ * 0.3) * 0.032;
+        item.el.rotation.x = Math.cos(t * 1.3 + item.posX * 0.3) * 0.022;
+      }
+    }
+  });
 
   return (
     <group name="CityStreetFurniture">
@@ -464,28 +478,28 @@ export const CityStreetFurniture: React.FC<CityStreetFurnitureProps> = ({
       {/* 1. STYLIZED TREES ON GRASS VERGES                        */}
       {/* ======================================================== */}
       {/* Along Northwest Block (Hero HQ Verge) */}
-      <StylizedTree position={[-3.85, 0.705, -5.5]} scale={1.05} type="conical" rotation={0.4} />
-      <StylizedTree position={[-3.85, 0.705, -9.2]} scale={0.9} type="spherical" rotation={1.2} />
-      <StylizedTree position={[-5.8, 0.705, -3.85]} scale={1.1} type="conical" rotation={2.1} />
-      <StylizedTree position={[-9.8, 0.705, -3.85]} scale={0.95} type="spherical" rotation={0.8} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[-3.85, 0.705, -5.5]} scale={1.05} type="conical" rotation={0.4} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[-3.85, 0.705, -9.2]} scale={0.9} type="spherical" rotation={1.2} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[-5.8, 0.705, -3.85]} scale={1.1} type="conical" rotation={2.1} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[-9.8, 0.705, -3.85]} scale={0.95} type="spherical" rotation={0.8} />
 
       {/* Along Northeast Block (About Me Studio Verge) */}
-      <StylizedTree position={[3.85, 0.705, -5.5]} scale={1.0} type="spherical" rotation={1.5} />
-      <StylizedTree position={[3.85, 0.705, -9.2]} scale={1.15} type="conical" rotation={0.3} />
-      <StylizedTree position={[5.8, 0.705, -3.85]} scale={0.95} type="spherical" rotation={2.4} />
-      <StylizedTree position={[9.8, 0.705, -3.85]} scale={1.05} type="conical" rotation={1.1} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[3.85, 0.705, -5.5]} scale={1.0} type="spherical" rotation={1.5} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[3.85, 0.705, -9.2]} scale={1.15} type="conical" rotation={0.3} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[5.8, 0.705, -3.85]} scale={0.95} type="spherical" rotation={2.4} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[9.8, 0.705, -3.85]} scale={1.05} type="conical" rotation={1.1} />
 
       {/* Along Southwest Block (Projects Center Verge) */}
-      <StylizedTree position={[-3.85, 0.705, 5.5]} scale={1.1} type="conical" rotation={0.7} />
-      <StylizedTree position={[-3.85, 0.705, 9.2]} scale={0.95} type="spherical" rotation={1.9} />
-      <StylizedTree position={[-5.8, 0.705, 3.85]} scale={1.0} type="conical" rotation={2.8} />
-      <StylizedTree position={[-9.8, 0.705, 3.85]} scale={1.1} type="spherical" rotation={0.2} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[-3.85, 0.705, 5.5]} scale={1.1} type="conical" rotation={0.7} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[-3.85, 0.705, 9.2]} scale={0.95} type="spherical" rotation={1.9} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[-5.8, 0.705, 3.85]} scale={1.0} type="conical" rotation={2.8} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[-9.8, 0.705, 3.85]} scale={1.1} type="spherical" rotation={0.2} />
 
       {/* Along Southeast Block (Skills Tower Verge) */}
-      <StylizedTree position={[3.85, 0.705, 5.5]} scale={0.95} type="spherical" rotation={1.3} />
-      <StylizedTree position={[3.85, 0.705, 9.2]} scale={1.1} type="conical" rotation={0.6} />
-      <StylizedTree position={[5.8, 0.705, 3.85]} scale={1.05} type="conical" rotation={2.0} />
-      <StylizedTree position={[9.8, 0.705, 3.85]} scale={0.9} type="spherical" rotation={1.7} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[3.85, 0.705, 5.5]} scale={0.95} type="spherical" rotation={1.3} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[3.85, 0.705, 9.2]} scale={1.1} type="conical" rotation={0.6} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[5.8, 0.705, 3.85]} scale={1.05} type="conical" rotation={2.0} />
+      <StylizedTree onFoliageMount={handleFoliageMount} position={[9.8, 0.705, 3.85]} scale={0.9} type="spherical" rotation={1.7} />
 
       {/* Stylized Bushes around the Verge Corners */}
       <StylizedBush position={[-3.85, 0.705, -7.3]} scale={1.1} />

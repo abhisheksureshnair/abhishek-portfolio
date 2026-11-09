@@ -22,6 +22,19 @@ export interface RoadSegmentProps {
  * - Solid white outer edge lines
  * - Exact layering preventing z-fighting (road y = 0.62, markings y = 0.625)
  */
+const _dashGeo = new THREE.PlaneGeometry(0.14, 1.2);
+const _markingMat = new THREE.MeshStandardMaterial({
+  color: '#ffffff',
+  roughness: 0.35,
+  metalness: 0.05,
+});
+const _edgeLineMat = new THREE.MeshStandardMaterial({
+  color: '#f8fafc',
+  roughness: 0.4,
+  metalness: 0.05,
+});
+const _shoulderMat = new THREE.MeshStandardMaterial({ color: '#1a1e24', roughness: 0.9 });
+
 export const RoadSegment: React.FC<RoadSegmentProps> = ({
   position,
   width,
@@ -55,11 +68,14 @@ export const RoadSegment: React.FC<RoadSegmentProps> = ({
   const halfWidth = width / 2;
   const edgeLineOffset = halfWidth - 0.18;
 
+  const roadBedGeo = useMemo(() => new THREE.BoxGeometry(width, 0.04, length), [width, length]);
+  const shoulderGeo = useMemo(() => new THREE.BoxGeometry(0.06, 0.03, length), [length]);
+  const edgeLineGeo = useMemo(() => new THREE.PlaneGeometry(0.1, length), [length]);
+
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
       {/* 1. Main Asphalt Bed (top at y = 0.62) */}
-      <mesh position={[0, 0.62, 0]} receiveShadow={receiveShadow}>
-        <boxGeometry args={[width, 0.04, length]} />
+      <mesh position={[0, 0.62, 0]} receiveShadow={receiveShadow} geometry={roadBedGeo}>
         <meshStandardMaterial
           map={asphaltTex}
           color="#222730"
@@ -68,12 +84,14 @@ export const RoadSegment: React.FC<RoadSegmentProps> = ({
         />
       </mesh>
 
-      {/* 2. Slightly Rounded / Chamfered Road Shoulder Borders */}
+      {/* 2. Chamfered Road Shoulder Borders */}
       {[-halfWidth, halfWidth].map((xSide, idx) => (
-        <mesh key={idx} position={[xSide, 0.615, 0]}>
-          <boxGeometry args={[0.06, 0.03, length]} />
-          <meshStandardMaterial color="#1a1e24" roughness={0.9} />
-        </mesh>
+        <mesh
+          key={idx}
+          position={[xSide, 0.615, 0]}
+          geometry={shoulderGeo}
+          material={_shoulderMat}
+        />
       ))}
 
       {/* 3. Solid White Edge Lines (y = 0.625) */}
@@ -83,14 +101,9 @@ export const RoadSegment: React.FC<RoadSegmentProps> = ({
             key={idx}
             rotation={[-Math.PI / 2, 0, 0]}
             position={[xOffset, 0.625, 0]}
-          >
-            <planeGeometry args={[0.1, length]} />
-            <meshStandardMaterial
-              color="#f8fafc"
-              roughness={0.4}
-              metalness={0.05}
-            />
-          </mesh>
+            geometry={edgeLineGeo}
+            material={_edgeLineMat}
+          />
         ))}
 
       {/* 4. Dashed White Center Lane Line (y = 0.625) */}
@@ -100,14 +113,9 @@ export const RoadSegment: React.FC<RoadSegmentProps> = ({
             key={idx}
             rotation={[-Math.PI / 2, 0, 0]}
             position={[0, 0.625, zOffset]}
-          >
-            <planeGeometry args={[0.14, dashLength]} />
-            <meshStandardMaterial
-              color="#ffffff"
-              roughness={0.35}
-              metalness={0.05}
-            />
-          </mesh>
+            geometry={_dashGeo}
+            material={_markingMat}
+          />
         ))}
     </group>
   );

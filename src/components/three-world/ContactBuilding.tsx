@@ -244,8 +244,6 @@ export const ContactBuilding: React.FC<ContactBuildingProps> = ({
             <sphereGeometry args={[0.4, 8, 8]} />
             <meshStandardMaterial color="#10b981" roughness={0.5} />
           </mesh>
-          {/* Pink Accent Glow on Palm Trunk */}
-          <pointLight position={[0, 1.4, 0]} color="#ec4899" intensity={0.6} distance={2.5} />
         </group>
         {/* Standalone Neon Street Lamp */}
         <group position={[0.8, 0, -1.0]}>
@@ -257,7 +255,6 @@ export const ContactBuilding: React.FC<ContactBuildingProps> = ({
             <sphereGeometry args={[0.12, 12, 12]} />
             <meshStandardMaterial color="#ff007f" emissive="#ff007f" emissiveIntensity={2.5} />
           </mesh>
-          <pointLight position={[0, 1.9, 0]} color="#ff007f" intensity={1.2} distance={3.5} />
         </group>
       </group>
 
@@ -409,9 +406,6 @@ export const ContactBuilding: React.FC<ContactBuildingProps> = ({
             <planeGeometry args={[2.72, 0.92]} />
             <meshBasicMaterial map={contactSignTex} transparent />
           </mesh>
-          {/* Magenta & Cyan Accent PointLights */}
-          <pointLight position={[0, 0, 0.4]} color="#ec4899" intensity={1.6} distance={4.0} />
-          <pointLight position={[0, -0.4, 0.4]} color="#00f0ff" intensity={1.2} distance={3.5} />
         </group>
 
         {/* Vertical Glowing Neon Strip on Building Corner */}
@@ -530,9 +524,6 @@ export const ContactBuilding: React.FC<ContactBuildingProps> = ({
               </mesh>
             </group>
           </group>
-
-          {/* Cyan Communication Dish Light */}
-          <pointLight position={[0, 1.2, 0]} color="#00f0ff" intensity={1.1} distance={4.5} />
         </group>
 
         {/* Rooftop Telecom Transceiver Mast & Flashing Beacon */}
@@ -555,14 +546,6 @@ export const ContactBuilding: React.FC<ContactBuildingProps> = ({
             <sphereGeometry args={[0.08, 12, 12]} />
             <meshStandardMaterial color="#ff0055" emissive="#ff0055" emissiveIntensity={3.0} />
           </mesh>
-          <pointLight
-            ref={beaconLightRef}
-            position={[0, 2.3, 0]}
-            color="#ff0055"
-            intensity={1.2}
-            distance={7.0}
-            decay={2}
-          />
         </group>
 
         {/* Small Rooftop Cyber-Shrubbery */}
@@ -601,7 +584,6 @@ export const ContactBuilding: React.FC<ContactBuildingProps> = ({
               emissiveIntensity={1.8}
             />
           </mesh>
-          <pointLight color="#f43f5e" intensity={1.5} distance={5.0} />
         </group>
       )}
     </group>
