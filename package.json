@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },
@@ -14,6 +14,7 @@
     "@react-three/rapier": "^2.2.0",
     "@types/canvas-confetti": "^1.9.0",
     "@types/three": "^0.185.4",
+    "@vercel/speed-insights": "^2.1.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "framer-motion": "^13.2.0",

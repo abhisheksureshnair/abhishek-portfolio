@@ -6,6 +6,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { Sparkles, Smartphone, Code2, Cpu, MapPin, Briefcase } from 'lucide-react';
 import { PERSONAL_INFO } from '../data/portfolioData';
 import { InteractivePortrait } from './portrait-3d/InteractivePortrait';
+import { SectionBackdrop } from './background/SectionBackdrop';
 
 // Word-by-word progressive opacity reveal component
 const ScrollWordReveal: React.FC<{ text: string }> = ({ text }) => {
@@ -47,9 +48,8 @@ export const AboutSection: React.FC = () => {
   return (
     <section id="about" className="py-32 bg-[#060911] relative border-t border-white/5 overflow-hidden">
       
-      {/* Background Radiance */}
-      <div className="absolute top-1/2 left-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute inset-0 bg-cinematic-grid opacity-20 pointer-events-none" />
+      {/* Section-Specific Background System */}
+      <SectionBackdrop variant="about" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         

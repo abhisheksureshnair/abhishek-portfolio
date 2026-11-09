@@ -3,30 +3,28 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowDown, FileText, Sparkles, Compass, GitBranch, Mail } from 'lucide-react';
+import { ArrowDown, FileText, Sparkles, Compass, GitBranch, Mail, RotateCcw } from 'lucide-react';
 import { PERSONAL_INFO } from '../data/portfolioData';
 import { HeroCanvas } from './HeroCanvas';
 import { GithubIcon, LinkedinIcon } from './Icons';
 import { InteractivePortrait } from './portrait-3d/InteractivePortrait';
+import { SectionBackdrop } from './background/SectionBackdrop';
 
 interface HeroSectionProps {
   onOpenResume?: () => void;
+  onReplayIntro?: () => void;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenResume }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenResume, onReplayIntro }) => {
   const letters = 'ABHISHEK S NAIR'.split('');
 
   return (
     <section className="relative min-h-screen flex flex-col justify-between pt-28 sm:pt-36 pb-16 overflow-hidden bg-[#030508]">
-      {/* 3D Celestial Neural Canvas */}
+      {/* 3D Celestial Neural Canvas (Paused when offscreen, 0 shadowBlur) */}
       <HeroCanvas />
 
-      {/* Cinematic Lighting Radiance */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-gradient-to-b from-indigo-600/15 via-purple-600/10 to-transparent rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[140px] pointer-events-none" />
-
-      {/* Background Cinematic Grid Lines */}
-      <div className="absolute inset-0 bg-cinematic-grid opacity-30 pointer-events-none" />
+      {/* Distinct Section Backdrop */}
+      <SectionBackdrop variant="hero" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1 flex flex-col justify-center">
         
@@ -112,13 +110,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenResume }) => {
                 </h2>
               </div>
 
-              {/* Staged Tech Pill Badge: Web • Mobile • AI Applications */}
+              {/* Staged Tech Pill Badge */}
               <p className="font-mono text-sm sm:text-base text-cyan-300 font-semibold tracking-wide flex items-center gap-2">
-                <span>Web</span>
+                <span>Web Platforms</span>
                 <span className="text-zinc-600">•</span>
-                <span>Mobile</span>
+                <span>Mobile Apps</span>
                 <span className="text-zinc-600">•</span>
-                <span>AI Applications</span>
+                <span>AI / LLM Systems</span>
               </p>
             </motion.div>
 
@@ -132,7 +130,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenResume }) => {
               {PERSONAL_INFO.tagline}
             </motion.p>
 
-            {/* 5 Working CTAs: Explore, 3D World, GitHub Universe, Resume, Contact */}
+            {/* Working CTAs */}
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -157,7 +155,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenResume }) => {
                 title="Enter 3D Open-World Simulation"
               >
                 <Compass className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
-                <span>ENTER 3D WORLD</span>
+                <span>3D OPEN WORLD</span>
               </Link>
 
               {/* 3. GitHub Universe */}
@@ -171,7 +169,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenResume }) => {
                 <span>GITHUB UNIVERSE</span>
               </Link>
 
-              {/* 4. Download Resume Button */}
+              {/* 4. Replay Assembly Intro */}
+              {onReplayIntro && (
+                <button
+                  onClick={onReplayIntro}
+                  className="px-3.5 py-3.5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/10 hover:border-indigo-400 text-indigo-300 text-xs font-mono font-semibold flex items-center gap-1.5 transition-all shadow-md"
+                  title="Replay Cinematic Website Assembly Introduction"
+                  data-cursor="pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Intro</span>
+                </button>
+              )}
+
+              {/* 5. Download Resume Button */}
               {onOpenResume ? (
                 <button
                   onClick={onOpenResume}
@@ -179,7 +190,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenResume }) => {
                   data-cursor="pointer"
                 >
                   <FileText className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Resume (PDF)</span>
+                  <span>Resume</span>
                 </button>
               ) : (
                 <a
@@ -194,16 +205,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenResume }) => {
                   <span>Resume</span>
                 </a>
               )}
-
-              {/* 5. Contact CTA */}
-              <a
-                href="#contact"
-                className="px-4 py-3.5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/10 text-zinc-300 font-semibold text-xs flex items-center gap-1.5 transition-all shadow-md"
-                data-cursor="pointer"
-              >
-                <Mail className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Contact</span>
-              </a>
 
               {/* Social Icons Bar */}
               <div className="flex items-center gap-2">

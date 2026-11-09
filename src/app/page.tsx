@@ -21,6 +21,11 @@ export default function Home() {
   const [isFlowSyncOpen, setIsFlowSyncOpen] = useState(false);
   const [isResumeOpen, setIsResumeOpen] = useState(false);
   const [isCommandKOpen, setIsCommandKOpen] = useState(false);
+  const [replayIntroKey, setReplayIntroKey] = useState<number>(0);
+
+  const handleReplayIntro = () => {
+    setReplayIntroKey((prev) => prev + 1);
+  };
 
   useEffect(() => {
     // Keyboard shortcut for Cmd+K / Ctrl+K
@@ -38,8 +43,11 @@ export default function Home() {
     <SmoothScroll>
       <main className="min-h-screen bg-[#030508] text-[#f8fafc] relative selection:bg-indigo-500/30 selection:text-white">
         
-        {/* Cinematic Intro Loader */}
-        <CinematicLoader />
+        {/* Cinematic Website Assembly Intro */}
+        <CinematicLoader
+          key={`intro-${replayIntroKey}`}
+          forcePlay={replayIntroKey > 0}
+        />
 
         {/* Desktop Custom Cursor with Ambient Light */}
         <CustomCursor />
@@ -51,7 +59,10 @@ export default function Home() {
         />
 
         {/* 1. HERO SECTION */}
-        <HeroSection onOpenResume={() => setIsResumeOpen(true)} />
+        <HeroSection
+          onOpenResume={() => setIsResumeOpen(true)}
+          onReplayIntro={handleReplayIntro}
+        />
 
         {/* 2. ABOUT SECTION (Scroll-driven Progressive Reveal) */}
         <AboutSection />

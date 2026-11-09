@@ -38,6 +38,7 @@ export const GithubUniverseView: React.FC<GithubUniverseViewProps> = ({
   const [currentTypingText, setCurrentTypingText] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [activeRepoId, setActiveRepoId] = useState<number | null>(null);
+  const [avatarSrc, setAvatarSrc] = useState<string>(initialData.avatarUrl || '/avatar.webp');
 
   // Fetch fresh server data if available
   useEffect(() => {
@@ -46,6 +47,9 @@ export const GithubUniverseView: React.FC<GithubUniverseViewProps> = ({
       .then((fresh) => {
         if (fresh && fresh.username) {
           setData(fresh);
+          if (fresh.avatarUrl) {
+            setAvatarSrc(fresh.avatarUrl);
+          }
         }
       })
       .catch(() => {});
@@ -297,10 +301,12 @@ export const GithubUniverseView: React.FC<GithubUniverseViewProps> = ({
                 <div className="flex items-center gap-5">
                   <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-indigo-500/50 shadow-2xl shadow-indigo-500/30 flex-shrink-0 bg-zinc-900">
                     <Image
-                      src={data.avatarUrl}
+                      src={avatarSrc}
                       alt={data.name}
                       fill
                       quality={95}
+                      unoptimized
+                      onError={() => setAvatarSrc('/avatar.webp')}
                       className="object-cover"
                     />
                     <div className="absolute inset-0 ring-1 ring-inset ring-white/20 rounded-2xl pointer-events-none" />

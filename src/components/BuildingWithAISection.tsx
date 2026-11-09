@@ -16,6 +16,7 @@ import {
   Activity
 } from 'lucide-react';
 import { AI_SKILLS } from '../data/portfolioData';
+import { SectionBackdrop } from './background/SectionBackdrop';
 
 export const BuildingWithAISection: React.FC = () => {
   const [activeModelDemo, setActiveModelDemo] = useState<'flowsync' | 'echo'>('flowsync');
@@ -62,12 +63,10 @@ export const BuildingWithAISection: React.FC = () => {
   };
 
   return (
-    <section id="ai" className="py-32 bg-[#060911] relative border-t border-white/5 overflow-hidden">
+    <section id="ai" className="py-24 sm:py-32 bg-[#060911] relative border-t border-white/5 overflow-hidden">
       
-      {/* Background Neural Radiance */}
-      <div className="absolute top-1/3 left-1/3 w-[650px] h-[650px] bg-purple-600/10 rounded-full blur-[170px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute inset-0 bg-cinematic-grid opacity-20 pointer-events-none" />
+      {/* Section-Specific Background System */}
+      <SectionBackdrop variant="ai" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         

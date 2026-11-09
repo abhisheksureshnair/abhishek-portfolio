@@ -1,35 +1,61 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Lenis from 'lenis';
+import { usePerformanceQuality } from './PerformanceControl';
 
 export const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { effectiveTier, prefersReducedMotion } = usePerformanceQuality();
+  const lenisRef = useRef<Lenis | null>(null);
+
   useEffect(() => {
-    // Check for user's reduced-motion preference
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
+    // If reduced motion or low tier, keep native scroll for maximum responsiveness
+    if (prefersReducedMotion || effectiveTier === 'low') {
+      return;
+    }
 
     const lenis = new Lenis({
-      lerp: 0.09,
-      wheelMultiplier: 0.95,
-      touchMultiplier: 1.2,
+      lerp: 0.1,
+      wheelMultiplier: 1.0,
+      touchMultiplier: 1.1,
       infinite: false,
     });
+    lenisRef.current = lenis;
 
     let animationFrameId: number;
+    let isRunning = true;
 
     function raf(time: number) {
-      lenis.raf(time);
-      animationFrameId = requestAnimationFrame(raf);
+      if (isRunning) {
+        lenis.raf(time);
+        animationFrameId = requestAnimationFrame(raf);
+      }
     }
 
     animationFrameId = requestAnimationFrame(raf);
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isRunning = false;
+        cancelAnimationFrame(animationFrameId);
+      } else {
+        if (!isRunning) {
+          isRunning = true;
+          animationFrameId = requestAnimationFrame(raf);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
+      isRunning = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(animationFrameId);
       lenis.destroy();
+      lenisRef.current = null;
     };
-  }, []);
+  }, [prefersReducedMotion, effectiveTier]);
 
   return <>{children}</>;
 };

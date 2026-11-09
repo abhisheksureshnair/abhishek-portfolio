@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
 import { FileText, Menu, X, Command, Compass, ArrowUpRight, GitBranch } from 'lucide-react';
 import Link from 'next/link';
+import { PerformanceSelector } from './PerformanceControl';
 
 interface NavbarProps {
   onOpenResume: () => void;
@@ -93,6 +94,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenResume, onOpenCommandK }) 
 
           {/* Action Group */}
           <div className="hidden sm:flex items-center gap-2.5">
+            {/* Visual Quality / Performance Tier Control */}
+            <PerformanceSelector />
+
             {/* Experience Mode Button */}
             <Link
               href="/experience?view=world"

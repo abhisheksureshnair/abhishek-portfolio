@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { PerformanceProvider } from "@/components/PerformanceControl";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const viewport: Viewport = {
   themeColor: "#030508",
@@ -137,7 +139,10 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        {children}
+        <PerformanceProvider>
+          {children}
+        </PerformanceProvider>
+        <SpeedInsights />
       </body>
     </html>
   );

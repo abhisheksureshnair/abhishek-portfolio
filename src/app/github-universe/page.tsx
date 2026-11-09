@@ -2,6 +2,8 @@ import { Metadata } from 'next';
 import { GithubUniverseView } from '@/components/github-universe/GithubUniverseView';
 import { getGitHubProfileData } from '@/lib/github/githubService';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'GitHub Code Nexus // Abhishek S Nair',
   description:

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { ALL_PROJECTS, Project } from '../data/portfolioData';
 import { GithubIcon } from './Icons';
+import { SectionBackdrop } from './background/SectionBackdrop';
 
 interface FeaturedProjectsSectionProps {
   onOpenFlowSyncCaseStudy: () => void;
@@ -57,12 +58,10 @@ export const FeaturedProjectsSection: React.FC<FeaturedProjectsSectionProps> = (
   };
 
   return (
-    <section id="projects" className="py-32 bg-[#060911] relative border-t border-white/5 overflow-hidden">
+    <section id="projects" className="py-24 sm:py-32 bg-[#060911] relative border-t border-white/5 overflow-hidden">
       
-      {/* Background Lighting Aura */}
-      <div className="absolute top-1/4 right-1/4 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[160px] pointer-events-none" />
-      <div className="absolute bottom-1/3 left-10 w-[500px] h-[500px] bg-cyan-600/10 rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute inset-0 bg-cinematic-grid opacity-25 pointer-events-none" />
+      {/* Section-Specific Background System */}
+      <SectionBackdrop variant="projects" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
@@ -107,7 +106,7 @@ export const FeaturedProjectsSection: React.FC<FeaturedProjectsSectionProps> = (
         </div>
 
         {/* Cinematic Projects Showcase */}
-        <div className="space-y-24">
+        <div className="space-y-12 sm:space-y-16">
           {filteredProjects.map((project) => {
             const isPersonal = project.type === 'personal';
             const isFlagship = project.isFlagship;
@@ -122,11 +121,11 @@ export const FeaturedProjectsSection: React.FC<FeaturedProjectsSectionProps> = (
             return (
               <motion.article
                 key={project.id}
-                initial={{ opacity: 0, y: 50 }}
+                initial={{ opacity: 0, y: 35 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.15 }}
-                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-                className={`group relative p-8 sm:p-12 rounded-3xl border transition-all duration-500 overflow-hidden ${
+                viewport={{ once: true, amount: 0.12 }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className={`group relative p-6 sm:p-10 rounded-3xl border transition-all duration-500 overflow-hidden ${
                   isPersonal
                     ? 'bg-gradient-to-b from-[#0b1021] via-[#070b16] to-[#030508] border-indigo-500/40 shadow-2xl shadow-indigo-950/40'
                     : 'bg-zinc-950/80 border-cyan-500/30 hover:border-cyan-500/50 shadow-2xl shadow-cyan-950/20'

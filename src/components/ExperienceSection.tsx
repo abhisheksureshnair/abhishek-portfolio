@@ -4,14 +4,14 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Briefcase, Calendar, MapPin, CheckCircle2, Smartphone, Radio, Shield, Bluetooth, Layers, Building2 } from 'lucide-react';
 import { PROFESSIONAL_EXPERIENCE_DATA, PERSONAL_INFO } from '../data/portfolioData';
+import { SectionBackdrop } from './background/SectionBackdrop';
 
 export const ExperienceSection: React.FC = () => {
   return (
     <section id="experience" className="py-32 bg-[#030508] relative border-t border-white/5 overflow-hidden">
       
-      {/* Background Glow */}
-      <div className="absolute top-1/3 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute inset-0 bg-cinematic-grid opacity-20 pointer-events-none" />
+      {/* Section-Specific Background System */}
+      <SectionBackdrop variant="experience" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
