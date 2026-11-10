@@ -107,6 +107,69 @@ function createFrontSignTexture(): THREE.CanvasTexture {
 }
 
 /**
+ * Procedural Texture for Vertical Corner Neon Blade Sign (Image 3 Style)
+ */
+function createVerticalBladeSignTexture(): THREE.CanvasTexture {
+  if (typeof window === 'undefined') {
+    return new THREE.CanvasTexture(document?.createElement('canvas') as any);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 768;
+  const ctx = canvas.getContext('2d')!;
+
+  // Deep obsidian backdrop
+  ctx.fillStyle = '#060a16';
+  ctx.fillRect(0, 0, 256, 768);
+
+  // Double glowing neon border (Cyan & Magenta)
+  ctx.strokeStyle = '#00f0ff';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(6, 6, 244, 756);
+
+  ctx.strokeStyle = 'rgba(236, 72, 153, 0.6)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(14, 14, 228, 740);
+
+  // Header tag
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 22px monospace';
+  ctx.fillStyle = '#ec4899';
+  ctx.fillText('• HQ // 01 •', 128, 48);
+
+  // Vertical stacked typography
+  ctx.font = '900 68px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowColor = '#00f0ff';
+  ctx.shadowBlur = 20;
+
+  const letters = ['D', 'E', 'V', '•', 'A', 'R', 'C', 'H'];
+  const startY = 125;
+  const spacing = 70;
+  letters.forEach((char, i) => {
+    if (char === '•') {
+      ctx.fillStyle = '#ec4899';
+      ctx.shadowColor = '#ec4899';
+      ctx.fillText(char, 128, startY + i * spacing);
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#00f0ff';
+    } else {
+      ctx.fillText(char, 128, startY + i * spacing);
+    }
+  });
+
+  // Footer status indicator
+  ctx.shadowBlur = 0;
+  ctx.font = 'bold 20px monospace';
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillText('SYSTEM // ONLINE', 128, 720);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+/**
  * Procedural Texture for Rooftop Solar Panels (Photovoltaic cells)
  */
 function createSolarPanelTexture(): THREE.CanvasTexture {
@@ -153,16 +216,81 @@ function createSolarPanelTexture(): THREE.CanvasTexture {
 }
 
 /**
+ * Procedural Texture for Lobby Back-Wall Digital Display Screen
+ */
+function createLobbyDisplayTexture(): THREE.CanvasTexture {
+  if (typeof window === 'undefined') {
+    return new THREE.CanvasTexture(document?.createElement('canvas') as any);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+
+  // Dark cyan-slate terminal backdrop
+  ctx.fillStyle = '#03111e';
+  ctx.fillRect(0, 0, 512, 256);
+
+  // Grid background
+  ctx.strokeStyle = 'rgba(6, 182, 212, 0.15)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < 512; x += 32) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, 256);
+    ctx.stroke();
+  }
+  for (let y = 0; y < 256; y += 32) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(512, y);
+    ctx.stroke();
+  }
+
+  // Header bar
+  ctx.fillStyle = 'rgba(6, 182, 212, 0.25)';
+  ctx.fillRect(16, 16, 480, 36);
+
+  ctx.font = 'bold 18px monospace';
+  ctx.fillStyle = '#00f0ff';
+  ctx.fillText('PORTFOLIO ARCHITECTURE // ARCHITECTURAL KERNEL', 32, 40);
+
+  // Simulated animated waveforms / metrics
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let x = 32; x < 480; x += 16) {
+    const y = 130 + Math.sin(x * 0.05) * 35;
+    if (x === 32) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Metrics text
+  ctx.font = '14px monospace';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('SYSTEM STATUS: OPTIMAL (60 FPS)', 32, 200);
+  ctx.fillText('ACTIVE SESSIONS: COMMERCIAL INNSPARK DELIVERY', 32, 224);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+/**
  * HeroBuilding Component
  * Architecturally Upgraded Flagship Tech Headquarters:
- * - Stepped modern massing with right-wing executive terrace setback
- * - Full-height reflective glass curtain walls with structural vertical mullions & spandrel bands
- * - Grand monumental beveled entrance portal with floating glass canopy & tension rods
- * - Illuminated double glass entrance doors with lobby reception desk interior preview
+ * - Clean contemporary modern architecture with realistic proportions
+ * - Stepped massing with 3rd-floor executive terrace setback (Image 2 style)
+ * - Rounded chamfered floor slab fascias with glowing cyan ribbon accents
+ * - Full-height reflective glass curtain walls with vertical structural mullions & horizontal louvers
+ * - Recessed ground-floor entrance lobby with warm interior illumination, reception desk & digital display
+ * - Cantilevered entrance glass canopy with stainless steel tension rods & glowing cyan under-trim
+ * - Automated double glass sliding doors with aluminum mullions & brushed steel pull handles
  * - Paved entrance plaza with step lights, low stone curbs & manicured topiary planters
  * - Executive 3rd-floor terrace with glass balustrade and miniature architectural greenery
  * - Industrial rooftop mechanical zone: HVAC chiller with ventilation ducts, dual solar arrays, telecom satellite dish & beacon
- * - High-res illuminated billboard sign with rear structural truss backstays and overhead LED floodlights
+ * - Vertical corner cyber neon blade sign (Image 3 style) & illuminated rooftop billboard sign
  */
 export const HeroBuilding: React.FC<HeroBuildingProps> = ({
   position = [-7.85, 0.74, -7.35],
@@ -181,58 +309,11 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
   // Cached procedural textures
   const rooftopSignTex = useMemo(() => createRooftopSignTexture(), []);
   const frontSignTex = useMemo(() => createFrontSignTexture(), []);
+  const verticalBladeSignTex = useMemo(() => createVerticalBladeSignTexture(), []);
   const solarPanelTex = useMemo(() => createSolarPanelTexture(), []);
+  const lobbyDisplayTex = useMemo(() => createLobbyDisplayTexture(), []);
 
-  // Frame-rate independent animations for hover lift, pulse, satellite dish and beacon
-  useFrame((_, delta) => {
-    if (typeof document !== 'undefined' && document.hidden) return;
-
-    // 1. Smooth vertical lift on hover/selection
-    if (rootGroupRef.current) {
-      const targetY = position[1] + ((isHovered || isSelected) && !prefersReducedMotion ? 0.12 : 0);
-      if (prefersReducedMotion) {
-        rootGroupRef.current.position.y = targetY;
-      } else {
-        rootGroupRef.current.position.y += (targetY - rootGroupRef.current.position.y) * (1 - Math.exp(-12.0 * delta));
-      }
-    }
-
-    const time = Date.now() * 0.001;
-
-    // 2. Hover/Selected breathing cyan glow
-    if (cyanMaterialRef.current) {
-      if (isHovered || isSelected) {
-        const pulse = 1.8 + Math.sin(time * 4.0) * 0.5;
-        cyanMaterialRef.current.emissiveIntensity = pulse;
-      } else {
-        cyanMaterialRef.current.emissiveIntensity = 1.1;
-      }
-    }
-
-    // 3. Subtle glass window breathing
-    if (blueGlassMat && !prefersReducedMotion) {
-      blueGlassMat.emissiveIntensity = 0.22 + Math.sin(time * 1.2) * 0.05;
-    }
-
-    // 4. Slow satellite dish azimuthal sweep (paused on reduced motion)
-    if (satelliteDishRef.current && !prefersReducedMotion) {
-      satelliteDishRef.current.rotation.y += delta * 0.25;
-    }
-
-    // 5. Flashing rooftop aviation obstruction beacon
-    if (beaconMeshRef.current && beaconMeshRef.current.material && !prefersReducedMotion) {
-      const beaconCycle = (Math.sin(time * 5.0) + 1) * 0.5;
-      const flash = Math.pow(beaconCycle, 5);
-      (beaconMeshRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.0 + flash * 4.0;
-    }
-  });
-
-  const width = 6.4;
-  const depth = 5.4;
-  const halfW = width / 2; // 3.2
-  const halfD = depth / 2; // 2.7
-
-  // Shared reusable architectural materials
+  // Shared reusable architectural materials (memoized once for zero memory allocations)
   const whiteFrameMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
@@ -246,7 +327,7 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
   const darkTrimMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#131b2e',
+        color: '#0f172a',
         roughness: 0.45,
         metalness: 0.4,
       }),
@@ -258,7 +339,7 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
       new THREE.MeshStandardMaterial({
         color: '#0284c7',
         emissive: '#0369a1',
-        emissiveIntensity: 0.25,
+        emissiveIntensity: 0.28,
         roughness: 0.1,
         metalness: 0.85,
         transparent: false,
@@ -271,7 +352,7 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
       new THREE.MeshStandardMaterial({
         color: '#00f0ff',
         emissive: '#00f0ff',
-        emissiveIntensity: 1.2,
+        emissiveIntensity: 1.4,
         roughness: 0.2,
       }),
     []
@@ -290,9 +371,9 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
   const lobbyInteriorMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#38bdf8',
-        emissive: '#0284c7',
-        emissiveIntensity: 0.6,
+        color: '#fef08a', // Warm welcoming interior lobby glow
+        emissive: '#f59e0b',
+        emissiveIntensity: 0.85,
         roughness: 0.3,
       }),
     []
@@ -317,6 +398,55 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
       }),
     []
   );
+
+  // Frame-rate independent animations for hover lift, pulse, satellite dish and beacon
+  useFrame((_, delta) => {
+    if (typeof document !== 'undefined' && document.hidden) return;
+
+    // 1. Smooth vertical lift on hover/selection
+    if (rootGroupRef.current) {
+      const targetY = position[1] + ((isHovered || isSelected) && !prefersReducedMotion ? 0.12 : 0);
+      if (prefersReducedMotion) {
+        rootGroupRef.current.position.y = targetY;
+      } else {
+        rootGroupRef.current.position.y += (targetY - rootGroupRef.current.position.y) * (1 - Math.exp(-12.0 * delta));
+      }
+    }
+
+    const time = Date.now() * 0.001;
+
+    // 2. Hover/Selected breathing cyan glow
+    if (cyanMaterialRef.current) {
+      if (isHovered || isSelected) {
+        const pulse = 1.8 + Math.sin(time * 4.0) * 0.5;
+        cyanMaterialRef.current.emissiveIntensity = pulse;
+      } else {
+        cyanMaterialRef.current.emissiveIntensity = 1.2;
+      }
+    }
+
+    // 3. Subtle glass window breathing
+    if (blueGlassMat && !prefersReducedMotion) {
+      blueGlassMat.emissiveIntensity = 0.25 + Math.sin(time * 1.2) * 0.05;
+    }
+
+    // 4. Slow satellite dish azimuthal sweep (paused on reduced motion)
+    if (satelliteDishRef.current && !prefersReducedMotion) {
+      satelliteDishRef.current.rotation.y += delta * 0.25;
+    }
+
+    // 5. Flashing rooftop aviation obstruction beacon
+    if (beaconMeshRef.current && beaconMeshRef.current.material && !prefersReducedMotion) {
+      const beaconCycle = (Math.sin(time * 5.0) + 1) * 0.5;
+      const flash = Math.pow(beaconCycle, 5);
+      (beaconMeshRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.0 + flash * 4.0;
+    }
+  });
+
+  const width = 6.4;
+  const depth = 5.4;
+  const halfW = width / 2; // 3.2
+  const halfD = depth / 2; // 2.7
 
   return (
     <group
@@ -384,11 +514,11 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
             <boxGeometry args={[0.82, 0.02, 0.82]} />
             <meshStandardMaterial color="#3f2e21" roughness={0.9} />
           </mesh>
-          {/* Spherical Sculpted Foliage */}
+          {/* Spherical Sculpted Boxwood Shrub */}
           <mesh position={[0, 0.65, 0]} castShadow material={foliageMat}>
             <sphereGeometry args={[0.38, 14, 14]} />
           </mesh>
-          {/* Flowering Accent Shrub */}
+          {/* Flowering Accent Topiary Shrub */}
           <mesh position={[0, 0.95, 0]} castShadow>
             <sphereGeometry args={[0.18, 10, 10]} />
             <meshStandardMaterial color="#38bdf8" roughness={0.5} />
@@ -436,12 +566,23 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
         <boxGeometry args={[1.7, 2.2, 0.08]} />
       </mesh>
 
-      {/* Recessed Lobby Interior Glow & Reception Desk Preview */}
+      {/* Recessed Lobby Interior Glow & Reception Desk Preview (Warm welcoming light) */}
       <mesh position={[0, 0.5, halfD - 0.6]} material={lobbyInteriorMat}>
-        <boxGeometry args={[1.6, 0.5, 0.5]} />
+        <boxGeometry args={[1.8, 0.5, 0.5]} />
       </mesh>
       <mesh position={[0, 0.78, halfD - 0.6]} material={whiteFrameMat}>
-        <boxGeometry args={[1.7, 0.06, 0.6]} />
+        <boxGeometry args={[1.9, 0.06, 0.6]} />
+      </mesh>
+
+      {/* Lobby Back-Wall Digital Display Screen */}
+      <mesh position={[0, 1.45, halfD - 0.85]}>
+        <planeGeometry args={[1.8, 0.9]} />
+        <meshStandardMaterial
+          map={lobbyDisplayTex}
+          emissive="#38bdf8"
+          emissiveIntensity={0.8}
+          roughness={0.2}
+        />
       </mesh>
 
       {/* Grand Monumental Angled Entrance Portal Frame (Titanium Clad) */}
@@ -511,7 +652,7 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
           <meshStandardMaterial
             map={frontSignTex}
             emissive="#38bdf8"
-            emissiveIntensity={isHovered ? 1.5 : 1.0}
+            emissiveIntensity={isHovered ? 1.6 : 1.1}
             roughness={0.2}
           />
         </mesh>
@@ -529,6 +670,39 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
           </mesh>
         </group>
       ))}
+
+      {/* Vertical Corner Cyber Blade Sign (Image 3 Style) */}
+      <group position={[halfW + 0.18, 2.6, halfD + 0.12]} rotation={[0, -Math.PI / 4, 0]}>
+        {/* Blade Backing Truss */}
+        <mesh material={darkTrimMat}>
+          <boxGeometry args={[0.65, 2.4, 0.08]} />
+        </mesh>
+        {/* Glowing Sign Faces (Front and Back) */}
+        <mesh position={[0, 0, 0.05]}>
+          <planeGeometry args={[0.6, 2.3]} />
+          <meshStandardMaterial
+            map={verticalBladeSignTex}
+            emissive="#ffffff"
+            emissiveIntensity={isHovered || isSelected ? 2.2 : 1.4}
+            roughness={0.15}
+          />
+        </mesh>
+        <mesh position={[0, 0, -0.05]} rotation={[0, Math.PI, 0]}>
+          <planeGeometry args={[0.6, 2.3]} />
+          <meshStandardMaterial
+            map={verticalBladeSignTex}
+            emissive="#ffffff"
+            emissiveIntensity={isHovered || isSelected ? 2.2 : 1.4}
+            roughness={0.15}
+          />
+        </mesh>
+        {/* Mounting Brackets */}
+        {[-0.8, 0.8].map((by, bIdx) => (
+          <mesh key={`blade-bracket-${bIdx}`} position={[-0.28, by, 0]} material={whiteFrameMat}>
+            <boxGeometry args={[0.25, 0.06, 0.06]} />
+          </mesh>
+        ))}
+      </group>
 
       {/* ======================================================== */}
       {/* 4. FLOOR 2: ENGINEERING LABS & CONTINUOUS CURTAIN GRID   */}
@@ -553,7 +727,7 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
           <boxGeometry args={[0.07, 2.05, 0.05]} />
         </mesh>
       ))}
-      {/* Intermediate Horizontal Spandrel Beam */}
+      {/* Intermediate Horizontal Spandrel Beam / Sunshade Louver */}
       <mesh position={[0, 4.0, halfD + 0.06]} material={darkTrimMat}>
         <boxGeometry args={[width - 0.38, 0.12, 0.04]} />
       </mesh>
@@ -604,7 +778,7 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
         ))}
       </group>
 
-      {/* Right Wing: Executive Open-Air Sky Terrace (Stepped Setback) */}
+      {/* Right Wing: Executive Open-Air Sky Terrace (Stepped Setback - Image 2 Style) */}
       <group position={[2.0, 4.95, 0.2]}>
         {/* Terrace Deck Flooring (Teak / Slate Tiles) */}
         <mesh position={[0, 0, 0]} receiveShadow>
@@ -626,12 +800,20 @@ export const HeroBuilding: React.FC<HeroBuildingProps> = ({
         <mesh position={[0.98, 0.68, 0]} rotation={[0, Math.PI / 2, 0]} material={whiteFrameMat}>
           <boxGeometry args={[depth - 0.92, 0.05, 0.05]} />
         </mesh>
-        {/* Terrace Architectural Planter & Miniature Bamboo */}
+        {/* Terrace Architectural Planter & Miniature Bamboo / Topiary */}
         <mesh position={[0.4, 0.18, -0.6]} castShadow material={darkTrimMat}>
           <boxGeometry args={[0.65, 0.32, 0.65]} />
         </mesh>
         <mesh position={[0.4, 0.52, -0.6]} castShadow material={foliageMat}>
           <cylinderGeometry args={[0.22, 0.12, 0.45, 8]} />
+        </mesh>
+        {/* Decorative Terrace Lantern */}
+        <mesh position={[-0.5, 0.22, 0.6]} castShadow material={darkTrimMat}>
+          <boxGeometry args={[0.16, 0.36, 0.16]} />
+        </mesh>
+        <mesh position={[-0.5, 0.22, 0.6]}>
+          <boxGeometry args={[0.12, 0.28, 0.12]} />
+          <meshStandardMaterial color="#fef08a" emissive="#eab308" emissiveIntensity={2.5} />
         </mesh>
       </group>
 

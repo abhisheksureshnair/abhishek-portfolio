@@ -226,7 +226,7 @@ export const WorldScene: React.FC = () => {
         for (let i = 0; i < CITY_BUILDING_ZONES.length; i++) {
           const zone = CITY_BUILDING_ZONES[i];
           const dist = Math.hypot(px - zone.entrance[0], pz - zone.entrance[1]);
-          if (dist < 4.8) {
+          if (dist < 5.2) {
             setSelectedBuilding(zone.id);
             return;
           }

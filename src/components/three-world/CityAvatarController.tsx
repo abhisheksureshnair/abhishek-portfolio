@@ -341,7 +341,7 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
     // 8. BUILDING INTERACTION PROXIMITY CHECK (Zero-rerender DOM/Mesh update)
     // =========================================================================
     let foundNear: BuildingZone | null = null;
-    let minEntranceDist = 4.8;
+    let minEntranceDist = 5.2;
 
     for (let i = 0; i < CITY_BUILDING_ZONES.length; i++) {
       const zone = CITY_BUILDING_ZONES[i];

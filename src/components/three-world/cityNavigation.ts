@@ -23,7 +23,7 @@ export const CITY_BUILDING_ZONES: BuildingZone[] = [
     accent: '#2563eb',
     center: [-7.85, -7.35],
     bounds: { minX: -12.2, maxX: -3.5, minZ: -11.2, maxZ: -3.5 },
-    entrance: [-4.2, -7.35],
+    entrance: [-7.85, -3.85],
   },
   {
     id: 'about',
