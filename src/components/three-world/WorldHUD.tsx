@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import * as THREE from 'three';
 import { WORLD_DISTRICTS, WorldDistrict } from './WorldConfig';
-import { usePerformanceQuality, PerformanceSelector } from '../PerformanceControl';
+import { usePerformanceQuality, usePerformanceTelemetry, PerformanceSelector } from '../PerformanceControl';
 
 interface WorldHUDProps {
   isIntroActive: boolean;
@@ -82,6 +82,11 @@ function RadarPlayerMarker({
   );
 }
 
+function FpsBadge() {
+  const { fps } = usePerformanceTelemetry();
+  return <span className="text-emerald-400 font-bold">{fps > 0 ? `${fps} FPS` : '60 FPS'}</span>;
+}
+
 export const WorldHUD: React.FC<WorldHUDProps> = ({
   isIntroActive,
   onSkipIntro,
@@ -102,7 +107,7 @@ export const WorldHUD: React.FC<WorldHUDProps> = ({
   selectedBuilding = null,
   onSelectBuilding,
 }) => {
-  const { effectiveTier, fps } = usePerformanceQuality();
+  const { effectiveTier } = usePerformanceQuality();
 
   const navItems = [
     { id: null, label: 'City View' },
@@ -441,7 +446,7 @@ export const WorldHUD: React.FC<WorldHUDProps> = ({
 
             <div className="flex items-center justify-between text-[9px] text-zinc-400 px-1">
               <span>TIER: <strong className="text-cyan-300">{effectiveTier.toUpperCase()}</strong></span>
-              <span className="text-emerald-400 font-bold">{fps > 0 ? `${fps} FPS` : '60 FPS'}</span>
+              <FpsBadge />
             </div>
           </div>
 

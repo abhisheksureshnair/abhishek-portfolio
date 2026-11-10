@@ -96,12 +96,12 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
     // S / ArrowDown = South (+Z)
     // A / ArrowLeft = West (-X)
     // D / ArrowRight = East (+X)
-    if (keys['w'] || keys['W'] || keys['ArrowUp']) inputZ -= 1;
-    if (keys['s'] || keys['S'] || keys['ArrowDown']) inputZ += 1;
-    if (keys['a'] || keys['A'] || keys['ArrowLeft']) inputX -= 1;
-    if (keys['d'] || keys['D'] || keys['ArrowRight']) inputX += 1;
+    if (keys['w'] || keys['W'] || keys['KeyW'] || keys['ArrowUp']) inputZ -= 1;
+    if (keys['s'] || keys['S'] || keys['KeyS'] || keys['ArrowDown']) inputZ += 1;
+    if (keys['a'] || keys['A'] || keys['KeyA'] || keys['ArrowLeft']) inputX -= 1;
+    if (keys['d'] || keys['D'] || keys['KeyD'] || keys['ArrowRight']) inputX += 1;
 
-    const isRunning = keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight'];
+    const isRunning = keys['Shift'] || keys['shift'] || keys['ShiftLeft'] || keys['ShiftRight'];
     const maxSpeed = isRunning ? 7.2 : 4.4;
 
     let targetDirX = 0;
@@ -181,9 +181,9 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
             px - lastProgressPosRef.current.x,
             pz - lastProgressPosRef.current.z
           );
-          if (movedSinceLastCheck < 0.02) {
+          if (movedSinceLastCheck < 0.003) {
             stuckFramesRef.current += 1;
-            if (stuckFramesRef.current > 35) {
+            if (stuckFramesRef.current > 60) {
               // Stuck: trigger a replan once
               cachedWaypointsRef.current = calculateClickToWalkPath(
                 px,
@@ -280,12 +280,14 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
         // Try sliding along X
         if (!isPointColliding(nextX, currentZ)) {
           playerPosRef.current.x = nextX;
-          velocityRef.current.z = 0;
-        }
-        // Try sliding along Z
-        if (!isPointColliding(currentX, nextZ)) {
+          velocityRef.current.z *= 0.3;
+        } else if (!isPointColliding(currentX, nextZ)) {
+          // Try sliding along Z
           playerPosRef.current.z = nextZ;
+          velocityRef.current.x *= 0.3;
+        } else {
           velocityRef.current.x = 0;
+          velocityRef.current.z = 0;
         }
       }
 

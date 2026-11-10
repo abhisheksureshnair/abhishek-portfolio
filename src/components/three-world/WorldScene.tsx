@@ -32,7 +32,7 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { WorldHUD } from './WorldHUD';
 import { ProjectOverlay } from '@/components/experience/ProjectOverlay';
 import { FlowSyncModal } from '@/components/FlowSyncModal';
-import { usePerformanceQuality } from '../PerformanceControl';
+import { usePerformanceQuality, usePerformanceTelemetry } from '../PerformanceControl';
 import { WebGLDiagnosticManager } from './WebGLDiagnosticManager';
 import { Sparkles, AlertTriangle, RefreshCw } from 'lucide-react';
 
@@ -57,25 +57,28 @@ function CanvasToneMappingManager({ timeOfDay }: { timeOfDay: TimeOfDay }) {
     const target = timeOfDay === 'night' ? 1.0 : 0.0;
     const dt = Math.min(delta, 0.1);
 
-    if (prefersReducedMotion) {
-      progressRef.current = target;
-    } else {
-      const damp = 1 - Math.exp(-4.2 * dt);
-      progressRef.current += (target - progressRef.current) * damp;
-    }
+    // Only update colors and uniforms when transitioning (saves CPU cycles when settled)
+    if (Math.abs(progressRef.current - target) > 0.0005) {
+      if (prefersReducedMotion) {
+        progressRef.current = target;
+      } else {
+        const damp = 1 - Math.exp(-4.2 * dt);
+        progressRef.current += (target - progressRef.current) * damp;
+      }
 
-    const t = progressRef.current;
-    gl.toneMappingExposure = THREE.MathUtils.lerp(1.25, 1.15, t);
+      const t = progressRef.current;
+      gl.toneMappingExposure = THREE.MathUtils.lerp(1.25, 1.15, t);
 
-    // Smoothly transition scene background & fog
-    if (scene.background && (scene.background as THREE.Color).isColor) {
-      (scene.background as THREE.Color).lerpColors(_daySky, _nightSky, t);
-    }
-    if (scene.fog && (scene.fog as THREE.Fog).isFog) {
-      const fog = scene.fog as THREE.Fog;
-      fog.color.lerpColors(_daySky, _nightSky, t);
-      fog.near = THREE.MathUtils.lerp(45, 35, t);
-      fog.far = THREE.MathUtils.lerp(120, 105, t);
+      // Smoothly transition scene background & fog
+      if (scene.background && (scene.background as THREE.Color).isColor) {
+        (scene.background as THREE.Color).lerpColors(_daySky, _nightSky, t);
+      }
+      if (scene.fog && (scene.fog as THREE.Fog).isFog) {
+        const fog = scene.fog as THREE.Fog;
+        fog.color.lerpColors(_daySky, _nightSky, t);
+        fog.near = THREE.MathUtils.lerp(45, 35, t);
+        fog.far = THREE.MathUtils.lerp(120, 105, t);
+      }
     }
   });
 
@@ -85,6 +88,7 @@ function CanvasToneMappingManager({ timeOfDay }: { timeOfDay: TimeOfDay }) {
 export const WorldScene: React.FC = () => {
   const router = useRouter();
   const { effectiveTier } = usePerformanceQuality();
+  const { updateTelemetry } = usePerformanceTelemetry();
 
   // HUD, Recovery & Game State
   const controlsRef = useRef<OrbitControlsImpl>(null);
@@ -199,7 +203,9 @@ export const WorldScene: React.FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      keysPressedRef.current[e.key.toLowerCase()] = true;
       keysPressedRef.current[e.key] = true;
+      if (e.code) keysPressedRef.current[e.code] = true;
 
       // Escape closes open building modal
       if (e.key === 'Escape') {
@@ -233,15 +239,23 @@ export const WorldScene: React.FC = () => {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      keysPressedRef.current[e.key.toLowerCase()] = false;
       keysPressedRef.current[e.key] = false;
+      if (e.code) keysPressedRef.current[e.code] = false;
+    };
+
+    const handleBlur = () => {
+      keysPressedRef.current = {};
     };
 
     window.addEventListener('keydown', handleKeyDown, { passive: true });
     window.addEventListener('keyup', handleKeyUp, { passive: true });
+    window.addEventListener('blur', handleBlur);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
     };
   }, [handleDistrictInteraction]);
 
@@ -410,6 +424,9 @@ export const WorldScene: React.FC = () => {
           <WebGLDiagnosticManager
             onContextLost={handleContextLost}
             onContextRestored={handleContextRestored}
+            onStatsUpdate={(stats) => {
+              updateTelemetry(stats.avgFps, stats.avgFrameTimeMs);
+            }}
           />
 
           {/* OrbitControls for Smooth Camera Rotation & Debugging */}
@@ -423,25 +440,6 @@ export const WorldScene: React.FC = () => {
             minPolarAngle={0.1}
             enableDamping
             dampingFactor={0.05}
-          />
-
-          {/* Frame-Rate Independent Camera Controller for Building focus, Avatar Follow & Intro Flyover */}
-          <CityCameraController
-            controlsRef={controlsRef}
-            selectedBuilding={selectedBuilding}
-            cameraMode={cameraMode}
-            playerPosRef={playerPosRef}
-            isIntroActive={isIntroActive}
-            onIntroComplete={() => {
-              setIsIntroActive(false);
-              sessionStorage.setItem('developer_universe_intro_done', 'true');
-            }}
-            heroPosition={[-7.85, 0.74, -7.35]}
-            aboutPosition={[7.85, 0.74, -7.35]}
-            projectsPosition={[-7.85, 0.74, 7.35]}
-            skillsPosition={[7.85, 0.74, 7.35]}
-            experiencePosition={[0, 0.74, 21.5]}
-            contactPosition={[0, 0.74, -21.5]}
           />
 
           {/* Reusable Stylized Diorama Lighting with Day / Night Mode */}
@@ -482,6 +480,25 @@ export const WorldScene: React.FC = () => {
             quaternionRef={quaternionRef}
             currentSpeedRef={currentSpeedRef}
             isMovingRef={isMovingRef}
+          />
+
+          {/* Frame-Rate Independent Camera Controller: mounted AFTER avatar to guarantee zero 1-frame lag */}
+          <CityCameraController
+            controlsRef={controlsRef}
+            selectedBuilding={selectedBuilding}
+            cameraMode={cameraMode}
+            playerPosRef={playerPosRef}
+            isIntroActive={isIntroActive}
+            onIntroComplete={() => {
+              setIsIntroActive(false);
+              sessionStorage.setItem('developer_universe_intro_done', 'true');
+            }}
+            heroPosition={[-7.85, 0.74, -7.35]}
+            aboutPosition={[7.85, 0.74, -7.35]}
+            projectsPosition={[-7.85, 0.74, 7.35]}
+            skillsPosition={[7.85, 0.74, 7.35]}
+            experiencePosition={[0, 0.74, 21.5]}
+            contactPosition={[0, 0.74, -21.5]}
           />
 
           {/* Hero Headquarters: 3-Floor Interactive Flagship Building (Plot 01) */}

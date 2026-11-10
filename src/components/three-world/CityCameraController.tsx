@@ -268,10 +268,10 @@ export const CityCameraController: React.FC<CityCameraControllerProps> = ({
     } else if (cameraMode === 'follow' && playerPosRef) {
       // Third-Person Smooth Follow Camera (persisting user-chosen orbit angle)
       const px = playerPosRef.current.x;
-      const py = playerPosRef.current.y;
       const pz = playerPosRef.current.z;
 
-      _targetLookAt.set(px, py + 0.85, pz);
+      // Stable look-at height at avatar chest level (decoupled from road/sidewalk curb hops)
+      _targetLookAt.set(px, 1.45, pz);
       _targetCamPos.copy(_targetLookAt).add(followOffsetRef.current);
       isTransitioningRef.current = true;
     } else {
@@ -296,26 +296,27 @@ export const CityCameraController: React.FC<CityCameraControllerProps> = ({
         parabolicLift = Math.sin(travelProgressRef.current * Math.PI) * 2.8;
       }
 
+      // Responsive, fluid tracking rate following camera-systems skill (lambda ~ 11.0)
       const lambda = prefersReducedMotion
-        ? 14.0
+        ? 16.0
         : cameraMode === 'follow' && !activeSelection
-        ? 6.5
-        : 4.8;
+        ? 11.0
+        : 5.5;
       // Exact exponential decay factor: 1 - e^(-lambda * dt) (Requirement 2 & 5)
       const factor = 1 - Math.exp(-lambda * dt);
 
       _lerpCamPos.copy(_targetCamPos);
       _lerpCamPos.y += parabolicLift;
 
-      // Smoothly damp both camera position and OrbitControls target
-      camera.position.lerp(_lerpCamPos, factor);
-      controls.target.lerp(_targetLookAt, factor);
-
-      // Sync OrbitControls state cleanly without conflicting damping
-      const prevDamping = controls.enableDamping;
-      controls.enableDamping = false;
-      controls.update();
-      controls.enableDamping = prevDamping;
+      // In steady follow mode, smoothly damp target and keep camera positioned relative to target
+      if (cameraMode === 'follow' && !activeSelection) {
+        controls.target.lerp(_targetLookAt, factor);
+        _targetCamPos.copy(controls.target).add(followOffsetRef.current);
+        camera.position.lerp(_targetCamPos, factor);
+      } else {
+        camera.position.lerp(_lerpCamPos, factor);
+        controls.target.lerp(_targetLookAt, factor);
+      }
 
       // For tactical mode or building focus, complete transition when arrived
       if (cameraMode !== 'follow' || activeSelection !== null) {

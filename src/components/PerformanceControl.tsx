@@ -6,16 +6,22 @@ import { Gauge, Sparkles, Zap, Shield, Check } from 'lucide-react';
 export type PerformanceTier = 'auto' | 'high' | 'medium' | 'balanced' | 'low';
 export type EffectiveQualityTier = 'high' | 'medium' | 'low';
 
-interface PerformanceContextType {
+export interface PerformanceQualityContextType {
   tier: PerformanceTier;
   effectiveTier: EffectiveQualityTier;
   setTier: (tier: PerformanceTier) => void;
   prefersReducedMotion: boolean;
-  fps: number;
-  avgFrameTime: number;
+  fps: number; // backward compatibility
+  avgFrameTime: number; // backward compatibility
 }
 
-const PerformanceContext = createContext<PerformanceContextType>({
+export interface PerformanceTelemetryContextType {
+  fps: number;
+  avgFrameTime: number;
+  updateTelemetry: (fps: number, frameTime: number) => void;
+}
+
+const PerformanceContext = createContext<PerformanceQualityContextType>({
   tier: 'auto',
   effectiveTier: 'medium',
   setTier: () => {},
@@ -24,7 +30,14 @@ const PerformanceContext = createContext<PerformanceContextType>({
   avgFrameTime: 16.6,
 });
 
+const TelemetryContext = createContext<PerformanceTelemetryContextType>({
+  fps: 60,
+  avgFrameTime: 16.6,
+  updateTelemetry: () => {},
+});
+
 export const usePerformanceQuality = () => useContext(PerformanceContext);
+export const usePerformanceTelemetry = () => useContext(TelemetryContext);
 
 // Initial device tier determination
 function getHardwareInitialTier(): EffectiveQualityTier {
@@ -96,81 +109,58 @@ export const PerformanceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setEffectiveTier(normalizeTier(initialTier));
     }
 
-    // Continuous Frame Time & FPS Telemetry Loop with Hysteresis
-    let frameCount = 0;
-    let lastTime = performance.now();
-    let animId: number;
+    return () => {
+      motionQuery.removeEventListener('change', handleMotionChange);
+    };
+  }, []);
 
-    const tick = (now: number) => {
-      frameCount++;
-      const elapsed = now - lastTime;
+  const updateTelemetry = useCallback((currentInstantFps: number, currentFrameTime: number) => {
+    setFps(currentInstantFps);
+    setAvgFrameTime(currentFrameTime);
 
-      if (elapsed >= 500) {
-        const currentInstantFps = Math.round((frameCount * 1000) / elapsed);
-        const currentFrameTime = elapsed / frameCount;
-        setFps(currentInstantFps);
-        setAvgFrameTime(currentFrameTime);
+    // AUTO Mode Hysteresis Evaluation using R3F's single engine loop
+    if (tierRef.current === 'auto') {
+      const now = performance.now();
+      const currentEffTier = effectiveTierRef.current;
+      const timeSinceLastChange = now - lastTierChangeTimeRef.current;
 
-        // AUTO Mode Hysteresis Evaluation
-        if (tierRef.current === 'auto') {
-          const currentEffTier = effectiveTierRef.current;
-          const timeSinceLastChange = now - lastTierChangeTimeRef.current;
-
-          if (timeSinceLastChange > HYSTERESIS_COOLDOWN) {
-            // Check for degradation
-            if (currentInstantFps < HYSTERESIS_DOWN_FPS) {
+      if (timeSinceLastChange > HYSTERESIS_COOLDOWN) {
+        if (currentInstantFps < HYSTERESIS_DOWN_FPS) {
+          highFpsStartTimeRef.current = null;
+          if (lowFpsStartTimeRef.current === null) {
+            lowFpsStartTimeRef.current = now;
+          } else if (now - lowFpsStartTimeRef.current >= HYSTERESIS_DOWN_TIME) {
+            if (currentEffTier === 'high') {
+              setEffectiveTier('medium');
+              lastTierChangeTimeRef.current = now;
+              lowFpsStartTimeRef.current = null;
+            } else if (currentEffTier === 'medium') {
+              setEffectiveTier('low');
+              lastTierChangeTimeRef.current = now;
+              lowFpsStartTimeRef.current = null;
+            }
+          }
+        } else if (currentInstantFps >= HYSTERESIS_UP_FPS) {
+          lowFpsStartTimeRef.current = null;
+          if (highFpsStartTimeRef.current === null) {
+            highFpsStartTimeRef.current = now;
+          } else if (now - highFpsStartTimeRef.current >= HYSTERESIS_UP_TIME) {
+            if (currentEffTier === 'low') {
+              setEffectiveTier('medium');
+              lastTierChangeTimeRef.current = now;
               highFpsStartTimeRef.current = null;
-              if (lowFpsStartTimeRef.current === null) {
-                lowFpsStartTimeRef.current = now;
-              } else if (now - lowFpsStartTimeRef.current >= HYSTERESIS_DOWN_TIME) {
-                // Demote quality tier
-                if (currentEffTier === 'high') {
-                  setEffectiveTier('medium');
-                  lastTierChangeTimeRef.current = now;
-                  lowFpsStartTimeRef.current = null;
-                } else if (currentEffTier === 'medium') {
-                  setEffectiveTier('low');
-                  lastTierChangeTimeRef.current = now;
-                  lowFpsStartTimeRef.current = null;
-                }
-              }
-            } else if (currentInstantFps >= HYSTERESIS_UP_FPS) {
-              lowFpsStartTimeRef.current = null;
-              if (highFpsStartTimeRef.current === null) {
-                highFpsStartTimeRef.current = now;
-              } else if (now - highFpsStartTimeRef.current >= HYSTERESIS_UP_TIME) {
-                // Promote quality tier
-                if (currentEffTier === 'low') {
-                  setEffectiveTier('medium');
-                  lastTierChangeTimeRef.current = now;
-                  highFpsStartTimeRef.current = null;
-                } else if (currentEffTier === 'medium') {
-                  setEffectiveTier('high');
-                  lastTierChangeTimeRef.current = now;
-                  highFpsStartTimeRef.current = null;
-                }
-              }
-            } else {
-              // Stable middle zone: reset timers
-              lowFpsStartTimeRef.current = null;
+            } else if (currentEffTier === 'medium') {
+              setEffectiveTier('high');
+              lastTierChangeTimeRef.current = now;
               highFpsStartTimeRef.current = null;
             }
           }
+        } else {
+          lowFpsStartTimeRef.current = null;
+          highFpsStartTimeRef.current = null;
         }
-
-        frameCount = 0;
-        lastTime = now;
       }
-
-      animId = requestAnimationFrame(tick);
-    };
-
-    animId = requestAnimationFrame(tick);
-
-    return () => {
-      motionQuery.removeEventListener('change', handleMotionChange);
-      cancelAnimationFrame(animId);
-    };
+    }
   }, []);
 
   const setTier = useCallback((newTier: PerformanceTier) => {
@@ -188,24 +178,34 @@ export const PerformanceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, []);
 
+  // Memoize quality context so 3D meshes DO NOT re-render on telemetry updates
+  const qualityValue = React.useMemo<PerformanceQualityContextType>(() => ({
+    tier,
+    effectiveTier,
+    setTier,
+    prefersReducedMotion,
+    fps,
+    avgFrameTime,
+  }), [tier, effectiveTier, setTier, prefersReducedMotion]);
+
+  const telemetryValue = React.useMemo<PerformanceTelemetryContextType>(() => ({
+    fps,
+    avgFrameTime,
+    updateTelemetry,
+  }), [fps, avgFrameTime, updateTelemetry]);
+
   return (
-    <PerformanceContext.Provider
-      value={{
-        tier,
-        effectiveTier,
-        setTier,
-        prefersReducedMotion,
-        fps,
-        avgFrameTime,
-      }}
-    >
-      {children}
+    <PerformanceContext.Provider value={qualityValue}>
+      <TelemetryContext.Provider value={telemetryValue}>
+        {children}
+      </TelemetryContext.Provider>
     </PerformanceContext.Provider>
   );
 };
 
 export const PerformanceSelector: React.FC<{ className?: string }> = ({ className = '' }) => {
-  const { tier, effectiveTier, setTier, fps } = usePerformanceQuality();
+  const { tier, effectiveTier, setTier } = usePerformanceQuality();
+  const { fps } = usePerformanceTelemetry();
   const [isOpen, setIsOpen] = useState(false);
 
   const options: { id: PerformanceTier; label: string; desc: string; icon: any }[] = [

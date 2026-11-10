@@ -59,51 +59,54 @@ export const CityLighting: React.FC<CityLightingProps> = ({
     const target = timeOfDay === 'night' ? 1.0 : 0.0;
     const dt = Math.min(delta, 0.1);
 
-    if (prefersReducedMotion) {
-      progressRef.current = target;
-    } else {
-      const damp = 1 - Math.exp(-4.2 * dt);
-      progressRef.current += (target - progressRef.current) * damp;
-    }
+    // Only update light intensities, colors and matrices during active transitions (saves CPU/GPU overhead)
+    if (Math.abs(progressRef.current - target) > 0.0005) {
+      if (prefersReducedMotion) {
+        progressRef.current = target;
+      } else {
+        const damp = 1 - Math.exp(-4.2 * dt);
+        progressRef.current += (target - progressRef.current) * damp;
+      }
 
-    const t = progressRef.current;
+      const t = progressRef.current;
 
-    // 1. Ambient Light interpolation
-    if (ambientRef.current) {
-      ambientRef.current.intensity = THREE.MathUtils.lerp(0.95, 0.72, t);
-      ambientRef.current.color.lerpColors(_dayAmbColor, _nightAmbColor, t);
-    }
+      // 1. Ambient Light interpolation
+      if (ambientRef.current) {
+        ambientRef.current.intensity = THREE.MathUtils.lerp(0.95, 0.72, t);
+        ambientRef.current.color.lerpColors(_dayAmbColor, _nightAmbColor, t);
+      }
 
-    // 2. Hemisphere Light interpolation
-    if (hemiRef.current) {
-      hemiRef.current.intensity = THREE.MathUtils.lerp(0.85, 0.65, t);
-      hemiRef.current.color.lerpColors(_daySkyColor, _nightSkyColor, t);
-      hemiRef.current.groundColor.lerpColors(_dayGroundColor, _nightGroundColor, t);
-    }
+      // 2. Hemisphere Light interpolation
+      if (hemiRef.current) {
+        hemiRef.current.intensity = THREE.MathUtils.lerp(0.85, 0.65, t);
+        hemiRef.current.color.lerpColors(_daySkyColor, _nightSkyColor, t);
+        hemiRef.current.groundColor.lerpColors(_dayGroundColor, _nightGroundColor, t);
+      }
 
-    // 3. Primary Key Light (Sun -> Moon)
-    if (keyLightRef.current) {
-      keyLightRef.current.intensity = THREE.MathUtils.lerp(2.3, 1.35, t);
-      keyLightRef.current.color.lerpColors(_daySunColor, _nightMoonColor, t);
-      keyLightRef.current.position.lerpVectors(_daySunPos, _nightMoonPos, t);
-    }
+      // 3. Primary Key Light (Sun -> Moon)
+      if (keyLightRef.current) {
+        keyLightRef.current.intensity = THREE.MathUtils.lerp(2.3, 1.35, t);
+        keyLightRef.current.color.lerpColors(_daySunColor, _nightMoonColor, t);
+        keyLightRef.current.position.lerpVectors(_daySunPos, _nightMoonPos, t);
+      }
 
-    // 4. Secondary Fill Light
-    if (fillLightRef.current) {
-      fillLightRef.current.intensity = THREE.MathUtils.lerp(0.85, 0.65, t);
-      fillLightRef.current.color.lerpColors(_dayFillColor, _nightFillColor, t);
-    }
+      // 4. Secondary Fill Light
+      if (fillLightRef.current) {
+        fillLightRef.current.intensity = THREE.MathUtils.lerp(0.85, 0.65, t);
+        fillLightRef.current.color.lerpColors(_dayFillColor, _nightFillColor, t);
+      }
 
-    // 5. Tertiary Sky-Bounce Light
-    if (rimLightRef.current) {
-      rimLightRef.current.intensity = THREE.MathUtils.lerp(0.45, 0.40, t);
-      rimLightRef.current.color.lerpColors(_dayRimColor, _nightRimColor, t);
-    }
+      // 5. Tertiary Sky-Bounce Light
+      if (rimLightRef.current) {
+        rimLightRef.current.intensity = THREE.MathUtils.lerp(0.45, 0.40, t);
+        rimLightRef.current.color.lerpColors(_dayRimColor, _nightRimColor, t);
+      }
 
-    // 6. Night Accent Center Point Light
-    if (pointLightRef.current && effectiveTier !== 'low') {
-      const maxIntensity = effectiveTier === 'high' ? 1.6 : 1.1;
-      pointLightRef.current.intensity = maxIntensity * Math.max(0, (t - 0.2) / 0.8);
+      // 6. Night Accent Center Point Light
+      if (pointLightRef.current && effectiveTier !== 'low') {
+        const maxIntensity = effectiveTier === 'high' ? 1.6 : 1.1;
+        pointLightRef.current.intensity = maxIntensity * Math.max(0, (t - 0.2) / 0.8);
+      }
     }
   });
 

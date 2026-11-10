@@ -8,6 +8,25 @@ import * as THREE from 'three';
 let gCanvasMountCount = 0;
 let gActiveContextCount = 0;
 
+// Cleanly intercept and silence deprecated THREE.Clock warning (migrated to modern THREE.Timer in r185+)
+if (typeof window !== 'undefined') {
+  if (typeof (THREE as any).setConsoleFunction === 'function') {
+    const origConsole = (THREE as any).getConsoleFunction?.();
+    (THREE as any).setConsoleFunction((type: string, message: string, ...args: any[]) => {
+      if (typeof message === 'string' && message.includes('Clock')) return;
+      if (origConsole) origConsole(type, message, ...args);
+      else (console as any)[type]?.(message, ...args);
+    });
+  }
+  const originalWarn = console.warn;
+  console.warn = (...args: any[]) => {
+    if (args.some((arg) => typeof arg === 'string' && arg.includes('Clock'))) {
+      return;
+    }
+    originalWarn.apply(console, args);
+  };
+}
+
 export interface WebGLDiagnosticStats {
   mountCount: number;
   activeContexts: number;
