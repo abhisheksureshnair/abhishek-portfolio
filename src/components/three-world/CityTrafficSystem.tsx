@@ -521,11 +521,17 @@ export const CityTrafficSystem: React.FC = () => {
       state.headings[i] += angleDiff * Math.min(1.0, STEERING_LAG * clampedDelta);
       carGroup.rotation.y = state.headings[i];
 
-      // 2e. Physically accurate wheel rotation based on tire radius
+      // 2e. Physically accurate wheel rotation around local axle (prevents detached wheels!)
       const wheelGroup = wheelRefs.current[i];
-      if (wheelGroup) {
+      if (wheelGroup && wheelGroup.children) {
         const wheelRadius = config.type === 'suv' ? 0.25 : 0.22;
-        wheelGroup.rotation.x += (speed * clampedDelta) / wheelRadius;
+        const deltaAngle = (speed * clampedDelta) / wheelRadius;
+        for (let w = 0; w < wheelGroup.children.length; w++) {
+          const axle = wheelGroup.children[w]?.children[0];
+          if (axle) {
+            axle.rotation.y += deltaAngle;
+          }
+        }
       }
     }
   });
