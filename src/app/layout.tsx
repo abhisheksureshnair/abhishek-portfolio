@@ -134,6 +134,35 @@ export default function RootLayout({
         className="bg-[#030508] text-[#f8fafc] antialiased min-h-screen selection:bg-indigo-500/30 selection:text-white"
         suppressHydrationWarning
       >
+        {/* Silence deprecated THREE.Clock warning before any Three.js/R3F bundle evaluation */}
+        <script
+          id="silence-three-clock-deprecation"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var filterClockWarning = function(args) {
+                  for (var i = 0; i < args.length; i++) {
+                    var str = String(args[i] || '');
+                    if (str.indexOf('THREE.Clock') !== -1 || (str.indexOf('Clock') !== -1 && str.indexOf('Timer') !== -1)) {
+                      return true;
+                    }
+                  }
+                  return false;
+                };
+                var _warn = console.warn;
+                console.warn = function() {
+                  if (filterClockWarning(arguments)) return;
+                  return _warn.apply(console, arguments);
+                };
+                var _error = console.error;
+                console.error = function() {
+                  if (filterClockWarning(arguments)) return;
+                  return _error.apply(console, arguments);
+                };
+              })();
+            `,
+          }}
+        />
         <script
           id="structured-data-jsonld"
           type="application/ld+json"

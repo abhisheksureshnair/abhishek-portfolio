@@ -1,5 +1,30 @@
 'use client';
 
+// Early browser console filter to silence deprecated THREE.Clock warning (migrated to modern THREE.Timer)
+if (typeof window !== 'undefined') {
+  const filterClockWarning = (args: any[]) => {
+    for (let i = 0; i < args.length; i++) {
+      const str = String(args[i] || '');
+      if (str.includes('THREE.Clock') || (str.includes('Clock') && str.includes('Timer'))) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const origWarn = console.warn;
+  console.warn = (...args: any[]) => {
+    if (filterClockWarning(args)) return;
+    origWarn.apply(console, args);
+  };
+
+  const origError = console.error;
+  console.error = (...args: any[]) => {
+    if (filterClockWarning(args)) return;
+    origError.apply(console, args);
+  };
+}
+
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Gauge, Sparkles, Zap, Shield, Check } from 'lucide-react';
 
