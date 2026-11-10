@@ -3,6 +3,7 @@
 import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { usePerformanceQuality } from '../PerformanceControl';
 
 export interface CityPlazaFountainProps {
   position?: [number, number, number];
@@ -19,11 +20,15 @@ export interface CityPlazaFountainProps {
 export const CityPlazaFountain: React.FC<CityPlazaFountainProps> = ({
   position = [3.85, 0.74, -3.85],
 }) => {
+  const { effectiveTier, prefersReducedMotion } = usePerformanceQuality();
   const waterRippleRef1 = useRef<THREE.Mesh>(null);
   const waterRippleRef2 = useRef<THREE.Mesh>(null);
   const waterSpoutRef = useRef<THREE.Mesh>(null);
 
   useFrame((_, delta) => {
+    if (typeof document !== 'undefined' && document.hidden) return;
+    if (prefersReducedMotion) return;
+
     const time = Date.now() * 0.001;
 
     // Animate water ripple scale and rotation
@@ -50,13 +55,13 @@ export const CityPlazaFountain: React.FC<CityPlazaFountainProps> = ({
       {/* 1. Outer Stone Basin */}
       <mesh position={[0, 0.15, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[1.2, 1.35, 0.3, 24]} />
-        <meshStandardMaterial color="#334155" roughness={0.6} metalness={0.2} />
+        <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.08} />
       </mesh>
 
       {/* Basin Outer Rim Lip */}
       <mesh position={[0, 0.32, 0]}>
         <torusGeometry args={[1.2, 0.08, 8, 24]} />
-        <meshStandardMaterial color="#475569" roughness={0.5} />
+        <meshStandardMaterial color="#f1f5f9" roughness={0.35} metalness={0.05} />
       </mesh>
 
       {/* 2. Lower Water Pool */}
@@ -86,13 +91,13 @@ export const CityPlazaFountain: React.FC<CityPlazaFountainProps> = ({
       {/* 3. Middle Tier Pedestal */}
       <mesh position={[0, 0.45, 0]} castShadow>
         <cylinderGeometry args={[0.3, 0.4, 0.35, 16]} />
-        <meshStandardMaterial color="#475569" metalness={0.3} />
+        <meshStandardMaterial color="#94a3b8" roughness={0.4} metalness={0.1} />
       </mesh>
 
       {/* Middle Tier Water Bowl */}
       <mesh position={[0, 0.65, 0]} castShadow>
         <cylinderGeometry args={[0.6, 0.25, 0.18, 20]} />
-        <meshStandardMaterial color="#334155" roughness={0.5} />
+        <meshStandardMaterial color="#cbd5e1" roughness={0.4} />
       </mesh>
       <mesh position={[0, 0.72, 0]}>
         <cylinderGeometry args={[0.56, 0.56, 0.04, 20]} />
@@ -118,7 +123,9 @@ export const CityPlazaFountain: React.FC<CityPlazaFountainProps> = ({
       </mesh>
 
       {/* Soft Underwater Glow */}
-      <pointLight position={[0, 0.6, 0]} color="#38bdf8" intensity={0.9} distance={3.0} />
+      {effectiveTier === 'high' && (
+        <pointLight position={[0, 0.6, 0]} color="#38bdf8" intensity={0.9} distance={3.0} />
+      )}
     </group>
   );
 };

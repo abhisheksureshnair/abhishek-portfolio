@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
@@ -36,6 +36,52 @@ import { usePerformanceQuality } from '../PerformanceControl';
 import { WebGLDiagnosticManager } from './WebGLDiagnosticManager';
 import { Sparkles, AlertTriangle, RefreshCw } from 'lucide-react';
 
+const _daySky = new THREE.Color('#bae6fd');
+const _nightSky = new THREE.Color('#0c1938');
+
+/**
+ * Syncs tone mapping, exposure, sky background, and atmospheric fog with smooth transitions
+ */
+function CanvasToneMappingManager({ timeOfDay }: { timeOfDay: TimeOfDay }) {
+  const { gl, scene } = useThree();
+  const { prefersReducedMotion } = usePerformanceQuality();
+  const progressRef = useRef(timeOfDay === 'night' ? 1.0 : 0.0);
+
+  useEffect(() => {
+    gl.toneMapping = THREE.ACESFilmicToneMapping;
+  }, [gl]);
+
+  useFrame((_, delta) => {
+    if (typeof document !== 'undefined' && document.hidden) return;
+
+    const target = timeOfDay === 'night' ? 1.0 : 0.0;
+    const dt = Math.min(delta, 0.1);
+
+    if (prefersReducedMotion) {
+      progressRef.current = target;
+    } else {
+      const damp = 1 - Math.exp(-4.2 * dt);
+      progressRef.current += (target - progressRef.current) * damp;
+    }
+
+    const t = progressRef.current;
+    gl.toneMappingExposure = THREE.MathUtils.lerp(1.25, 1.15, t);
+
+    // Smoothly transition scene background & fog
+    if (scene.background && (scene.background as THREE.Color).isColor) {
+      (scene.background as THREE.Color).lerpColors(_daySky, _nightSky, t);
+    }
+    if (scene.fog && (scene.fog as THREE.Fog).isFog) {
+      const fog = scene.fog as THREE.Fog;
+      fog.color.lerpColors(_daySky, _nightSky, t);
+      fog.near = THREE.MathUtils.lerp(45, 35, t);
+      fog.far = THREE.MathUtils.lerp(120, 105, t);
+    }
+  });
+
+  return null;
+}
+
 export const WorldScene: React.FC = () => {
   const router = useRouter();
   const { effectiveTier } = usePerformanceQuality();
@@ -57,15 +103,17 @@ export const WorldScene: React.FC = () => {
   // Avatar transform refs for zero React re-renders during 60fps movement
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0.62, 14));
   const rotationRef = useRef<number>(0);
+  const quaternionRef = useRef<THREE.Quaternion>(new THREE.Quaternion());
+  const currentSpeedRef = useRef<number>(0);
   const isMovingRef = useRef<boolean>(false);
   const keysPressedRef = useRef<Record<string, boolean>>({});
   const targetWalkPosRef = useRef<THREE.Vector3 | null>(null);
 
   // Ground and road click-to-walk handler
   const handleGroundClick = useCallback((point: THREE.Vector3) => {
-    if (selectedBuilding !== null) return;
+    if (selectedBuilding !== null || isIntroActive) return;
     targetWalkPosRef.current = point.clone();
-  }, [selectedBuilding]);
+  }, [selectedBuilding, isIntroActive]);
 
   // Enterable Building Interiors (Image 3)
   const streetPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 14));
@@ -113,7 +161,7 @@ export const WorldScene: React.FC = () => {
         const parsed = JSON.parse(savedPos);
         playerPosRef.current.set(parsed.x, 0, parsed.z);
         sessionStorage.removeItem('universe_return_pos');
-      } catch (e) {}
+      } catch (e) { }
     }
   }, []);
 
@@ -301,17 +349,16 @@ export const WorldScene: React.FC = () => {
   const dprConfig: number | [number, number] =
     effectiveTier === 'low'
       ? 1.0
-      : effectiveTier === 'balanced'
-      ? [1, 1.25]
-      : [1, 1.5];
+      : effectiveTier === 'medium'
+        ? [1, 1.25]
+        : [1, 1.75];
 
   const shadowSetting = effectiveTier === 'low' ? false : 'percentage';
 
   return (
     <div
-      className={`relative w-full h-screen min-h-screen ${
-        timeOfDay === 'night' ? 'bg-[#070b19]' : 'bg-[#c8e6fc]'
-      } overflow-hidden select-none`}
+      className={`relative w-full h-screen min-h-screen ${timeOfDay === 'night' ? 'bg-[#0c1938]' : 'bg-[#bae6fd]'
+        } overflow-hidden select-none`}
       style={{ width: '100%', height: '100vh', minHeight: '100vh' }}
     >
       {/* 3D Loading Screen with Progress & Instant Bypass */}
@@ -331,6 +378,8 @@ export const WorldScene: React.FC = () => {
           depth: true,
         }}
         onCreated={({ gl }) => {
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = timeOfDay === 'night' ? 1.15 : 1.25;
           if (effectiveTier !== 'low') {
             gl.shadowMap.enabled = true;
             gl.shadowMap.type = THREE.PCFShadowMap;
@@ -343,132 +392,139 @@ export const WorldScene: React.FC = () => {
         style={{ width: '100%', height: '100%' }}
       >
         <React.Suspense fallback={null}>
-        {/* Soft Daylight vs Cyberpunk Night Sky Background & Fog */}
-        <color attach="background" args={[timeOfDay === 'night' ? '#070b19' : '#c8e6fc']} />
-        <fog
-          attach="fog"
-          args={[
-            timeOfDay === 'night' ? '#070b19' : '#c8e6fc',
-            timeOfDay === 'night' ? 26 : 35,
-            timeOfDay === 'night' ? 82 : 95,
-          ]}
-        />
+          {/* Tone Mapping & Exposure Manager */}
+          <CanvasToneMappingManager timeOfDay={timeOfDay} />
 
-        {/* WebGL Context Interruption & Telemetry Monitor */}
-        <WebGLDiagnosticManager
-          onContextLost={handleContextLost}
-          onContextRestored={handleContextRestored}
-        />
+          {/* Soft Sunny Daylight vs Deep Midnight Sapphire Atmosphere & Fog */}
+          <color attach="background" args={[timeOfDay === 'night' ? '#0c1938' : '#bae6fd']} />
+          <fog
+            attach="fog"
+            args={[
+              timeOfDay === 'night' ? '#0c1938' : '#bae6fd',
+              timeOfDay === 'night' ? 35 : 45,
+              timeOfDay === 'night' ? 105 : 120,
+            ]}
+          />
 
-        {/* OrbitControls for Smooth Camera Rotation & Debugging */}
-        <OrbitControls
-          ref={controlsRef}
-          makeDefault
-          target={[0, 0, 0]}
-          minDistance={8}
-          maxDistance={70}
-          maxPolarAngle={Math.PI / 2 - 0.05}
-          minPolarAngle={0.1}
-          enableDamping
-          dampingFactor={0.05}
-        />
+          {/* WebGL Context Interruption & Telemetry Monitor */}
+          <WebGLDiagnosticManager
+            onContextLost={handleContextLost}
+            onContextRestored={handleContextRestored}
+          />
 
-        {/* Frame-Rate Independent Camera Controller for Building focus, Avatar Follow & Intro Flyover */}
-        <CityCameraController
-          controlsRef={controlsRef}
-          selectedBuilding={selectedBuilding}
-          cameraMode={cameraMode}
-          playerPosRef={playerPosRef}
-          isIntroActive={isIntroActive}
-          onIntroComplete={() => {
-            setIsIntroActive(false);
-            sessionStorage.setItem('developer_universe_intro_done', 'true');
-          }}
-          heroPosition={[-7.85, 0.74, -7.35]}
-          aboutPosition={[7.85, 0.74, -7.35]}
-          projectsPosition={[-7.85, 0.74, 7.35]}
-          skillsPosition={[7.85, 0.74, 7.35]}
-          experiencePosition={[0, 0.74, 21.5]}
-          contactPosition={[0, 0.74, -21.5]}
-        />
+          {/* OrbitControls for Smooth Camera Rotation & Debugging */}
+          <OrbitControls
+            ref={controlsRef}
+            makeDefault
+            target={[0, 0, 0]}
+            minDistance={8}
+            maxDistance={70}
+            maxPolarAngle={Math.PI / 2 - 0.05}
+            minPolarAngle={0.1}
+            enableDamping
+            dampingFactor={0.05}
+          />
 
-        {/* Reusable Stylized Diorama Lighting with Day / Night Mode */}
-        <CityLighting timeOfDay={timeOfDay} />
+          {/* Frame-Rate Independent Camera Controller for Building focus, Avatar Follow & Intro Flyover */}
+          <CityCameraController
+            controlsRef={controlsRef}
+            selectedBuilding={selectedBuilding}
+            cameraMode={cameraMode}
+            playerPosRef={playerPosRef}
+            isIntroActive={isIntroActive}
+            onIntroComplete={() => {
+              setIsIntroActive(false);
+              sessionStorage.setItem('developer_universe_intro_done', 'true');
+            }}
+            heroPosition={[-7.85, 0.74, -7.35]}
+            aboutPosition={[7.85, 0.74, -7.35]}
+            projectsPosition={[-7.85, 0.74, 7.35]}
+            skillsPosition={[7.85, 0.74, 7.35]}
+            experiencePosition={[0, 0.74, 21.5]}
+            contactPosition={[0, 0.74, -21.5]}
+          />
 
-        {/* Reusable 60x60 Raised Ground Platform */}
-        <CityGround size={60} onGroundClick={handleGroundClick} />
+          {/* Reusable Stylized Diorama Lighting with Day / Night Mode */}
+          <CityLighting timeOfDay={timeOfDay} />
 
-        {/* Reusable City Road & Sidewalk Network */}
-        <CityRoadNetwork onRoadClick={handleGroundClick} />
+          {/* Reusable 60x60 Raised Ground Platform */}
+          <CityGround size={60} onGroundClick={handleGroundClick} />
 
-        {/* Environmental Details: Trees (with ambient sway), Bushes, Streetlights, Signals & Parked Cars */}
-        <CityStreetFurniture timeOfDay={timeOfDay} />
+          {/* Reusable City Road & Sidewalk Network */}
+          <CityRoadNetwork onRoadClick={handleGroundClick} />
 
-        {/* Civic Central Plaza Animated Fountain */}
-        <CityPlazaFountain position={[3.85, 0.74, -3.85]} />
+          {/* Environmental Details: Trees (with ambient sway), Bushes, Streetlights, Signals & Parked Cars */}
+          <CityStreetFurniture timeOfDay={timeOfDay} />
 
-        {/* Animated Traffic System: 5 Moving Low-Poly Vehicles on Road Circuits */}
-        <CityTrafficSystem />
+          {/* Civic Central Plaza Animated Fountain */}
+          <CityPlazaFountain position={[3.85, 0.74, -3.85]} />
 
-        {/* Stylized 3D Developer Avatar Movement & Building Proximity Controller */}
-        <CityAvatarController
-          playerPosRef={playerPosRef}
-          rotationRef={rotationRef}
-          isMovingRef={isMovingRef}
-          keysPressedRef={keysPressedRef}
-          targetWalkPosRef={targetWalkPosRef}
-          onSelectBuilding={(bId) => setSelectedBuilding(bId)}
-          isModalOpen={selectedBuilding !== null}
-        />
+          {/* Animated Traffic System: 5 Moving Low-Poly Vehicles on Road Circuits */}
+          <CityTrafficSystem />
 
-        {/* Stylized 3D Developer Avatar (Chibi Casual Outfit, Head, Backpack, Sneakers, Locomotion) */}
-        <DeveloperAvatar3D
-          positionRef={playerPosRef}
-          rotationRef={rotationRef}
-          isMovingRef={isMovingRef}
-        />
+          {/* Stylized 3D Developer Avatar Movement & Building Proximity Controller */}
+          <CityAvatarController
+            playerPosRef={playerPosRef}
+            rotationRef={rotationRef}
+            quaternionRef={quaternionRef}
+            currentSpeedRef={currentSpeedRef}
+            isMovingRef={isMovingRef}
+            keysPressedRef={keysPressedRef}
+            targetWalkPosRef={targetWalkPosRef}
+            onSelectBuilding={(bId) => setSelectedBuilding(bId)}
+            isModalOpen={selectedBuilding !== null}
+          />
 
-        {/* Hero Headquarters: 3-Floor Interactive Flagship Building (Plot 01) */}
-        <HeroBuilding
-          position={[-7.85, 0.74, -7.35]}
-          onSelect={() => setSelectedBuilding('hero')}
-          isSelected={selectedBuilding === 'hero'}
-        />
+          {/* Stylized 3D Developer Avatar (Chibi Casual Outfit, Head, Backpack, Sneakers, Locomotion) */}
+          <DeveloperAvatar3D
+            positionRef={playerPosRef}
+            rotationRef={rotationRef}
+            quaternionRef={quaternionRef}
+            currentSpeedRef={currentSpeedRef}
+            isMovingRef={isMovingRef}
+          />
 
-        {/* About Me Creative Studio: 2-Story Studio with Terrace & Balcony (Plot 02) */}
-        <AboutBuilding
-          position={[7.85, 0.74, -7.35]}
-          onSelect={() => setSelectedBuilding('about')}
-          isSelected={selectedBuilding === 'about'}
-        />
+          {/* Hero Headquarters: 3-Floor Interactive Flagship Building (Plot 01) */}
+          <HeroBuilding
+            position={[-7.85, 0.74, -7.35]}
+            onSelect={() => setSelectedBuilding('hero')}
+            isSelected={selectedBuilding === 'hero'}
+          />
 
-        {/* Projects Innovation Center: Futuristic Purple & Blue Exhibition Building (Plot 03) */}
-        <ProjectsBuilding
-          position={[-7.85, 0.74, 7.35]}
-          onSelect={() => setSelectedBuilding('projects')}
-          isSelected={selectedBuilding === 'projects'}
-        />
+          {/* About Me Creative Studio: 2-Story Studio with Terrace & Balcony (Plot 02) */}
+          <AboutBuilding
+            position={[7.85, 0.74, -7.35]}
+            onSelect={() => setSelectedBuilding('about')}
+            isSelected={selectedBuilding === 'about'}
+          />
 
-        {/* Skills Tech Tower: Tall Futuristic Skyscraper with Glowing Windows & Antenna (Plot 04) */}
-        <SkillsBuilding
-          position={[7.85, 0.74, 7.35]}
-          onSelect={() => setSelectedBuilding('skills')}
-          isSelected={selectedBuilding === 'skills'}
-        />
+          {/* Projects Innovation Center: Futuristic Purple & Blue Exhibition Building (Plot 03) */}
+          <ProjectsBuilding
+            position={[-7.85, 0.74, 7.35]}
+            onSelect={() => setSelectedBuilding('projects')}
+            isSelected={selectedBuilding === 'projects'}
+          />
 
-        {/* Experience Office: Professional Blue-and-White Corporate Office Complex (Plot 06) */}
-        <ExperienceBuilding
-          position={[0, 0.74, 21.5]}
-          onSelect={() => setSelectedBuilding('experience')}
-          isSelected={selectedBuilding === 'experience'}
-        />
+          {/* Skills Tech Tower: Tall Futuristic Skyscraper with Glowing Windows & Antenna (Plot 04) */}
+          <SkillsBuilding
+            position={[7.85, 0.74, 7.35]}
+            onSelect={() => setSelectedBuilding('skills')}
+            isSelected={selectedBuilding === 'skills'}
+          />
 
-        {/* Contact Hub: Friendly Modern Communication Hub with Pink & Blue Accents (Plot 05) */}
-        <ContactBuilding
-          position={[0, 0.74, -21.5]}
-          onSelect={() => setSelectedBuilding('contact')}
-          isSelected={selectedBuilding === 'contact'}
-        />
+          {/* Experience Office: Professional Blue-and-White Corporate Office Complex (Plot 06) */}
+          <ExperienceBuilding
+            position={[0, 0.74, 21.5]}
+            onSelect={() => setSelectedBuilding('experience')}
+            isSelected={selectedBuilding === 'experience'}
+          />
+
+          {/* Contact Hub: Friendly Modern Communication Hub with Pink & Blue Accents (Plot 05) */}
+          <ContactBuilding
+            position={[0, 0.74, -21.5]}
+            onSelect={() => setSelectedBuilding('contact')}
+            isSelected={selectedBuilding === 'contact'}
+          />
         </React.Suspense>
       </Canvas>
 

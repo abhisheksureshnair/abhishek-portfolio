@@ -3,6 +3,7 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { usePerformanceQuality } from '../PerformanceControl';
 
 export interface SkillsBuildingProps {
   position?: [number, number, number];
@@ -126,9 +127,12 @@ export const SkillsBuilding: React.FC<SkillsBuildingProps> = ({
   onSelect,
   isSelected = false,
 }) => {
+  const { effectiveTier, prefersReducedMotion } = usePerformanceQuality();
+  const allowPointLights = effectiveTier === 'high';
   const [isHovered, setIsHovered] = useState(false);
 
   // Animation refs
+  const rootGroupRef = useRef<THREE.Group>(null);
   const antennaRingRef1 = useRef<THREE.Group>(null);
   const antennaRingRef2 = useRef<THREE.Group>(null);
   const beaconLightRef = useRef<THREE.PointLight>(null);
@@ -142,39 +146,54 @@ export const SkillsBuilding: React.FC<SkillsBuildingProps> = ({
 
   // Frame-rate independent animations
   useFrame((_, delta) => {
-    // 1. Rotate antenna telecom rings
-    if (antennaRingRef1.current) {
-      antennaRingRef1.current.rotation.y += delta * 1.8;
-    }
-    if (antennaRingRef2.current) {
-      antennaRingRef2.current.rotation.y -= delta * 1.2;
-      antennaRingRef2.current.rotation.z = Math.sin(Date.now() * 0.002) * 0.15;
+    if (typeof document !== 'undefined' && document.hidden) return;
+
+    // 1. Smooth vertical lift on hover/selection
+    if (rootGroupRef.current) {
+      const targetY = position[1] + ((isHovered || isSelected) && !prefersReducedMotion ? 0.12 : 0);
+      if (prefersReducedMotion) {
+        rootGroupRef.current.position.y = targetY;
+      } else {
+        rootGroupRef.current.position.y += (targetY - rootGroupRef.current.position.y) * (1 - Math.exp(-12.0 * delta));
+      }
     }
 
-    // 2. Beacon flash on the antenna tip (every 1.2 seconds sharp pulse)
     const time = Date.now() * 0.001;
-    const beaconCycle = (Math.sin(time * 5.0) + 1) * 0.5; // 0 to 1
-    const sharpFlash = Math.pow(beaconCycle, 4);
 
-    if (beaconMeshRef.current && beaconMeshRef.current.material) {
+    // 2. Rotate antenna telecom rings (paused on reduced motion)
+    if (!prefersReducedMotion) {
+      if (antennaRingRef1.current) {
+        antennaRingRef1.current.rotation.y += delta * 1.8;
+      }
+      if (antennaRingRef2.current) {
+        antennaRingRef2.current.rotation.y -= delta * 1.2;
+        antennaRingRef2.current.rotation.z = Math.sin(time * 2.0) * 0.15;
+      }
+    }
+
+    // 3. Beacon flash on the antenna tip (every 1.2 seconds sharp pulse)
+    if (beaconMeshRef.current && beaconMeshRef.current.material && !prefersReducedMotion) {
+      const beaconCycle = (Math.sin(time * 5.0) + 1) * 0.5; // 0 to 1
+      const sharpFlash = Math.pow(beaconCycle, 4);
       const mat = beaconMeshRef.current.material as THREE.MeshStandardMaterial;
       mat.emissiveIntensity = 1.0 + sharpFlash * 4.0;
     }
 
-    // 3. Subtle pulsing light strips along skyscraper corners
+    // 4. Subtle pulsing light strips along skyscraper corners
     if (pulseStripMatRef.current) {
       const pulse = 1.2 + Math.sin(time * 3.5) * 0.5;
-      pulseStripMatRef.current.emissiveIntensity = isHovered ? pulse * 1.6 : pulse;
+      pulseStripMatRef.current.emissiveIntensity = isHovered || isSelected ? pulse * 1.6 : pulse;
     }
 
-    // 4. Subtle bobbing for the floating badge
-    if (badgeRef.current) {
+    // 5. Subtle bobbing for the floating badge
+    if (badgeRef.current && !prefersReducedMotion) {
       badgeRef.current.position.y = 15.6 + Math.sin(time * 2.5) * 0.15;
     }
   });
 
   return (
     <group
+      ref={rootGroupRef}
       position={position}
       onClick={(e) => {
         e.stopPropagation();
@@ -273,8 +292,7 @@ export const SkillsBuilding: React.FC<SkillsBuildingProps> = ({
             emissiveIntensity={0.35}
             roughness={0.1}
             metalness={0.9}
-            transparent
-            opacity={0.45}
+            transparent={false}
           />
         </mesh>
 
@@ -303,13 +321,15 @@ export const SkillsBuilding: React.FC<SkillsBuildingProps> = ({
           </mesh>
 
           {/* Downward Entrance Spotlight */}
-          <pointLight
-            position={[0, -0.3, 0]}
-            color="#22d3ee"
-            intensity={1.2}
-            distance={4.5}
-            decay={2}
-          />
+          {allowPointLights && (
+            <pointLight
+              position={[0, -0.3, 0]}
+              color="#22d3ee"
+              intensity={1.2}
+              distance={4.5}
+              decay={2}
+            />
+          )}
         </group>
       </group>
 
@@ -650,13 +670,15 @@ export const SkillsBuilding: React.FC<SkillsBuildingProps> = ({
       {/* 8. INTERACTIVE HOVER / SELECTION GLOW & BADGE            */}
       {/* ======================================================== */}
       {/* Architectural Accent Glow */}
-      <pointLight
-        position={[0, 8.0, 3.0]}
-        color="#00f0ff"
-        intensity={isHovered || isSelected ? 2.5 : 1.2}
-        distance={9.0}
-        decay={2}
-      />
+      {allowPointLights && (
+        <pointLight
+          position={[0, 8.0, 3.0]}
+          color="#00f0ff"
+          intensity={isHovered || isSelected ? 2.5 : 1.2}
+          distance={9.0}
+          decay={2}
+        />
+      )}
 
       {/* Floating Hover Indicator Badge */}
       {isHovered && !isSelected && (

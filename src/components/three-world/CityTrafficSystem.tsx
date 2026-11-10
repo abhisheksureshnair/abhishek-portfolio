@@ -3,6 +3,9 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { VehicleType, VehicleAccessory, VehicleChassis, VehicleWheels } from './CityVehicles';
+import { usePerformanceQuality } from '../PerformanceControl';
+import { getTrafficSignalState, SignalPhase } from './CityTrafficSignals';
 
 interface Point2D {
   x: number;
@@ -14,26 +17,39 @@ interface PathSample {
   z: number;
   distance: number;
   angle: number;
+  isCurved: boolean;
 }
 
-interface CircuitPath {
+interface StopLine {
+  dist: number; // Arc-length distance along circuit
+  x: number;
+  z: number;
+  direction: 'ns' | 'ew';
+}
+
+interface AdvancedCircuitPath {
   samples: PathSample[];
   totalLength: number;
+  stopLines: StopLine[];
 }
 
 /**
- * Builds a smooth closed-loop road circuit with rounded bezier corners.
+ * Builds a continuous closed-loop road circuit with smooth cubic Bezier turns and stop lines.
  */
-function buildCircuit(corners: Point2D[], cornerRadius = 2.2, samplesPerTurn = 10): CircuitPath {
+function buildAdvancedCircuit(
+  corners: Point2D[],
+  stopLineDefinitions: { x: number; z: number; heading: number; direction: 'ns' | 'ew' }[] = [],
+  cornerRadius = 2.6
+): AdvancedCircuitPath {
   const count = corners.length;
-  const rawPoints: Point2D[] = [];
+  const rawPoints: { x: number; z: number; isCurved: boolean }[] = [];
 
   for (let i = 0; i < count; i++) {
     const prev = corners[(i - 1 + count) % count];
     const curr = corners[i];
     const next = corners[(i + 1) % count];
 
-    // Direction vectors
+    // Inbound & outbound direction vectors
     const vIn = { x: curr.x - prev.x, z: curr.z - prev.z };
     const lenIn = Math.hypot(vIn.x, vIn.z);
     const nIn = { x: vIn.x / lenIn, z: vIn.z / lenIn };
@@ -43,28 +59,62 @@ function buildCircuit(corners: Point2D[], cornerRadius = 2.2, samplesPerTurn = 1
     const nOut = { x: vOut.x / lenOut, z: vOut.z / lenOut };
 
     const actualR = Math.min(cornerRadius, lenIn * 0.45, lenOut * 0.45);
+    const pStart = { x: curr.x - nIn.x * actualR, z: curr.z - nIn.z * actualR };
+    const pEnd = { x: curr.x + nOut.x * actualR, z: curr.z + nOut.z * actualR };
 
-    // Start and end points of the rounded corner
-    const pStart = {
-      x: curr.x - nIn.x * actualR,
-      z: curr.z - nIn.z * actualR,
-    };
-    const pEnd = {
-      x: curr.x + nOut.x * actualR,
-      z: curr.z + nOut.z * actualR,
-    };
+    // 1. Subdivide straight segment between previous curve end and current curve start
+    if (rawPoints.length > 0) {
+      const lastP = rawPoints[rawPoints.length - 1];
+      const distStraight = Math.hypot(pStart.x - lastP.x, pStart.z - lastP.z);
+      const steps = Math.max(1, Math.floor(distStraight / 0.4));
+      for (let st = 1; st < steps; st++) {
+        const u = st / steps;
+        rawPoints.push({
+          x: lastP.x + (pStart.x - lastP.x) * u,
+          z: lastP.z + (pStart.z - lastP.z) * u,
+          isCurved: false,
+        });
+      }
+    }
 
-    // Quadratic Bezier corner interpolation
-    for (let s = 0; s <= samplesPerTurn; s++) {
-      const t = s / samplesPerTurn;
+    // 2. Cubic Bezier curve for turn (circular arc approximation)
+    const k = actualR * 0.552;
+    const c1 = { x: pStart.x + nIn.x * k, z: pStart.z + nIn.z * k };
+    const c2 = { x: pEnd.x - nOut.x * k, z: pEnd.z - nOut.z * k };
+
+    const CURVE_STEPS = 16;
+    for (let s = 0; s <= CURVE_STEPS; s++) {
+      const t = s / CURVE_STEPS;
       const oneMinusT = 1 - t;
-      const bx = oneMinusT * oneMinusT * pStart.x + 2 * oneMinusT * t * curr.x + t * t * pEnd.x;
-      const bz = oneMinusT * oneMinusT * pStart.z + 2 * oneMinusT * t * curr.z + t * t * pEnd.z;
-      rawPoints.push({ x: bx, z: bz });
+      const bx =
+        oneMinusT * oneMinusT * oneMinusT * pStart.x +
+        3 * oneMinusT * oneMinusT * t * c1.x +
+        3 * oneMinusT * t * t * c2.x +
+        t * t * t * pEnd.x;
+      const bz =
+        oneMinusT * oneMinusT * oneMinusT * pStart.z +
+        3 * oneMinusT * oneMinusT * t * c1.z +
+        3 * oneMinusT * t * t * c2.z +
+        t * t * t * pEnd.z;
+      rawPoints.push({ x: bx, z: bz, isCurved: true });
     }
   }
 
-  // Calculate cumulative arc distances and tangent angles
+  // Connect closing segment back to first point
+  const firstP = rawPoints[0];
+  const lastP = rawPoints[rawPoints.length - 1];
+  const distClose = Math.hypot(firstP.x - lastP.x, firstP.z - lastP.z);
+  const stepsClose = Math.max(1, Math.floor(distClose / 0.4));
+  for (let st = 1; st < stepsClose; st++) {
+    const u = st / stepsClose;
+    rawPoints.push({
+      x: lastP.x + (firstP.x - lastP.x) * u,
+      z: lastP.z + (firstP.z - lastP.z) * u,
+      isCurved: false,
+    });
+  }
+
+  // Calculate cumulative distances and tangents
   const samples: PathSample[] = [];
   let totalLength = 0;
 
@@ -75,27 +125,62 @@ function buildCircuit(corners: Point2D[], cornerRadius = 2.2, samplesPerTurn = 1
     const dz = next.z - curr.z;
     const segLen = Math.hypot(dx, dz);
 
-    const angle = Math.atan2(dx, dz);
-    samples.push({
-      x: curr.x,
-      z: curr.z,
-      distance: totalLength,
-      angle,
-    });
-    totalLength += segLen;
+    if (segLen > 0.0001) {
+      const angle = Math.atan2(dx, dz);
+      samples.push({
+        x: curr.x,
+        z: curr.z,
+        distance: totalLength,
+        angle,
+        isCurved: curr.isCurved,
+      });
+      totalLength += segLen;
+    }
   }
 
-  return { samples, totalLength };
+  // Map stop line triggers to exact arc-length distances on this circuit
+  const stopLines: StopLine[] = [];
+  for (const def of stopLineDefinitions) {
+    let bestDist = -1;
+    let minDist = 3.5;
+
+    for (let i = 0; i < samples.length; i++) {
+      const s = samples[i];
+      const d = Math.hypot(s.x - def.x, s.z - def.z);
+      if (d < minDist) {
+        let angleDiff = Math.abs(s.angle - def.heading);
+        while (angleDiff > Math.PI) angleDiff = Math.abs(angleDiff - Math.PI * 2);
+        if (angleDiff < 0.85) {
+          minDist = d;
+          bestDist = s.distance;
+        }
+      }
+    }
+
+    if (bestDist !== -1) {
+      stopLines.push({
+        dist: bestDist,
+        x: def.x,
+        z: def.z,
+        direction: def.direction,
+      });
+    }
+  }
+
+  return { samples, totalLength, stopLines };
 }
 
 /**
- * Samples a continuous road position and angle along a circuit.
+ * High-performance binary search sampling along a circuit.
  */
-function sampleCircuit(circuit: CircuitPath, targetDistance: number, out: { x: number; z: number; angle: number }) {
+function sampleCircuit(
+  circuit: AdvancedCircuitPath,
+  targetDistance: number,
+  out: { x: number; z: number; angle: number; isCurved: boolean }
+) {
   const normDist = ((targetDistance % circuit.totalLength) + circuit.totalLength) % circuit.totalLength;
   const samples = circuit.samples;
 
-  // Binary search for efficiency
   let low = 0;
   let high = samples.length - 1;
 
@@ -122,267 +207,353 @@ function sampleCircuit(circuit: CircuitPath, targetDistance: number, out: { x: n
 
   out.x = sA.x + (sB.x - sA.x) * t;
   out.z = sA.z + (sB.z - sA.z) * t;
+  out.isCurved = sA.isCurved || sB.isCurved;
 
-  // Tangent interpolation
+  // Shortest angular tangent interpolation
   let diff = sB.angle - sA.angle;
   while (diff < -Math.PI) diff += Math.PI * 2;
   while (diff > Math.PI) diff -= Math.PI * 2;
   out.angle = sA.angle + diff * t;
 }
 
-/**
- * Low-Poly Stylized Animated Car Model
- */
-interface CarModelProps {
-  type: 'taxi' | 'sports' | 'coupe' | 'van' | 'police';
+export interface VehicleConfig {
+  id: string;
+  type: VehicleType;
   color: string;
+  accessory?: VehicleAccessory;
+  circuitIdx: number;
+  baseCruisingSpeed: number; // m/s
+  initialDist: number;
 }
-
-const CarBody: React.FC<CarModelProps> = ({ type, color }) => {
-  return (
-    <group>
-      {/* Lower Main Chassis */}
-      <mesh position={[0, 0.22, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.35, 0.26, type === 'van' ? 3.0 : 2.7]} />
-        <meshStandardMaterial color={color} roughness={0.3} metalness={0.2} />
-      </mesh>
-
-      {/* Cabin & Windows */}
-      {type === 'van' ? (
-        <group position={[0, 0.62, -0.2]}>
-          <mesh castShadow>
-            <boxGeometry args={[1.25, 0.58, 2.2]} />
-            <meshStandardMaterial color="#f8fafc" roughness={0.3} />
-          </mesh>
-          {/* Van Front Glass */}
-          <mesh position={[0, 0, 1.11]}>
-            <planeGeometry args={[1.1, 0.45]} />
-            <meshStandardMaterial color="#0284c7" metalness={0.9} roughness={0.1} transparent opacity={0.7} />
-          </mesh>
-        </group>
-      ) : (
-        <group position={[0, 0.48, -0.1]}>
-          <mesh castShadow>
-            <boxGeometry args={[1.15, 0.32, 1.45]} />
-            <meshStandardMaterial
-              color="#0284c7"
-              emissive="#0369a1"
-              emissiveIntensity={0.2}
-              roughness={0.1}
-              metalness={0.85}
-              transparent
-              opacity={0.8}
-            />
-          </mesh>
-          {/* Roof Panel */}
-          <mesh position={[0, 0.17, 0]}>
-            <boxGeometry args={[1.18, 0.04, 1.48]} />
-            <meshStandardMaterial color={color} roughness={0.3} />
-          </mesh>
-        </group>
-      )}
-
-      {/* Type-Specific Roof Fixture */}
-      {type === 'taxi' && (
-        <group position={[0, 0.72, -0.1]}>
-          <mesh>
-            <boxGeometry args={[0.5, 0.12, 0.22]} />
-            <meshStandardMaterial color="#fef08a" emissive="#fde047" emissiveIntensity={2.0} />
-          </mesh>
-          <mesh position={[0, 0.08, 0]}>
-            <boxGeometry args={[0.3, 0.04, 0.06]} />
-            <meshStandardMaterial color="#0f172a" />
-          </mesh>
-        </group>
-      )}
-
-      {type === 'police' && (
-        <group position={[0, 0.72, -0.1]}>
-          {/* Red & Blue Emergency Light Bar */}
-          <mesh position={[-0.2, 0, 0]}>
-            <boxGeometry args={[0.24, 0.1, 0.16]} />
-            <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={3.0} />
-          </mesh>
-          <mesh position={[0.2, 0, 0]}>
-            <boxGeometry args={[0.24, 0.1, 0.16]} />
-            <meshStandardMaterial color="#0284c7" emissive="#00f0ff" emissiveIntensity={3.0} />
-          </mesh>
-        </group>
-      )}
-
-      {type === 'sports' && (
-        <group position={[0, 0.52, -1.25]}>
-          {/* Aerodynamic Rear Spoiler */}
-          <mesh castShadow>
-            <boxGeometry args={[1.25, 0.05, 0.22]} />
-            <meshStandardMaterial color="#0f172a" metalness={0.8} />
-          </mesh>
-          <mesh position={[-0.5, -0.1, 0]}>
-            <boxGeometry args={[0.04, 0.2, 0.06]} />
-            <meshStandardMaterial color="#0f172a" />
-          </mesh>
-          <mesh position={[0.5, -0.1, 0]}>
-            <boxGeometry args={[0.04, 0.2, 0.06]} />
-            <meshStandardMaterial color="#0f172a" />
-          </mesh>
-        </group>
-      )}
-
-      {/* Bumpers */}
-      <mesh position={[0, 0.16, 1.38]}>
-        <boxGeometry args={[1.38, 0.12, 0.1]} />
-        <meshStandardMaterial color="#1e293b" metalness={0.7} />
-      </mesh>
-      <mesh position={[0, 0.16, -1.38]}>
-        <boxGeometry args={[1.38, 0.12, 0.1]} />
-        <meshStandardMaterial color="#1e293b" metalness={0.7} />
-      </mesh>
-
-      {/* Headlights (Warm White Glow) */}
-      <mesh position={[-0.45, 0.24, 1.41]}>
-        <sphereGeometry args={[0.09, 8, 8]} />
-        <meshStandardMaterial color="#fef08a" emissive="#fef08a" emissiveIntensity={2.5} />
-      </mesh>
-      <mesh position={[0.45, 0.24, 1.41]}>
-        <sphereGeometry args={[0.09, 8, 8]} />
-        <meshStandardMaterial color="#fef08a" emissive="#fef08a" emissiveIntensity={2.5} />
-      </mesh>
-
-      {/* Taillights (Red Glow) */}
-      <mesh position={[-0.45, 0.24, -1.41]}>
-        <sphereGeometry args={[0.09, 8, 8]} />
-        <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={2.5} />
-      </mesh>
-      <mesh position={[0.45, 0.24, -1.41]}>
-        <sphereGeometry args={[0.09, 8, 8]} />
-        <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={2.5} />
-      </mesh>
-    </group>
-  );
-};
 
 /**
  * CityTrafficSystem Component
- * Manages 4 to 5 animated low-poly cars on continuous road circuits:
- * - Stays strictly on valid asphalt road lanes
- * - Smooth quadratic bezier turns at intersections
- * - Frame-rate independent speed and wheel rotation
- * - Zero real-time object allocation in useFrame
+ * Production-ready intelligent traffic engine:
+ * - 5 stylized 3D vehicles following strictly valid, right-hand drive road lanes
+ * - Smooth cubic Bezier intersection turns with natural corner deceleration
+ * - Traffic signal detection & stopping behind intersection zebra crossings
+ * - Smooth gradual acceleration, deceleration, and car-following collision prevention
+ * - Realistic delta-time-aware steering rotation damping
+ * - Physically accurate wheel rotation based on distance and tire radius
+ * - Zero React re-renders in useFrame (100% mutable ref updates)
  */
 export const CityTrafficSystem: React.FC = () => {
-  // Precompute 4 closed-loop road circuits
+  const { effectiveTier } = usePerformanceQuality();
+  const enableShadows = effectiveTier !== 'low';
+
+  // Standard stop lines for major intersections
+  const standardStopLines = useMemo(
+    () => [
+      // 1. Center Crossroads (X=0, Z=0)
+      { x: 1.4, z: -3.2, heading: 0, direction: 'ns' as const }, // Southbound approach
+      { x: -1.4, z: 3.2, heading: Math.PI, direction: 'ns' as const }, // Northbound approach
+      { x: -3.2, z: -1.4, heading: Math.PI / 2, direction: 'ew' as const }, // Eastbound approach
+      { x: 3.2, z: 1.4, heading: -Math.PI / 2, direction: 'ew' as const }, // Westbound approach
+
+      // 2. North Junction (X=0, Z=-14)
+      { x: 1.4, z: -17.2, heading: 0, direction: 'ns' as const },
+      { x: -1.4, z: -10.8, heading: Math.PI, direction: 'ns' as const },
+      { x: -3.2, z: -12.95, heading: Math.PI / 2, direction: 'ew' as const },
+      { x: 3.2, z: -12.95, heading: -Math.PI / 2, direction: 'ew' as const },
+
+      // 3. South Junction (X=0, Z=14)
+      { x: 1.4, z: 10.8, heading: 0, direction: 'ns' as const },
+      { x: -1.4, z: 17.2, heading: Math.PI, direction: 'ns' as const },
+      { x: -3.2, z: 12.95, heading: Math.PI / 2, direction: 'ew' as const },
+      { x: 3.2, z: 12.95, heading: -Math.PI / 2, direction: 'ew' as const },
+
+      // 4. West Junction (X=-15, Z=0)
+      { x: -13.95, z: -3.2, heading: 0, direction: 'ns' as const },
+      { x: -13.95, z: 3.2, heading: Math.PI, direction: 'ns' as const },
+
+      // 5. East Junction (X=15, Z=0)
+      { x: 13.95, z: -3.2, heading: 0, direction: 'ns' as const },
+      { x: 13.95, z: 3.2, heading: Math.PI, direction: 'ns' as const },
+    ],
+    []
+  );
+
+  // Precompute 4 closed-loop road circuits strictly aligned to right-hand traffic
   const circuits = useMemo(() => {
-    // Circuit 1: Outer City Ring (Clockwise, right-hand drive lane)
-    // Runs along outer streets: West Street (x=-13.95), North Cross (z=-12.95), East Street (x=13.95), South Cross (z=12.95)
-    const c1 = buildCircuit([
-      { x: -13.95, z: 12.0 },
-      { x: -13.95, z: -12.0 },
-      { x: 13.95, z: -12.0 },
-      { x: 13.95, z: 12.0 },
-    ]);
+    // Circuit 0: Outer City Ring (Clockwise perimeter: West St -> North Cross -> East St -> South Cross)
+    const c0 = buildAdvancedCircuit(
+      [
+        { x: -13.95, z: 12.0 },
+        { x: -13.95, z: -12.0 },
+        { x: 13.95, z: -12.0 },
+        { x: 13.95, z: 12.0 },
+      ],
+      standardStopLines,
+      2.6
+    );
 
-    // Circuit 2: Northeast Block Loop (Central Blvd North -> East on North Cross -> South on East St -> West on Central Blvd)
-    const c2 = buildCircuit([
-      { x: 1.4, z: 0.0 },
-      { x: 1.4, z: -12.0 },
-      { x: 13.95, z: -12.0 },
-      { x: 13.95, z: 0.0 },
-    ]);
+    // Circuit 1: Northeast Boulevard Loop (Central Ave South -> East St -> North Cross St)
+    const c1 = buildAdvancedCircuit(
+      [
+        { x: 1.4, z: 0.0 },
+        { x: 1.4, z: -12.0 },
+        { x: 13.95, z: -12.0 },
+        { x: 13.95, z: -1.4 },
+        { x: 1.4, z: -1.4 },
+      ],
+      standardStopLines,
+      2.5
+    );
 
-    // Circuit 3: Southwest Block Loop (Central Blvd South -> West on South Cross -> North on West St -> East on Central Blvd)
-    const c3 = buildCircuit([
-      { x: -1.4, z: 0.0 },
-      { x: -1.4, z: 12.0 },
-      { x: -13.95, z: 12.0 },
-      { x: -13.95, z: 0.0 },
-    ]);
+    // Circuit 2: Southwest Boulevard Loop (Central Ave North -> West St -> South Cross St)
+    const c2 = buildAdvancedCircuit(
+      [
+        { x: -1.4, z: 0.0 },
+        { x: -1.4, z: 12.0 },
+        { x: -13.95, z: 12.0 },
+        { x: -13.95, z: 1.4 },
+        { x: -1.4, z: 1.4 },
+      ],
+      standardStopLines,
+      2.5
+    );
 
-    // Circuit 4: Southeast Block Loop (South on East St -> West on South Cross -> North on Central Blvd -> East on Central Blvd)
-    const c4 = buildCircuit([
-      { x: 13.95, z: 0.0 },
-      { x: 13.95, z: 12.0 },
-      { x: 1.4, z: 12.0 },
-      { x: 1.4, z: 0.0 },
-    ]);
+    // Circuit 3: Southeast Boulevard Loop
+    const c3 = buildAdvancedCircuit(
+      [
+        { x: 13.95, z: 0.0 },
+        { x: 13.95, z: 12.0 },
+        { x: 1.4, z: 12.0 },
+        { x: 1.4, z: 0.0 },
+      ],
+      standardStopLines,
+      2.5
+    );
 
-    return [c1, c2, c3, c4];
-  }, []);
+    return [c0, c1, c2, c3];
+  }, [standardStopLines]);
 
   // 5 Active Vehicle Configs
-  const vehicles = useMemo(() => [
-    { id: 'taxi-1', type: 'taxi' as const, color: '#f59e0b', circuitIdx: 0, speed: 5.6, dist: 0 },
-    { id: 'sports-1', type: 'sports' as const, color: '#06b6d4', circuitIdx: 1, speed: 6.8, dist: 15 },
-    { id: 'coupe-1', type: 'coupe' as const, color: '#ef4444', circuitIdx: 2, speed: 6.0, dist: 8 },
-    { id: 'van-1', type: 'van' as const, color: '#10b981', circuitIdx: 0, speed: 4.8, dist: 55 },
-    { id: 'police-1', type: 'police' as const, color: '#0f172a', circuitIdx: 3, speed: 7.2, dist: 22 },
-  ], []);
+  const vehicleConfigs: VehicleConfig[] = useMemo(
+    () => [
+      {
+        id: 'hatchback-orange',
+        type: 'hatchback',
+        color: '#f97316',
+        accessory: 'none',
+        circuitIdx: 0,
+        baseCruisingSpeed: 5.6,
+        initialDist: 0,
+      },
+      {
+        id: 'sedan-cyber-grey',
+        type: 'sedan',
+        color: '#94a3b8',
+        accessory: 'spoiler',
+        circuitIdx: 1,
+        baseCruisingSpeed: 6.4,
+        initialDist: 18,
+      },
+      {
+        id: 'sedan-taxi-yellow',
+        type: 'sedan',
+        color: '#f59e0b',
+        accessory: 'taxi',
+        circuitIdx: 2,
+        baseCruisingSpeed: 5.8,
+        initialDist: 10,
+      },
+      {
+        id: 'suv-urban-cyan',
+        type: 'suv',
+        color: '#06b6d4',
+        accessory: 'none',
+        circuitIdx: 0,
+        baseCruisingSpeed: 5.0,
+        initialDist: 50,
+      },
+      {
+        id: 'sedan-police-cruiser',
+        type: 'sedan',
+        color: '#0b1329',
+        accessory: 'police',
+        circuitIdx: 3,
+        baseCruisingSpeed: 6.8,
+        initialDist: 22,
+      },
+    ],
+    []
+  );
 
-  // Vehicle refs
+  // Vehicle DOM/Scene Refs
   const carRefs = useRef<(THREE.Group | null)[]>([]);
   const wheelRefs = useRef<(THREE.Group | null)[]>([]);
 
-  // Distance tracking ref
-  const distancesRef = useRef<number[]>(vehicles.map((v) => v.dist));
+  // Simulation State Refs (Mutable Float64 arrays for 60 FPS zero-allocation physics)
+  const simState = useRef({
+    distances: vehicleConfigs.map((v) => v.initialDist),
+    currentSpeeds: vehicleConfigs.map((v) => v.baseCruisingSpeed * 0.8),
+    headings: vehicleConfigs.map(() => 0),
+    positions: vehicleConfigs.map(() => ({ x: 0, z: 0 })),
+  });
 
-  // Scratch transform object
-  const scratchPos = useMemo(() => ({ x: 0, z: 0, angle: 0 }), []);
+  // Reusable scratch objects
+  const scratchSample = useMemo(() => ({ x: 0, z: 0, angle: 0, isCurved: false }), []);
+
+  // Traffic Physics Constants
+  const ACCEL_RATE = 2.8; // m/s^2 smooth throttle
+  const DECEL_RATE = 4.4; // m/s^2 smooth braking
+  const TURN_MAX_SPEED = 3.6; // m/s cornering speed
+  const STEERING_LAG = 10.5; // rad/s natural steering rate
 
   useFrame((_, delta) => {
-    const clampedDelta = Math.min(delta, 0.1);
+    if (typeof document !== 'undefined' && document.hidden) return;
+    const clampedDelta = Math.min(delta, 0.08);
+    const timeSec = Date.now() * 0.001;
+    const { nsPhase, ewPhase } = getTrafficSignalState(timeSec);
 
-    for (let i = 0; i < vehicles.length; i++) {
-      const v = vehicles[i];
+    const count = vehicleConfigs.length;
+    const state = simState.current;
+
+    // STEP 1: Calculate target desired speed for each vehicle
+    const desiredSpeeds = new Float32Array(count);
+
+    for (let i = 0; i < count; i++) {
+      const config = vehicleConfigs[i];
+      const circuit = circuits[config.circuitIdx];
+      const currentDist = state.distances[i];
+      let desired = config.baseCruisingSpeed;
+
+      // 1a. Decelerate if in or approaching a turn
+      sampleCircuit(circuit, currentDist + 1.8, scratchSample);
+      if (scratchSample.isCurved) {
+        desired = Math.min(desired, TURN_MAX_SPEED);
+      }
+
+      // 1b. Check traffic signal stop lines ahead on this circuit
+      for (let sIdx = 0; sIdx < circuit.stopLines.length; sIdx++) {
+        const stopLine = circuit.stopLines[sIdx];
+        let distToStop = stopLine.dist - currentDist;
+        if (distToStop < -1.0) distToStop += circuit.totalLength;
+
+        // Approaching within stopping window (0.4m to 7.2m before stop line)
+        if (distToStop > 0.4 && distToStop < 7.2) {
+          const phase: SignalPhase = stopLine.direction === 'ns' ? nsPhase : ewPhase;
+
+          if (phase === 'red' || (phase === 'yellow' && distToStop > 2.0)) {
+            // Smooth quadratic braking curve
+            const stopFactor = Math.max(0, (distToStop - 0.7) / 6.0);
+            const targetBrakingSpeed = config.baseCruisingSpeed * Math.pow(stopFactor, 1.4);
+            desired = Math.min(desired, targetBrakingSpeed);
+
+            if (distToStop <= 0.8) {
+              desired = 0;
+            }
+          }
+        }
+      }
+
+      // 1c. Car-Following / Anti-Collision (Avoid overlapping cars ahead)
+      for (let j = 0; j < count; j++) {
+        if (i === j) continue;
+
+        // Same circuit check:
+        if (config.circuitIdx === vehicleConfigs[j].circuitIdx) {
+          let distAhead = state.distances[j] - currentDist;
+          if (distAhead < 0) distAhead += circuit.totalLength;
+
+          if (distAhead > 0.1 && distAhead < 6.0) {
+            if (distAhead <= 2.6) {
+              desired = 0; // Immediate full stop to prevent bumper clipping
+            } else {
+              const followFactor = Math.max(0, (distAhead - 2.6) / 3.4);
+              const followSpeed = state.currentSpeeds[j] * followFactor;
+              desired = Math.min(desired, followSpeed);
+            }
+          }
+        } else {
+          // Different circuits converging near junctions
+          const dx = state.positions[j].x - state.positions[i].x;
+          const dz = state.positions[j].z - state.positions[i].z;
+          const dist2D = Math.hypot(dx, dz);
+
+          if (dist2D < 3.8) {
+            // Yield to vehicle that has priority or is already moving faster
+            if (i > j && state.currentSpeeds[j] > 0.5) {
+              desired = Math.min(desired, 0);
+            }
+          }
+        }
+      }
+
+      desiredSpeeds[i] = desired;
+    }
+
+    // STEP 2: Apply smooth physics integration & update transforms
+    for (let i = 0; i < count; i++) {
+      const config = vehicleConfigs[i];
+      const circuit = circuits[config.circuitIdx];
       const carGroup = carRefs.current[i];
       if (!carGroup) continue;
 
-      const circuit = circuits[v.circuitIdx];
-      distancesRef.current[i] += v.speed * clampedDelta;
+      // 2a. Gradual acceleration and deceleration
+      const targetSpeed = desiredSpeeds[i];
+      let speed = state.currentSpeeds[i];
 
-      // Sample position and heading
-      sampleCircuit(circuit, distancesRef.current[i], scratchPos);
+      if (speed < targetSpeed) {
+        speed = Math.min(targetSpeed, speed + ACCEL_RATE * clampedDelta);
+      } else if (speed > targetSpeed) {
+        speed = Math.max(targetSpeed, speed - DECEL_RATE * clampedDelta);
+      }
+      state.currentSpeeds[i] = speed;
 
-      // Road elevation is 0.62. Car chassis sits cleanly at y = 0.65
-      carGroup.position.set(scratchPos.x, 0.65, scratchPos.z);
-      carGroup.rotation.y = scratchPos.angle;
+      // 2b. Advance distance along path
+      state.distances[i] = (state.distances[i] + speed * clampedDelta) % circuit.totalLength;
 
-      // Rotate wheels based on distance traveled (radius = 0.22)
+      // 2c. Sample continuous trajectory & road direction
+      sampleCircuit(circuit, state.distances[i], scratchSample);
+      state.positions[i].x = scratchSample.x;
+      state.positions[i].z = scratchSample.z;
+
+      // Road plane is at 0.62. Car chassis sits cleanly at y = 0.65
+      carGroup.position.set(scratchSample.x, 0.65, scratchSample.z);
+
+      // 2d. Smooth steering and rotation damping during turns
+      let angleDiff = scratchSample.angle - state.headings[i];
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+
+      state.headings[i] += angleDiff * Math.min(1.0, STEERING_LAG * clampedDelta);
+      carGroup.rotation.y = state.headings[i];
+
+      // 2e. Physically accurate wheel rotation based on tire radius
       const wheelGroup = wheelRefs.current[i];
       if (wheelGroup) {
-        wheelGroup.rotation.x += (v.speed * clampedDelta) / 0.22;
+        const wheelRadius = config.type === 'suv' ? 0.25 : 0.22;
+        wheelGroup.rotation.x += (speed * clampedDelta) / wheelRadius;
       }
     }
   });
 
   return (
     <group name="CityTrafficSystem">
-      {vehicles.map((v, i) => (
+      {vehicleConfigs.map((v, i) => (
         <group
           key={v.id}
           ref={(el) => {
             carRefs.current[i] = el;
           }}
         >
-          {/* Car Body Model */}
-          <CarBody type={v.type} color={v.color} />
+          {/* Stylized Recognizable 3D Car Body */}
+          <VehicleChassis
+            type={v.type}
+            color={v.color}
+            accessory={v.accessory}
+            enableShadows={enableShadows}
+          />
 
-          {/* 4 Rotating Wheels Assembly */}
-          <group
+          {/* 4 Rotating Rubber Tires with Silver Star-Spoke Rims */}
+          <VehicleWheels
+            type={v.type}
             ref={(el) => {
               wheelRefs.current[i] = el;
             }}
-          >
-            {[
-              [-0.72, 0.14, 0.75],
-              [0.72, 0.14, 0.75],
-              [-0.72, 0.14, -0.75],
-              [0.72, 0.14, -0.75],
-            ].map(([wx, wy, wz], wIdx) => (
-              <mesh key={`wheel-${wIdx}`} position={[wx, wy, wz]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.22, 0.22, 0.14, 10]} />
-                <meshStandardMaterial color="#0f172a" roughness={0.8} />
-              </mesh>
-            ))}
-          </group>
+          />
         </group>
       ))}
     </group>

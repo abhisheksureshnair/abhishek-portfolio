@@ -15,6 +15,7 @@ export interface WebGLDiagnosticStats {
   triangles: number;
   geometries: number;
   textures: number;
+  programs: number;
   fps: number;
   avgFps: number;
   onePercentLowFps: number;
@@ -202,6 +203,7 @@ export function WebGLDiagnosticManager({
       const tris = gl.info.render.triangles;
       const geos = gl.info.memory.geometries;
       const texs = gl.info.memory.textures;
+      const programs = (gl.info as any).programs?.length ?? 0;
 
       // Update Dev Overlay directly via DOM (Zero React rerender!)
       if (overlayRef.current) {
@@ -216,7 +218,7 @@ export function WebGLDiagnosticManager({
             <span style="color:${spikesCountRef.current > 0 ? '#fb923c' : '#64748b'};font-size:10px;">[Spikes: ${spikesCountRef.current}]</span>
           </div>
           <div style="color:#94a3b8;font-size:10px;margin-top:2px;">
-            Calls: <strong style="color:#f8fafc;">${calls}</strong> &bull; Tris: <strong style="color:#f8fafc;">${(tris / 1000).toFixed(1)}k</strong> &bull; Mem: ${geos} geo, ${texs} tex
+            Calls: <strong style="color:#f8fafc;">${calls}</strong> &bull; Tris: <strong style="color:#f8fafc;">${(tris / 1000).toFixed(1)}k</strong> &bull; Shaders: <strong style="color:#f8fafc;">${programs}</strong> &bull; Mem: ${geos}g / ${texs}t
           </div>
         `;
       }
@@ -229,6 +231,7 @@ export function WebGLDiagnosticManager({
           triangles: tris,
           geometries: geos,
           textures: texs,
+          programs,
           fps: instantFps,
           avgFps,
           onePercentLowFps,

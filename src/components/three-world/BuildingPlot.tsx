@@ -53,8 +53,8 @@ export const BuildingPlot: React.FC<BuildingPlotProps> = ({
       <mesh position={[0, 0.705, 0]} receiveShadow={receiveShadow}>
         <boxGeometry args={[sizeX, 0.05, sizeZ]} />
         <meshStandardMaterial
-          color="#38a169" // Vibrant stylized grass
-          roughness={0.7}
+          color="#22c55e" // Vibrant stylized grass
+          roughness={0.65}
           metalness={0.04}
         />
       </mesh>

@@ -3,6 +3,7 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { usePerformanceQuality } from '../PerformanceControl';
 
 export interface ExperienceBuildingProps {
   position?: [number, number, number];
@@ -111,9 +112,12 @@ export const ExperienceBuilding: React.FC<ExperienceBuildingProps> = ({
   onSelect,
   isSelected = false,
 }) => {
+  const { effectiveTier, prefersReducedMotion } = usePerformanceQuality();
+  const allowPointLights = effectiveTier === 'high';
   const [isHovered, setIsHovered] = useState(false);
 
   // Animation refs
+  const rootGroupRef = useRef<THREE.Group>(null);
   const windowMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
   const badgeRef = useRef<THREE.Group>(null);
   const atriumFanRef = useRef<THREE.Group>(null);
@@ -124,27 +128,40 @@ export const ExperienceBuilding: React.FC<ExperienceBuildingProps> = ({
 
   // Frame-rate independent window light and beacon animation
   useFrame((_, delta) => {
-    const time = Date.now() * 0.001;
+    if (typeof document !== 'undefined' && document.hidden) return;
 
-    // Subtle window light breathing/shimmer
-    if (windowMaterialRef.current) {
-      const pulse = 0.35 + Math.sin(time * 1.8) * 0.08 + Math.cos(time * 3.1) * 0.04;
-      windowMaterialRef.current.emissiveIntensity = isHovered ? pulse * 1.8 : pulse;
+    // 1. Smooth vertical lift on hover/selection
+    if (rootGroupRef.current) {
+      const targetY = position[1] + ((isHovered || isSelected) && !prefersReducedMotion ? 0.12 : 0);
+      if (prefersReducedMotion) {
+        rootGroupRef.current.position.y = targetY;
+      } else {
+        rootGroupRef.current.position.y += (targetY - rootGroupRef.current.position.y) * (1 - Math.exp(-12.0 * delta));
+      }
     }
 
-    // Gentle floating badge bob
-    if (badgeRef.current) {
+    const time = Date.now() * 0.001;
+
+    // 2. Subtle window light breathing/shimmer
+    if (windowMaterialRef.current && !prefersReducedMotion) {
+      const pulse = 0.35 + Math.sin(time * 1.8) * 0.08 + Math.cos(time * 3.1) * 0.04;
+      windowMaterialRef.current.emissiveIntensity = isHovered || isSelected ? pulse * 1.8 : pulse;
+    }
+
+    // 3. Gentle floating badge bob (paused on reduced motion)
+    if (badgeRef.current && !prefersReducedMotion) {
       badgeRef.current.position.y = 11.2 + Math.sin(time * 2.4) * 0.12;
     }
 
-    // Rooftop HVAC / aeration fan rotation
-    if (atriumFanRef.current) {
+    // 4. Rooftop HVAC / aeration fan rotation (paused on reduced motion)
+    if (atriumFanRef.current && !prefersReducedMotion) {
       atriumFanRef.current.rotation.y += delta * 2.0;
     }
   });
 
   return (
     <group
+      ref={rootGroupRef}
       position={position}
       onClick={(e) => {
         e.stopPropagation();
@@ -251,8 +268,7 @@ export const ExperienceBuilding: React.FC<ExperienceBuildingProps> = ({
             emissiveIntensity={0.4}
             roughness={0.1}
             metalness={0.9}
-            transparent
-            opacity={0.7}
+            transparent={false}
           />
         </mesh>
 
@@ -289,13 +305,15 @@ export const ExperienceBuilding: React.FC<ExperienceBuildingProps> = ({
           </mesh>
 
           {/* Downward Welcome Spotlight */}
-          <pointLight
-            position={[0, -0.3, 0]}
-            color="#bae6fd"
-            intensity={1.2}
-            distance={4.5}
-            decay={2}
-          />
+          {allowPointLights && (
+            <pointLight
+              position={[0, -0.3, 0]}
+              color="#bae6fd"
+              intensity={1.2}
+              distance={4.5}
+              decay={2}
+            />
+          )}
         </group>
       </group>
 
@@ -655,13 +673,15 @@ export const ExperienceBuilding: React.FC<ExperienceBuildingProps> = ({
       {/* 7. INTERACTIVE HOVER / SELECTION GLOW & BADGE            */}
       {/* ======================================================== */}
       {/* Front Entrance Glow */}
-      <pointLight
-        position={[0, 3.5, -3.2]}
-        color="#38bdf8"
-        intensity={isHovered || isSelected ? 2.8 : 1.2}
-        distance={7.5}
-        decay={2}
-      />
+      {allowPointLights && (
+        <pointLight
+          position={[0, 3.5, -3.2]}
+          color="#38bdf8"
+          intensity={isHovered || isSelected ? 2.8 : 1.2}
+          distance={7.5}
+          decay={2}
+        />
+      )}
 
       {/* Floating Hover Indicator Badge */}
       {isHovered && !isSelected && (

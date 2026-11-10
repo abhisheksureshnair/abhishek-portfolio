@@ -31,6 +31,8 @@ export const CityGround: React.FC<CityGroundProps> = ({ size = 60, onGroundClick
       position={[0, 0, 0]}
       onClick={(e) => {
         e.stopPropagation();
+        // Ignore click if user was dragging/orbiting the mouse (Requirement 1 & 10)
+        if (e.delta > 5) return;
         if (onGroundClick) {
           onGroundClick(e.point);
         }
@@ -54,8 +56,8 @@ export const CityGround: React.FC<CityGroundProps> = ({ size = 60, onGroundClick
       <mesh position={[0, -0.15, 0]} receiveShadow={enableShadows}>
         <boxGeometry args={[size + 0.8, 0.5, size + 0.8]} />
         <meshStandardMaterial
-          color="#e2e8f0" // Clean stone/concrete trim
-          roughness={0.45}
+          color="#f1f5f9" // Clean stone/concrete trim
+          roughness={0.4}
           metalness={0.08}
         />
       </mesh>
@@ -66,9 +68,9 @@ export const CityGround: React.FC<CityGroundProps> = ({ size = 60, onGroundClick
       <mesh position={[0, groundTopY, 0]} receiveShadow={enableShadows}>
         <boxGeometry args={[size, foundationHeight, size]} />
         <meshStandardMaterial
-          color="#38a169" // Stylized vibrant grass green
-          roughness={0.7}
-          metalness={0.05}
+          color="#22c55e" // Stylized vibrant lush spring grass green
+          roughness={0.65}
+          metalness={0.04}
         />
       </mesh>
 
@@ -83,8 +85,8 @@ export const CityGround: React.FC<CityGroundProps> = ({ size = 60, onGroundClick
       >
         <planeGeometry args={[size - 0.2, size - 0.2]} />
         <meshStandardMaterial
-          color="#48bb78" // Slightly lighter emerald grass center
-          roughness={0.65}
+          color="#4ade80" // Lighter fresh spring grass center
+          roughness={0.6}
           metalness={0.02}
         />
       </mesh>

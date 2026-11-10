@@ -33,7 +33,7 @@ export const HeroCanvas: React.FC = () => {
     const PARTICLE_COUNT =
       effectiveTier === 'low'
         ? 15
-        : effectiveTier === 'balanced'
+        : effectiveTier === 'medium'
         ? width > 768
           ? 32
           : 18

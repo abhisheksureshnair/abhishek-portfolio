@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { getProceduralAsphaltTexture } from './proceduralTextures';
 
@@ -14,26 +14,41 @@ export interface RoadSegmentProps {
   receiveShadow?: boolean;
 }
 
-/**
- * Reusable RoadSegment component
- * Renders a dark asphalt roadway with:
- * - Subtle procedural asphalt texture
- * - White dashed center lane markings
- * - Solid white outer edge lines
- * - Exact layering preventing z-fighting (road y = 0.62, markings y = 0.625)
- */
+// Module-level shared static geometries and materials
 const _dashGeo = new THREE.PlaneGeometry(0.14, 1.2);
 const _markingMat = new THREE.MeshStandardMaterial({
   color: '#ffffff',
   roughness: 0.35,
   metalness: 0.05,
+  emissive: '#ffffff',
+  emissiveIntensity: 0.15,
+  transparent: false,
 });
 const _edgeLineMat = new THREE.MeshStandardMaterial({
   color: '#f8fafc',
   roughness: 0.4,
   metalness: 0.05,
+  emissive: '#f8fafc',
+  emissiveIntensity: 0.1,
+  transparent: false,
 });
-const _shoulderMat = new THREE.MeshStandardMaterial({ color: '#1a1e24', roughness: 0.9 });
+const _shoulderMat = new THREE.MeshStandardMaterial({ color: '#242e3b', roughness: 0.85 });
+
+let _sharedAsphaltMat: THREE.MeshStandardMaterial | null = null;
+function getSharedAsphaltMaterial(): THREE.MeshStandardMaterial {
+  if (!_sharedAsphaltMat) {
+    const tex = getProceduralAsphaltTexture();
+    _sharedAsphaltMat = new THREE.MeshStandardMaterial({
+      map: tex,
+      color: '#3b4758',
+      roughness: 0.72,
+      metalness: 0.06,
+    });
+  }
+  return _sharedAsphaltMat;
+}
+
+const _dummy = new THREE.Object3D();
 
 export const RoadSegment: React.FC<RoadSegmentProps> = ({
   position,
@@ -44,7 +59,7 @@ export const RoadSegment: React.FC<RoadSegmentProps> = ({
   hasEdgeLines = true,
   receiveShadow = true,
 }) => {
-  const asphaltTex = useMemo(() => getProceduralAsphaltTexture(), []);
+  const asphaltMat = useMemo(() => getSharedAsphaltMaterial(), []);
 
   // Calculate dashes along road length
   const dashLength = 1.2;
@@ -72,17 +87,31 @@ export const RoadSegment: React.FC<RoadSegmentProps> = ({
   const shoulderGeo = useMemo(() => new THREE.BoxGeometry(0.06, 0.03, length), [length]);
   const edgeLineGeo = useMemo(() => new THREE.PlaneGeometry(0.1, length), [length]);
 
+  // Instanced Dashed Center Lines (1 Draw Call instead of N individual meshes)
+  const dashesInstancedRef = useRef<THREE.InstancedMesh>(null);
+
+  useEffect(() => {
+    if (dashesInstancedRef.current && dashes.length > 0) {
+      for (let i = 0; i < dashes.length; i++) {
+        _dummy.position.set(0, 0.625, dashes[i]);
+        _dummy.rotation.set(-Math.PI / 2, 0, 0);
+        _dummy.scale.set(1, 1, 1);
+        _dummy.updateMatrix();
+        dashesInstancedRef.current.setMatrixAt(i, _dummy.matrix);
+      }
+      dashesInstancedRef.current.instanceMatrix.needsUpdate = true;
+    }
+  }, [dashes]);
+
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
       {/* 1. Main Asphalt Bed (top at y = 0.62) */}
-      <mesh position={[0, 0.62, 0]} receiveShadow={receiveShadow} geometry={roadBedGeo}>
-        <meshStandardMaterial
-          map={asphaltTex}
-          color="#222730"
-          roughness={0.78}
-          metalness={0.08}
-        />
-      </mesh>
+      <mesh
+        position={[0, 0.62, 0]}
+        receiveShadow={receiveShadow}
+        geometry={roadBedGeo}
+        material={asphaltMat}
+      />
 
       {/* 2. Chamfered Road Shoulder Borders */}
       {[-halfWidth, halfWidth].map((xSide, idx) => (
@@ -106,18 +135,14 @@ export const RoadSegment: React.FC<RoadSegmentProps> = ({
           />
         ))}
 
-      {/* 4. Dashed White Center Lane Line (y = 0.625) */}
-      {hasCenterLine &&
-        dashes.map((zOffset, idx) => (
-          <mesh
-            key={idx}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, 0.625, zOffset]}
-            geometry={_dashGeo}
-            material={_markingMat}
-          />
-        ))}
+      {/* 4. Instanced Dashed White Center Lane Line (1 Draw Call) */}
+      {hasCenterLine && dashes.length > 0 && (
+        <instancedMesh
+          ref={dashesInstancedRef}
+          args={[_dashGeo, _markingMat, dashes.length]}
+          frustumCulled={false}
+        />
+      )}
     </group>
   );
 };
-

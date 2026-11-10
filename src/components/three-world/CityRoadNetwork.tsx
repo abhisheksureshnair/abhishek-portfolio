@@ -30,12 +30,154 @@ interface CityRoadNetworkProps {
   onRoadClick?: (point: THREE.Vector3) => void;
 }
 
+const _stallLineMat = new THREE.MeshStandardMaterial({
+  color: '#ffffff',
+  roughness: 0.35,
+  metalness: 0.05,
+  emissive: '#ffffff',
+  emissiveIntensity: 0.18,
+  transparent: false,
+});
+
+const _walkwayPaverMat = new THREE.MeshStandardMaterial({
+  color: '#f8fafc',
+  roughness: 0.45,
+  metalness: 0.06,
+});
+
+const _walkwayBorderMat = new THREE.MeshStandardMaterial({
+  color: '#cbd5e1',
+  roughness: 0.55,
+  metalness: 0.08,
+});
+
+const _bollardBodyMat = new THREE.MeshStandardMaterial({
+  color: '#334155',
+  metalness: 0.8,
+  roughness: 0.3,
+});
+
+const _bollardLightMat = new THREE.MeshStandardMaterial({
+  color: '#fef08a',
+  emissive: '#fde047',
+  emissiveIntensity: 1.8,
+});
+
+/**
+ * Curbside Parking Stall Markings
+ */
+interface ParkingStallsProps {
+  position: [number, number, number];
+  length: number;
+  width?: number;
+  orientation?: 'z' | 'x';
+  stallCount?: number;
+}
+
+const ParkingStalls: React.FC<ParkingStallsProps> = ({
+  position,
+  length,
+  width = 1.8,
+  orientation = 'z',
+  stallCount = 2,
+}) => {
+  const isX = orientation === 'x';
+  const rotationY = isX ? Math.PI / 2 : 0;
+  const stallSpan = length / stallCount;
+
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      {/* Outer longitudinal white boundary line */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[width / 2, 0.626, 0]}>
+        <planeGeometry args={[0.1, length]} />
+        <primitive object={_stallLineMat} attach="material" />
+      </mesh>
+
+      {/* Perpendicular stall divider lines */}
+      {Array.from({ length: stallCount + 1 }).map((_, i) => {
+        const zPos = -length / 2 + i * stallSpan;
+        return (
+          <mesh
+            key={i}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0.626, zPos]}
+          >
+            <planeGeometry args={[width, 0.1]} />
+            <primitive object={_stallLineMat} attach="material" />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+};
+
+/**
+ * Paved Building Entrance Walkway connecting Sidewalk to Building Entrance
+ */
+interface BuildingEntranceWalkwayProps {
+  position: [number, number, number];
+  sizeX: number;
+  sizeZ: number;
+  accentColor?: string;
+}
+
+const BuildingEntranceWalkway: React.FC<BuildingEntranceWalkwayProps> = ({
+  position,
+  sizeX,
+  sizeZ,
+  accentColor,
+}) => {
+  return (
+    <group position={position}>
+      {/* Main raised paver platform */}
+      <mesh position={[0, 0.725, 0]}>
+        <boxGeometry args={[sizeX, 0.05, sizeZ]} />
+        <primitive object={_walkwayPaverMat} attach="material" />
+      </mesh>
+
+      {/* Raised stone curb border */}
+      <mesh position={[0, 0.73, 0]}>
+        <boxGeometry args={[sizeX + 0.08, 0.04, sizeZ + 0.08]} />
+        <primitive object={_walkwayBorderMat} attach="material" />
+      </mesh>
+
+      {/* Optional district accent strip */}
+      {accentColor && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.751, 0]}>
+          <planeGeometry args={[sizeX - 0.2, 0.12]} />
+          <meshStandardMaterial
+            color={accentColor}
+            emissive={accentColor}
+            emissiveIntensity={0.8}
+          />
+        </mesh>
+      )}
+
+      {/* Twin miniature decorative entrance bollards */}
+      {[-sizeX / 2 + 0.2, sizeX / 2 - 0.2].map((bx, idx) => (
+        <group key={idx} position={[bx, 0.75, sizeZ / 2 - 0.2]}>
+          <mesh position={[0, 0.2, 0]}>
+            <cylinderGeometry args={[0.06, 0.08, 0.4, 8]} />
+            <primitive object={_bollardBodyMat} attach="material" />
+          </mesh>
+          <mesh position={[0, 0.42, 0]}>
+            <cylinderGeometry args={[0.062, 0.062, 0.05, 8]} />
+            <primitive object={_bollardLightMat} attach="material" />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+};
+
 export const CityRoadNetwork: React.FC<CityRoadNetworkProps> = ({ onRoadClick }) => {
   return (
     <group
       name="CityRoadNetwork"
       onClick={(e) => {
         e.stopPropagation();
+        // Ignore click if user was dragging/orbiting the mouse (Requirement 1 & 10)
+        if (e.delta > 5) return;
         if (onRoadClick) {
           onRoadClick(e.point);
         }
@@ -557,6 +699,46 @@ export const CityRoadNetwork: React.FC<CityRoadNetworkProps> = ({ onRoadClick })
         sizeX={9.5}
         sizeZ={7.8}
       />
+
+      {/* ======================================================== */}
+      {/* 10. CURBSIDE PARKING STALL MARKINGS (Requirement: Parking) */}
+      {/* ======================================================== */}
+      {/* West Street curbside bays (adjacent to parked Hatchbacks) */}
+      <ParkingStalls position={[-13.2, 0, -5.2]} length={5.8} width={1.8} orientation="z" stallCount={2} />
+      <ParkingStalls position={[-13.2, 0, 5.2]} length={5.8} width={1.8} orientation="z" stallCount={2} />
+
+      {/* East Street curbside bays (adjacent to parked Sedan & SUV) */}
+      <ParkingStalls position={[13.2, 0, -5.2]} length={5.8} width={1.8} orientation="z" stallCount={2} />
+      <ParkingStalls position={[13.2, 0, 5.2]} length={5.8} width={1.8} orientation="z" stallCount={2} />
+
+      {/* South Cross Street curbside parking bays */}
+      <ParkingStalls position={[-7.85, 0, 12.3]} length={6.8} width={1.8} orientation="x" stallCount={3} />
+      <ParkingStalls position={[7.85, 0, 12.3]} length={6.8} width={1.8} orientation="x" stallCount={3} />
+
+      {/* North Cross Street curbside parking bays */}
+      <ParkingStalls position={[-7.85, 0, -12.3]} length={6.8} width={1.8} orientation="x" stallCount={3} />
+      <ParkingStalls position={[7.85, 0, -12.3]} length={6.8} width={1.8} orientation="x" stallCount={3} />
+
+      {/* ======================================================== */}
+      {/* 11. BUILDING ENTRANCE PATHS (Requirement: Entrance paths) */}
+      {/* ======================================================== */}
+      {/* 11a. Hero HQ Entrance Walkway (South facing) */}
+      <BuildingEntranceWalkway position={[-7.85, 0, -3.85]} sizeX={2.8} sizeZ={1.4} accentColor="#00f0ff" />
+
+      {/* 11b. About Me Studio Entrance Walkway (South facing) */}
+      <BuildingEntranceWalkway position={[7.85, 0, -3.85]} sizeX={2.8} sizeZ={1.4} accentColor="#f97316" />
+
+      {/* 11c. Projects Innovation Center Entrance Walkway (North facing) */}
+      <BuildingEntranceWalkway position={[-7.85, 0, 3.85]} sizeX={2.8} sizeZ={1.4} accentColor="#8b5cf6" />
+
+      {/* 11d. Skills Tech Tower Entrance Walkway (North facing) */}
+      <BuildingEntranceWalkway position={[7.85, 0, 3.85]} sizeX={2.8} sizeZ={1.4} accentColor="#06b6d4" />
+
+      {/* 11e. Contact Hub Entrance Walkway (South facing) */}
+      <BuildingEntranceWalkway position={[0, 0, -17.4]} sizeX={3.2} sizeZ={1.8} accentColor="#ec4899" />
+
+      {/* 11f. Experience Office Entrance Walkway (North facing) */}
+      <BuildingEntranceWalkway position={[0, 0, 17.4]} sizeX={3.2} sizeZ={1.8} accentColor="#0284c7" />
     </group>
   );
 };

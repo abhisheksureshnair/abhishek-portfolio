@@ -24,7 +24,7 @@ interface CityCameraControllerProps {
   contactPosition?: [number, number, number];
 }
 
-// Module-level scratch vectors to prevent runtime heap allocation
+// Module-level static scratch objects (Zero runtime GC allocation)
 const _targetCamPos = new THREE.Vector3();
 const _targetLookAt = new THREE.Vector3();
 const _lerpCamPos = new THREE.Vector3();
@@ -33,17 +33,6 @@ const _scratchVec2 = new THREE.Vector3();
 const _defaultCamPos = new THREE.Vector3(18, 16, 22);
 const _defaultLookAt = new THREE.Vector3(0, 0, 0);
 
-/**
- * CityCameraController
- * 
- * Features:
- * 1. Cinematic introductory flyover arc sweeping over the entire 60x60 diorama city
- * 2. Reduced-motion respect (instant bypass of flyover if requested by system)
- * 3. Smooth parabolic camera flight between buildings (avoids clipping through skyscrapers)
- * 4. Responsive mobile camera framing (adjusts isometric distance for portrait viewports)
- * 5. Third-person follow camera tracking the miniature developer avatar
- * 6. Free OrbitControls in Tactical mode
- */
 export const CityCameraController: React.FC<CityCameraControllerProps> = ({
   controlsRef,
   selectedBuilding = null,
@@ -66,6 +55,13 @@ export const CityCameraController: React.FC<CityCameraControllerProps> = ({
   const travelProgressRef = useRef<number>(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
+  // User mouse orbit tracking ref (Requirement 6 & 11)
+  const isUserOrbitingRef = useRef(false);
+
+  // User's custom spherical follow offset relative to player
+  const followOffsetRef = useRef<THREE.Vector3>(new THREE.Vector3(8.5, 8.0, 10.5));
+  const hasInitializedOffsetRef = useRef(false);
+
   const activeSelection = selectedBuilding ?? (isHeroSelected ? 'hero' : null);
 
   // Check system reduced-motion preference
@@ -82,18 +78,58 @@ export const CityCameraController: React.FC<CityCameraControllerProps> = ({
     }
   }, []);
 
+  // Listen to OrbitControls events to guarantee follow camera and OrbitControls NEVER update simultaneously (Requirement 6)
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    const handleOrbitStart = () => {
+      isUserOrbitingRef.current = true;
+    };
+
+    const handleOrbitEnd = () => {
+      isUserOrbitingRef.current = false;
+      // When user finishes orbiting, preserve the newly chosen relative offset from the target
+      if (controls && controls.target) {
+        followOffsetRef.current.copy(camera.position).sub(controls.target);
+        // Clamp minimum and maximum follow distance
+        const len = followOffsetRef.current.length();
+        const clampedLen = Math.max(5.5, Math.min(26.0, len));
+        followOffsetRef.current.multiplyScalar(clampedLen / len);
+        // Ensure camera stays above ground
+        if (followOffsetRef.current.y < 1.6) {
+          followOffsetRef.current.y = 1.6;
+        }
+      }
+    };
+
+    controls.addEventListener('start', handleOrbitStart);
+    controls.addEventListener('end', handleOrbitEnd);
+
+    return () => {
+      controls.removeEventListener('start', handleOrbitStart);
+      controls.removeEventListener('end', handleOrbitEnd);
+    };
+  }, [controlsRef.current, camera]);
+
   // Reset transition timer when selection or mode changes
   useEffect(() => {
     isTransitioningRef.current = true;
     travelProgressRef.current = 0;
     previousBuildingRef.current = activeSelection;
-  }, [activeSelection, cameraMode]);
+
+    // Reset default follow offset when switching into follow mode
+    if (cameraMode === 'follow' && !activeSelection) {
+      const isMobile = size.width < 768 || size.width / size.height < 1.0;
+      const mult = isMobile ? 1.34 : 1.0;
+      followOffsetRef.current.set(8.5 * mult, 8.0 * mult, 10.5 * mult);
+    }
+  }, [activeSelection, cameraMode, size.width, size.height]);
 
   // Handle intro start / skip
   useEffect(() => {
     if (isIntroActive) {
       if (prefersReducedMotion) {
-        // If reduced motion is preferred, immediately finish intro without spinning
         onIntroComplete?.();
         return;
       }
@@ -104,17 +140,34 @@ export const CityCameraController: React.FC<CityCameraControllerProps> = ({
   }, [isIntroActive, prefersReducedMotion, onIntroComplete]);
 
   useFrame((_, delta) => {
+    if (typeof document !== 'undefined' && document.hidden) return;
+
     const controls = controlsRef.current;
     if (!controls) return;
 
+    // Clamp delta time to 50ms to prevent sudden camera jumps on lag spikes (Requirement 2 & 10)
+    const dt = Math.min(delta, 0.05);
     const time = performance.now() * 0.001;
     const isMobile = size.width < 768 || size.width / size.height < 1.0;
     const mobileDistMultiplier = isMobile ? 1.34 : 1.0;
+
+    // Initialize follow offset once if needed
+    if (!hasInitializedOffsetRef.current) {
+      followOffsetRef.current.set(
+        8.5 * mobileDistMultiplier,
+        8.0 * mobileDistMultiplier,
+        10.5 * mobileDistMultiplier
+      );
+      hasInitializedOffsetRef.current = true;
+    }
 
     // ========================================================
     // 1. CINEMATIC INTRODUCTORY FLYOVER
     // ========================================================
     if (isIntroActive && !prefersReducedMotion) {
+      // Disable OrbitControls during flyover to prevent simultaneous camera mutations
+      controls.enabled = false;
+
       if (introStartTimeRef.current === null) {
         introStartTimeRef.current = time;
       }
@@ -122,13 +175,12 @@ export const CityCameraController: React.FC<CityCameraControllerProps> = ({
       const introDuration = 4.8; // seconds
 
       if (introElapsed >= introDuration) {
+        controls.enabled = true;
         onIntroComplete?.();
       } else {
         const t = introElapsed / introDuration;
-        // Smooth cubic ease-in-out
         const easeT = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-        // Sweep camera in an elevated arc around the diorama
         const angle = 0.85 + easeT * 1.1;
         const radius = (38 - easeT * 14) * mobileDistMultiplier;
         const camX = Math.cos(angle) * radius;
@@ -144,16 +196,26 @@ export const CityCameraController: React.FC<CityCameraControllerProps> = ({
         _scratchVec2.set(px, py + 1.0, pz);
         _targetLookAt.lerpVectors(_scratchVec1, _scratchVec2, easeT);
         controls.target.copy(_targetLookAt);
-        const prevDamping = controls.enableDamping;
-        controls.enableDamping = false;
         controls.update();
-        controls.enableDamping = prevDamping;
         return;
       }
     }
 
     // ========================================================
-    // 2. TARGET POSITION COMPUTATION
+    // 2. USER IS ACTIVELY ORBITING (Requirement 6 & 11)
+    // ========================================================
+    if (isUserOrbitingRef.current) {
+      // While user is actively orbiting with mouse/touch, OrbitControls has exclusive authority.
+      // Follow camera MUST NOT modify camera.position or controls.target simultaneously.
+      // Continuously update follow offset so release transitions seamlessly.
+      if (controls.target) {
+        followOffsetRef.current.copy(camera.position).sub(controls.target);
+      }
+      return;
+    }
+
+    // ========================================================
+    // 3. TARGET POSITION & ORIENTATION COMPUTATION
     // ========================================================
     if (activeSelection === 'hero') {
       const [hx, hy, hz] = heroPosition;
@@ -204,17 +266,13 @@ export const CityCameraController: React.FC<CityCameraControllerProps> = ({
         cz + 7.6 * mobileDistMultiplier
       );
     } else if (cameraMode === 'follow' && playerPosRef) {
-      // Third-Person Elevated Isometric Follow Camera
+      // Third-Person Smooth Follow Camera (persisting user-chosen orbit angle)
       const px = playerPosRef.current.x;
       const py = playerPosRef.current.y;
       const pz = playerPosRef.current.z;
 
       _targetLookAt.set(px, py + 0.85, pz);
-      _targetCamPos.set(
-        px + 8.5 * mobileDistMultiplier,
-        py + 8.0 * mobileDistMultiplier,
-        pz + 10.5 * mobileDistMultiplier
-      );
+      _targetCamPos.copy(_targetLookAt).add(followOffsetRef.current);
       isTransitioningRef.current = true;
     } else {
       // Tactical Mode: Full diorama city overview
@@ -227,41 +285,45 @@ export const CityCameraController: React.FC<CityCameraControllerProps> = ({
     }
 
     // ========================================================
-    // 3. FRAME-RATE INDEPENDENT LERP & SMOOTH ARC TRAVEL
+    // 4. DELTA-TIME-AWARE DAMPING & SMOOTH CAMERA FOLLOWING (Requirement 5)
     // ========================================================
     if (isTransitioningRef.current) {
-      travelProgressRef.current = Math.min(1, travelProgressRef.current + delta * 2.5);
+      travelProgressRef.current = Math.min(1, travelProgressRef.current + dt * 2.5);
 
-      // Parabolic elevation lift during inter-building travel to avoid clipping
+      // Parabolic elevation lift during inter-building travel to avoid clipping skyscrapers
       let parabolicLift = 0;
       if (activeSelection !== null && travelProgressRef.current < 1) {
         parabolicLift = Math.sin(travelProgressRef.current * Math.PI) * 2.8;
       }
 
       const lambda = prefersReducedMotion
-        ? 14
+        ? 14.0
         : cameraMode === 'follow' && !activeSelection
-        ? 5.5
-        : 4.2;
-      const factor = 1 - Math.exp(-lambda * delta);
+        ? 6.5
+        : 4.8;
+      // Exact exponential decay factor: 1 - e^(-lambda * dt) (Requirement 2 & 5)
+      const factor = 1 - Math.exp(-lambda * dt);
 
-      // Safe non-mutating copy for camera position interpolation
       _lerpCamPos.copy(_targetCamPos);
       _lerpCamPos.y += parabolicLift;
 
+      // Smoothly damp both camera position and OrbitControls target
       camera.position.lerp(_lerpCamPos, factor);
       controls.target.lerp(_targetLookAt, factor);
+
+      // Sync OrbitControls state cleanly without conflicting damping
       const prevDamping = controls.enableDamping;
       controls.enableDamping = false;
       controls.update();
       controls.enableDamping = prevDamping;
 
-      // Only finish transition if not continuously tracking moving player
+      // For tactical mode or building focus, complete transition when arrived
       if (cameraMode !== 'follow' || activeSelection !== null) {
         const distPos = camera.position.distanceTo(_targetCamPos);
         const distTarget = controls.target.distanceTo(_targetLookAt);
         if (distPos < 0.05 && distTarget < 0.05) {
           isTransitioningRef.current = false;
+          controls.enabled = true;
         }
       }
     }

@@ -1,93 +1,22 @@
 'use client';
 
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Billboard, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { SelectedBuildingType } from './CityCameraController';
+import {
+  isPointColliding,
+  calculateClickToWalkPath,
+  NavPoint,
+  CITY_BOUNDS,
+  AVATAR_RADIUS,
+  CITY_BUILDING_ZONES,
+  BuildingZone,
+} from './cityNavigation';
 
-interface BuildingZone {
-  id: SelectedBuildingType;
-  name: string;
-  label: string;
-  color: string;
-  accent: string;
-  center: [number, number];
-  bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
-  entrance: [number, number];
-}
-
-export const CITY_BUILDING_ZONES: BuildingZone[] = [
-  {
-    id: 'hero',
-    name: 'Hero Headquarters',
-    label: 'EXPLORE HERO HQ',
-    color: '#00f0ff',
-    accent: '#2563eb',
-    center: [-7.85, -7.35],
-    bounds: { minX: -12.2, maxX: -3.5, minZ: -11.2, maxZ: -3.5 },
-    entrance: [-4.2, -7.35],
-  },
-  {
-    id: 'about',
-    name: 'About Me Studio',
-    label: 'VIEW ABOUT ME',
-    color: '#f97316',
-    accent: '#ea580c',
-    center: [7.85, -7.35],
-    bounds: { minX: 3.5, maxX: 12.2, minZ: -11.2, maxZ: -3.5 },
-    entrance: [4.2, -7.35],
-  },
-  {
-    id: 'projects',
-    name: 'Projects Innovation Center',
-    label: 'VIEW PROJECTS',
-    color: '#a855f7',
-    accent: '#7c3aed',
-    center: [-7.85, 7.35],
-    bounds: { minX: -12.2, maxX: -3.5, minZ: 3.5, maxZ: 11.2 },
-    entrance: [-4.2, 7.35],
-  },
-  {
-    id: 'skills',
-    name: 'Skills Tech Tower',
-    label: 'INSPECT SKILLS',
-    color: '#06b6d4',
-    accent: '#0284c7',
-    center: [7.85, 7.35],
-    bounds: { minX: 3.5, maxX: 12.2, minZ: 3.5, maxZ: 11.2 },
-    entrance: [4.2, 7.35],
-  },
-  {
-    id: 'experience',
-    name: 'Experience Corporate Office',
-    label: 'VIEW EXPERIENCE',
-    color: '#3b82f6',
-    accent: '#1d4ed8',
-    center: [0, 21.5],
-    bounds: { minX: -4.5, maxX: 4.5, minZ: 17.5, maxZ: 25.5 },
-    entrance: [0, 17.8],
-  },
-  {
-    id: 'contact',
-    name: 'Contact Hub',
-    label: 'CONTACT ME',
-    color: '#ec4899',
-    accent: '#be185d',
-    center: [0, -21.5],
-    bounds: { minX: -4.5, maxX: 4.5, minZ: -25.5, maxZ: -17.5 },
-    entrance: [0, -17.8],
-  },
-];
-
-// Obstacle collision zones (including the central plaza fountain)
-const OBSTACLES = [
-  ...CITY_BUILDING_ZONES.map((b) => b.bounds),
-  // Central Plaza Fountain obstacle
-  { minX: 2.2, maxX: 5.5, minZ: -5.5, maxZ: -2.2 },
-];
-
-const CITY_BOUNDS = { minX: -27.2, maxX: 27.2, minZ: -27.2, maxZ: 27.2 };
+export { CITY_BUILDING_ZONES };
+export type { BuildingZone };
 
 interface CityAvatarControllerProps {
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
@@ -97,7 +26,13 @@ interface CityAvatarControllerProps {
   targetWalkPosRef: React.MutableRefObject<THREE.Vector3 | null>;
   onSelectBuilding: (buildingId: SelectedBuildingType) => void;
   isModalOpen: boolean;
+  quaternionRef?: React.MutableRefObject<THREE.Quaternion>;
+  currentSpeedRef?: React.MutableRefObject<number>;
 }
+
+// Module-level static scratch objects to prevent garbage collection churn
+const _upAxis = new THREE.Vector3(0, 1, 0);
+const _targetQuat = new THREE.Quaternion();
 
 export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
   playerPosRef,
@@ -107,12 +42,28 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
   targetWalkPosRef,
   onSelectBuilding,
   isModalOpen,
+  quaternionRef,
+  currentSpeedRef,
 }) => {
   const clickTargetMeshRef = useRef<THREE.Mesh>(null);
   const promptGroupRef = useRef<THREE.Group>(null);
   const promptTextRef = useRef<any>(null);
   const borderMatRef = useRef<THREE.LineBasicMaterial>(null);
   const activeNearZoneRef = useRef<BuildingZone | null>(null);
+
+  // Velocity tracking ref for smooth acceleration and deceleration
+  const velocityRef = useRef<{ x: number; z: number }>({ x: 0, z: 0 });
+
+  // Internal quaternion ref if parent doesn't provide one
+  const internalQuatRef = useRef<THREE.Quaternion>(new THREE.Quaternion());
+  const activeQuatRef = quaternionRef || internalQuatRef;
+
+  // Cached click-to-walk pathfinding refs
+  const cachedWaypointsRef = useRef<NavPoint[]>([]);
+  const waypointIndexRef = useRef<number>(0);
+  const lastTargetPosRef = useRef<{ x: number; z: number } | null>(null);
+  const stuckFramesRef = useRef<number>(0);
+  const lastProgressPosRef = useRef<{ x: number; z: number }>({ x: 0, z: 0 });
 
   // Statically allocated and memoized geometries/materials (Zero GC heap churn)
   const pillGeo = useMemo(() => new THREE.PlaneGeometry(1.75, 0.38), []);
@@ -121,40 +72,17 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
     () => new THREE.MeshBasicMaterial({ color: '#090d16', transparent: true, opacity: 0.92 }),
     []
   );
-  const borderMat = useMemo(() => new THREE.LineBasicMaterial({ color: '#00f0ff', linewidth: 2 }), []);
-
-  // Check collision against all obstacles & city perimeter
-  const checkCollision = (x: number, z: number): boolean => {
-    // City boundary check
-    if (
-      x < CITY_BOUNDS.minX ||
-      x > CITY_BOUNDS.maxX ||
-      z < CITY_BOUNDS.minZ ||
-      z > CITY_BOUNDS.maxZ
-    ) {
-      return true;
-    }
-
-    // Avatar collision radius: 0.32m
-    const radius = 0.32;
-    for (let i = 0; i < OBSTACLES.length; i++) {
-      const obs = OBSTACLES[i];
-      if (
-        x + radius > obs.minX &&
-        x - radius < obs.maxX &&
-        z + radius > obs.minZ &&
-        z - radius < obs.maxZ
-      ) {
-        return true;
-      }
-    }
-    return false;
-  };
 
   useFrame((_, delta) => {
-    // If modal is active, halt character motion
+    // 1. Clamp delta time to 50ms to completely prevent lag spikes & teleporting through walls
+    const dt = Math.min(delta, 0.05);
+
+    // If modal is active, halt character motion immediately
     if (isModalOpen) {
       isMovingRef.current = false;
+      velocityRef.current.x = 0;
+      velocityRef.current.z = 0;
+      if (currentSpeedRef) currentSpeedRef.current = 0;
       if (promptGroupRef.current) promptGroupRef.current.visible = false;
       return;
     }
@@ -174,80 +102,223 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
     if (keys['d'] || keys['D'] || keys['ArrowRight']) inputX += 1;
 
     const isRunning = keys['Shift'] || keys['ShiftLeft'] || keys['ShiftRight'];
-    const walkSpeed = isRunning ? 7.5 : 4.6;
+    const maxSpeed = isRunning ? 7.2 : 4.4;
 
-    let dirX = 0;
-    let dirZ = 0;
-    let moving = false;
+    let targetDirX = 0;
+    let targetDirZ = 0;
+    let hasMovementIntent = false;
+    let isClickToWalk = false;
+    let distanceToFinalTarget = Infinity;
 
+    // =========================================================================
+    // 2. INPUT PROCESSING & CLICK-TO-WALK PATHFINDING
+    // =========================================================================
     if (inputX !== 0 || inputZ !== 0) {
-      // Direct keyboard / virtual D-pad input takes priority over click-to-walk
+      // Direct keyboard input cancels active click-to-walk path
       targetWalkPosRef.current = null;
-      const len = Math.hypot(inputX, inputZ);
-      dirX = inputX / len;
-      dirZ = inputZ / len;
-      moving = true;
-    } else if (targetWalkPosRef.current) {
-      // Click-to-walk navigation
-      const tx = targetWalkPosRef.current.x - playerPosRef.current.x;
-      const tz = targetWalkPosRef.current.z - playerPosRef.current.z;
-      const dist = Math.hypot(tx, tz);
+      lastTargetPosRef.current = null;
+      cachedWaypointsRef.current = [];
+      waypointIndexRef.current = 0;
 
-      if (dist > 0.2) {
-        dirX = tx / dist;
-        dirZ = tz / dist;
-        moving = true;
+      const len = Math.hypot(inputX, inputZ);
+      targetDirX = inputX / len;
+      targetDirZ = inputZ / len;
+      hasMovementIntent = true;
+    } else if (targetWalkPosRef.current) {
+      const currentTarget = targetWalkPosRef.current;
+      const px = playerPosRef.current.x;
+      const pz = playerPosRef.current.z;
+
+      // Check if destination changed or replanning is required (Requirement 8)
+      const isNewDestination =
+        !lastTargetPosRef.current ||
+        Math.hypot(
+          currentTarget.x - lastTargetPosRef.current.x,
+          currentTarget.z - lastTargetPosRef.current.z
+        ) > 0.25;
+
+      if (isNewDestination) {
+        lastTargetPosRef.current = { x: currentTarget.x, z: currentTarget.z };
+        cachedWaypointsRef.current = calculateClickToWalkPath(px, pz, currentTarget.x, currentTarget.z);
+        waypointIndexRef.current = 0;
+        stuckFramesRef.current = 0;
+        lastProgressPosRef.current = { x: px, z: pz };
+      }
+
+      const waypoints = cachedWaypointsRef.current;
+      const currentIdx = waypointIndexRef.current;
+
+      if (waypoints.length > 0 && currentIdx < waypoints.length) {
+        isClickToWalk = true;
+        const targetWaypoint = waypoints[currentIdx];
+        const dx = targetWaypoint.x - px;
+        const dz = targetWaypoint.z - pz;
+        const distToWaypoint = Math.hypot(dx, dz);
+
+        // Distance to the final destination in the path
+        const finalWaypoint = waypoints[waypoints.length - 1];
+        distanceToFinalTarget = Math.hypot(finalWaypoint.x - px, finalWaypoint.z - pz);
+
+        const isLastWaypoint = currentIdx === waypoints.length - 1;
+        const arrivalRadius = isLastWaypoint ? 0.22 : 0.55;
+
+        if (distToWaypoint <= arrivalRadius) {
+          // Reached intermediate or final waypoint
+          waypointIndexRef.current += 1;
+          if (waypointIndexRef.current >= waypoints.length) {
+            // Arrived at final destination!
+            targetWalkPosRef.current = null;
+            lastTargetPosRef.current = null;
+            cachedWaypointsRef.current = [];
+          }
+        } else {
+          targetDirX = dx / distToWaypoint;
+          targetDirZ = dz / distToWaypoint;
+          hasMovementIntent = true;
+
+          // Stuck detection & replanning
+          const movedSinceLastCheck = Math.hypot(
+            px - lastProgressPosRef.current.x,
+            pz - lastProgressPosRef.current.z
+          );
+          if (movedSinceLastCheck < 0.02) {
+            stuckFramesRef.current += 1;
+            if (stuckFramesRef.current > 35) {
+              // Stuck: trigger a replan once
+              cachedWaypointsRef.current = calculateClickToWalkPath(
+                px,
+                pz,
+                currentTarget.x,
+                currentTarget.z
+              );
+              waypointIndexRef.current = 0;
+              stuckFramesRef.current = 0;
+            }
+          } else {
+            stuckFramesRef.current = 0;
+            lastProgressPosRef.current = { x: px, z: pz };
+          }
+        }
       } else {
-        // Reached target walk point
         targetWalkPosRef.current = null;
+        lastTargetPosRef.current = null;
       }
     }
 
-    isMovingRef.current = moving;
+    // =========================================================================
+    // 3. FRAME-RATE INDEPENDENT ACCELERATION & DECELERATION (Requirement 2 & 9)
+    // =========================================================================
+    let targetSpeed = 0;
+    if (hasMovementIntent) {
+      targetSpeed = maxSpeed;
 
-    if (moving) {
-      // Calculate target yaw angle
-      rotationRef.current = Math.atan2(dirX, dirZ);
+      // Arrival deceleration behavior when approaching click-to-walk destination
+      if (isClickToWalk && distanceToFinalTarget < 1.4) {
+        const ramp = Math.max(0.18, distanceToFinalTarget / 1.4);
+        targetSpeed = maxSpeed * ramp;
+      }
+    }
 
-      const moveStep = walkSpeed * delta;
-      const nextX = playerPosRef.current.x + dirX * moveStep;
-      const nextZ = playerPosRef.current.z + dirZ * moveStep;
+    const desiredVelX = targetDirX * targetSpeed;
+    const desiredVelZ = targetDirZ * targetSpeed;
 
-      // Smooth collision resolution with axis-separated wall sliding
+    // Use exponential decay rate for silky frame-rate independent response
+    const accelRate = hasMovementIntent ? 14.0 : 18.0;
+    const accelFactor = 1 - Math.exp(-accelRate * dt);
+
+    velocityRef.current.x += (desiredVelX - velocityRef.current.x) * accelFactor;
+    velocityRef.current.z += (desiredVelZ - velocityRef.current.z) * accelFactor;
+
+    const currentSpeed = Math.hypot(velocityRef.current.x, velocityRef.current.z);
+    if (!hasMovementIntent && currentSpeed < 0.04) {
+      velocityRef.current.x = 0;
+      velocityRef.current.z = 0;
+    }
+
+    const actualSpeed = Math.hypot(velocityRef.current.x, velocityRef.current.z);
+    if (currentSpeedRef) {
+      currentSpeedRef.current = actualSpeed;
+    }
+
+    const isMoving = actualSpeed > 0.08;
+    isMovingRef.current = isMoving;
+
+    // =========================================================================
+    // 4. SMOOTH CHARACTER ROTATION USING QUATERNIONS (Requirement 4)
+    // =========================================================================
+    if (actualSpeed > 0.12) {
+      const headingYaw = Math.atan2(velocityRef.current.x, velocityRef.current.z);
+      rotationRef.current = headingYaw;
+
+      // Target quaternion from current movement velocity heading
+      _targetQuat.setFromAxisAngle(_upAxis, headingYaw);
+
+      // Delta-time aware quaternion slerp (Requirement 4)
+      const rotFactor = 1 - Math.exp(-18.0 * dt);
+      activeQuatRef.current.slerp(_targetQuat, rotFactor);
+    }
+
+    // =========================================================================
+    // 5. CACHED COLLISION SLIDING & POSITION UPDATES (Requirement 7 & 10)
+    // =========================================================================
+    if (isMoving) {
+      const stepX = velocityRef.current.x * dt;
+      const stepZ = velocityRef.current.z * dt;
+
       const currentX = playerPosRef.current.x;
       const currentZ = playerPosRef.current.z;
 
-      const collidesBoth = checkCollision(nextX, nextZ);
-      if (!collidesBoth) {
+      const nextX = currentX + stepX;
+      const nextZ = currentZ + stepZ;
+
+      // Check collision against pre-cached static boundaries
+      if (!isPointColliding(nextX, nextZ)) {
         playerPosRef.current.x = nextX;
         playerPosRef.current.z = nextZ;
       } else {
-        // Try sliding horizontally along X
-        if (!checkCollision(nextX, currentZ)) {
+        // Axis-separated wall sliding:
+        // Try sliding along X
+        if (!isPointColliding(nextX, currentZ)) {
           playerPosRef.current.x = nextX;
+          velocityRef.current.z = 0;
         }
-        // Try sliding vertically along Z
-        if (!checkCollision(currentX, nextZ)) {
+        // Try sliding along Z
+        if (!isPointColliding(currentX, nextZ)) {
           playerPosRef.current.z = nextZ;
+          velocityRef.current.x = 0;
         }
       }
+
+      // Hard clamp inside city boundaries to prevent falling off the world
+      playerPosRef.current.x = Math.max(
+        CITY_BOUNDS.minX + AVATAR_RADIUS,
+        Math.min(CITY_BOUNDS.maxX - AVATAR_RADIUS, playerPosRef.current.x)
+      );
+      playerPosRef.current.z = Math.max(
+        CITY_BOUNDS.minZ + AVATAR_RADIUS,
+        Math.min(CITY_BOUNDS.maxZ - AVATAR_RADIUS, playerPosRef.current.z)
+      );
     }
 
-    // Determine surface elevation (Sidewalk: 0.74, Road: 0.62)
+    // =========================================================================
+    // 6. SURFACE ELEVATION DAMPING (Sidewalk: 0.74, Road: 0.62)
+    // =========================================================================
     const px = playerPosRef.current.x;
     const pz = playerPosRef.current.z;
 
-    // Main boulevards bounds
     const onMainNSBoulevard = Math.abs(px) < 2.45 && Math.abs(pz) < 26.5;
     const onMainEWBoulevard = Math.abs(pz) < 2.45 && Math.abs(px) < 26.5;
     const isRoad = onMainNSBoulevard || onMainEWBoulevard;
     const targetY = isRoad ? 0.62 : 0.74;
 
-    // Smoothly lerp height to avoid sharp vertical snapping
-    playerPosRef.current.y += (targetY - playerPosRef.current.y) * Math.min(1, delta * 12);
+    // Delta-time-aware exponential vertical height damping
+    const heightFactor = 1 - Math.exp(-14.0 * dt);
+    playerPosRef.current.y += (targetY - playerPosRef.current.y) * heightFactor;
     const py = playerPosRef.current.y;
 
-    // Pulse click-to-walk ring animation without React state updates
+    // =========================================================================
+    // 7. CLICK-TO-WALK PULSE RING (Zero-rerender DOM/Mesh update)
+    // =========================================================================
     if (clickTargetMeshRef.current) {
       if (targetWalkPosRef.current) {
         clickTargetMeshRef.current.visible = true;
@@ -264,7 +335,9 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
       }
     }
 
-    // Check proximity to building entrances/zones (every frame, zero-rerender)
+    // =========================================================================
+    // 8. BUILDING INTERACTION PROXIMITY CHECK (Zero-rerender DOM/Mesh update)
+    // =========================================================================
     let foundNear: BuildingZone | null = null;
     let minEntranceDist = 4.8;
 
@@ -314,10 +387,9 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
         <meshBasicMaterial color="#00f0ff" transparent opacity={0.75} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Floating 3D Interaction Indicator Pill over Avatar (Permanent node, zero-rerender visibility) */}
+      {/* Floating 3D Interaction Indicator Pill over Avatar */}
       <group ref={promptGroupRef} position={[0, 0, 0]} visible={false}>
         <Billboard follow lockX={false} lockY={false} lockZ={false}>
-          {/* Clickable Pill Badge */}
           <mesh
             onClick={(e) => {
               e.stopPropagation();
@@ -329,12 +401,10 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
             material={pillMat}
           />
 
-          {/* Glowing Accent Border */}
           <lineSegments geometry={edgesGeo}>
             <lineBasicMaterial ref={borderMatRef} color="#00f0ff" linewidth={2} />
           </lineSegments>
 
-          {/* Prompt Text */}
           <Text
             ref={promptTextRef}
             position={[0, 0.01, 0.02]}
@@ -350,4 +420,3 @@ export const CityAvatarController: React.FC<CityAvatarControllerProps> = ({
     </>
   );
 };
-

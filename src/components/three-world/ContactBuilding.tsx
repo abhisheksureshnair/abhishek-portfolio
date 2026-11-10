@@ -3,6 +3,7 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { usePerformanceQuality } from '../PerformanceControl';
 
 export interface ContactBuildingProps {
   position?: [number, number, number];
@@ -103,9 +104,12 @@ export const ContactBuilding: React.FC<ContactBuildingProps> = ({
   onSelect,
   isSelected = false,
 }) => {
+  const { effectiveTier, prefersReducedMotion } = usePerformanceQuality();
+  const allowPointLights = effectiveTier === 'high';
   const [isHovered, setIsHovered] = useState(false);
 
   // Animation refs
+  const rootGroupRef = useRef<THREE.Group>(null);
   const satelliteDishRef = useRef<THREE.Group>(null);
   const beaconLightRef = useRef<THREE.PointLight>(null);
   const neonMatRef = useRef<THREE.MeshStandardMaterial>(null);
@@ -117,33 +121,46 @@ export const ContactBuilding: React.FC<ContactBuildingProps> = ({
 
   // Frame-rate independent animations
   useFrame((_, delta) => {
-    // 1. Slow satellite dish rotation
-    if (satelliteDishRef.current) {
-      satelliteDishRef.current.rotation.y += delta * 0.45;
+    if (typeof document !== 'undefined' && document.hidden) return;
+
+    // 1. Smooth vertical lift on hover/selection
+    if (rootGroupRef.current) {
+      const targetY = position[1] + ((isHovered || isSelected) && !prefersReducedMotion ? 0.12 : 0);
+      if (prefersReducedMotion) {
+        rootGroupRef.current.position.y = targetY;
+      } else {
+        rootGroupRef.current.position.y += (targetY - rootGroupRef.current.position.y) * (1 - Math.exp(-12.0 * delta));
+      }
     }
 
     const time = Date.now() * 0.001;
 
-    // 2. Subtle neon light breathing
-    if (neonMatRef.current) {
-      const pulse = 1.3 + Math.sin(time * 3.0) * 0.35;
-      neonMatRef.current.emissiveIntensity = isHovered ? pulse * 1.5 : pulse;
+    // 2. Slow satellite dish rotation (paused on reduced motion)
+    if (satelliteDishRef.current && !prefersReducedMotion) {
+      satelliteDishRef.current.rotation.y += delta * 0.45;
     }
 
-    // 3. Beacon light flash
-    if (beaconLightRef.current) {
+    // 3. Subtle neon light breathing
+    if (neonMatRef.current && !prefersReducedMotion) {
+      const pulse = 1.3 + Math.sin(time * 3.0) * 0.35;
+      neonMatRef.current.emissiveIntensity = isHovered || isSelected ? pulse * 1.5 : pulse;
+    }
+
+    // 4. Beacon light flash (paused on reduced motion)
+    if (beaconLightRef.current && !prefersReducedMotion) {
       const beaconCycle = (Math.sin(time * 4.5) + 1) * 0.5;
       beaconLightRef.current.intensity = 0.8 + Math.pow(beaconCycle, 3) * 2.2;
     }
 
-    // 4. Subtle bobbing for hover badge
-    if (badgeRef.current) {
+    // 5. Subtle bobbing for hover badge (paused on reduced motion)
+    if (badgeRef.current && !prefersReducedMotion) {
       badgeRef.current.position.y = 9.8 + Math.sin(time * 2.5) * 0.12;
     }
   });
 
   return (
     <group
+      ref={rootGroupRef}
       position={position}
       onClick={(e) => {
         e.stopPropagation();
@@ -196,8 +213,12 @@ export const ContactBuilding: React.FC<ContactBuildingProps> = ({
       </mesh>
 
       {/* Decorative Neon Underglow Pointlights (Blue & Pink) */}
-      <pointLight position={[-3.0, 0.3, 2.5]} color="#00f0ff" intensity={1.5} distance={4.5} />
-      <pointLight position={[3.0, 0.3, 2.5]} color="#ec4899" intensity={1.5} distance={4.5} />
+      {allowPointLights && (
+        <>
+          <pointLight position={[-3.0, 0.3, 2.5]} color="#00f0ff" intensity={1.5} distance={4.5} />
+          <pointLight position={[3.0, 0.3, 2.5]} color="#ec4899" intensity={1.5} distance={4.5} />
+        </>
+      )}
 
       {/* Front Steps (Facing South toward cross street) */}
       <mesh position={[0, 0.08, 3.2]} receiveShadow>
@@ -277,11 +298,12 @@ export const ContactBuilding: React.FC<ContactBuildingProps> = ({
             emissiveIntensity={0.65}
             roughness={0.1}
             metalness={0.8}
-            transparent
-            opacity={0.85}
+            transparent={false}
           />
         </mesh>
-        <pointLight position={[1.4, 0, 2.0]} color="#ffedd5" intensity={2.2} distance={5.5} decay={2} />
+        {allowPointLights && (
+          <pointLight position={[1.4, 0, 2.0]} color="#ffedd5" intensity={2.2} distance={5.5} decay={2} />
+        )}
 
         {/* Front Entrance Glass Sliding Doors */}
         <mesh position={[-1.6, -0.2, 2.52]}>
@@ -292,8 +314,7 @@ export const ContactBuilding: React.FC<ContactBuildingProps> = ({
             emissiveIntensity={0.4}
             roughness={0.1}
             metalness={0.9}
-            transparent
-            opacity={0.65}
+            transparent={false}
           />
         </mesh>
 
@@ -388,11 +409,12 @@ export const ContactBuilding: React.FC<ContactBuildingProps> = ({
             emissive="#ea580c"
             emissiveIntensity={0.55}
             roughness={0.1}
-            transparent
-            opacity={0.8}
+            transparent={false}
           />
         </mesh>
-        <pointLight position={[-1.2, 0, 2.0]} color="#f97316" intensity={1.8} distance={4.5} />
+        {allowPointLights && (
+          <pointLight position={[-1.2, 0, 2.0]} color="#f97316" intensity={1.8} distance={4.5} />
+        )}
 
         {/* Right Section Upper Facade & ILLUMINATED "CONTACT" SIGN */}
         <group position={[1.4, 0.3, 2.36]}>
@@ -565,13 +587,15 @@ export const ContactBuilding: React.FC<ContactBuildingProps> = ({
       {/* 5. INTERACTIVE HOVER / SELECTION GLOW & BADGE            */}
       {/* ======================================================== */}
       {/* Front Entrance Warm Glow */}
-      <pointLight
-        position={[0, 2.8, 3.4]}
-        color="#ec4899"
-        intensity={isHovered || isSelected ? 3.0 : 1.4}
-        distance={7.0}
-        decay={2}
-      />
+      {allowPointLights && (
+        <pointLight
+          position={[0, 2.8, 3.4]}
+          color="#ec4899"
+          intensity={isHovered || isSelected ? 3.0 : 1.4}
+          distance={7.0}
+          decay={2}
+        />
+      )}
 
       {/* Floating Hover Indicator Badge */}
       {isHovered && !isSelected && (

@@ -6,7 +6,8 @@ let asphaltTexture: THREE.CanvasTexture | null = null;
 let sidewalkTexture: THREE.CanvasTexture | null = null;
 
 /**
- * Generates a lightweight procedural asphalt texture with subtle aggregate grain
+ * Generates a lightweight procedural asphalt texture with subtle aggregate grain.
+ * High-clarity, sunny slate-gray diorama asphalt (matches reference aesthetic).
  * Zero network dependencies, zero 404 risks.
  */
 export function getProceduralAsphaltTexture(): THREE.CanvasTexture {
@@ -22,25 +23,25 @@ export function getProceduralAsphaltTexture(): THREE.CanvasTexture {
   const ctx = canvas.getContext('2d');
 
   if (ctx) {
-    // 1. Dark charcoal asphalt base
-    ctx.fillStyle = '#1e2229';
+    // 1. Medium Slate Gray Asphalt Base (clean, bright diorama asphalt)
+    ctx.fillStyle = '#384353';
     ctx.fillRect(0, 0, 256, 256);
 
     // 2. Fine aggregate grains
     for (let i = 0; i < 3500; i++) {
       const x = Math.random() * 256;
       const y = Math.random() * 256;
-      const tone = 25 + Math.floor(Math.random() * 28);
-      ctx.fillStyle = `rgb(${tone}, ${tone + 1}, ${tone + 4})`;
+      const tone = 62 + Math.floor(Math.random() * 32);
+      ctx.fillStyle = `rgb(${tone}, ${tone + 4}, ${tone + 10})`;
       ctx.fillRect(x, y, 1.2, 1.2);
     }
 
-    // 3. Medium subtle specks
-    for (let i = 0; i < 700; i++) {
+    // 3. Medium subtle aggregate specks
+    for (let i = 0; i < 800; i++) {
       const x = Math.random() * 256;
       const y = Math.random() * 256;
-      const gray = 42 + Math.floor(Math.random() * 25);
-      ctx.fillStyle = `rgba(${gray}, ${gray + 2}, ${gray + 5}, 0.5)`;
+      const gray = 75 + Math.floor(Math.random() * 35);
+      ctx.fillStyle = `rgba(${gray}, ${gray + 4}, ${gray + 12}, 0.55)`;
       ctx.fillRect(x, y, 2.0, 2.0);
     }
   }
@@ -53,7 +54,8 @@ export function getProceduralAsphaltTexture(): THREE.CanvasTexture {
 }
 
 /**
- * Generates a lightweight procedural concrete sidewalk texture with subtle paving joints
+ * Generates a lightweight procedural concrete sidewalk texture with subtle paving joints.
+ * Clean, bright architectural flagstone pavers (matches reference aesthetic).
  */
 export function getProceduralSidewalkTexture(): THREE.CanvasTexture {
   if (sidewalkTexture) return sidewalkTexture;
@@ -68,12 +70,12 @@ export function getProceduralSidewalkTexture(): THREE.CanvasTexture {
   const ctx = canvas.getContext('2d');
 
   if (ctx) {
-    // Light gray stone base
-    ctx.fillStyle = '#dbe2ea';
+    // Clean bright stone base
+    ctx.fillStyle = '#f1f5f9';
     ctx.fillRect(0, 0, 128, 128);
 
     // Subtle paving grid groove
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
     ctx.lineWidth = 2;
     ctx.strokeRect(1, 1, 126, 126);
 
@@ -81,8 +83,8 @@ export function getProceduralSidewalkTexture(): THREE.CanvasTexture {
     for (let i = 0; i < 600; i++) {
       const x = Math.random() * 128;
       const y = Math.random() * 128;
-      const val = 180 + Math.floor(Math.random() * 35);
-      ctx.fillStyle = `rgba(${val}, ${val}, ${val}, 0.25)`;
+      const val = 210 + Math.floor(Math.random() * 35);
+      ctx.fillStyle = `rgba(${val}, ${val}, ${val}, 0.3)`;
       ctx.fillRect(x, y, 1.5, 1.5);
     }
   }
@@ -93,4 +95,3 @@ export function getProceduralSidewalkTexture(): THREE.CanvasTexture {
   sidewalkTexture.repeat.set(2, 2);
   return sidewalkTexture;
 }
-

@@ -8,7 +8,12 @@ interface DeveloperAvatar3DProps {
   positionRef: React.MutableRefObject<THREE.Vector3>;
   rotationRef: React.MutableRefObject<number>;
   isMovingRef: React.MutableRefObject<boolean>;
+  quaternionRef?: React.MutableRefObject<THREE.Quaternion>;
+  currentSpeedRef?: React.MutableRefObject<number>;
 }
+
+const _upAxis = new THREE.Vector3(0, 1, 0);
+const _targetQuat = new THREE.Quaternion();
 
 /**
  * Stylized 3D Miniature Developer Avatar (Matching User Reference Image)
@@ -28,6 +33,8 @@ export const DeveloperAvatar3D: React.FC<DeveloperAvatar3DProps> = ({
   positionRef,
   rotationRef,
   isMovingRef,
+  quaternionRef,
+  currentSpeedRef,
 }) => {
   const rootGroupRef = useRef<THREE.Group>(null);
   const bodyGroupRef = useRef<THREE.Group>(null);
@@ -37,8 +44,9 @@ export const DeveloperAvatar3D: React.FC<DeveloperAvatar3DProps> = ({
   const leftArmRef = useRef<THREE.Group>(null);
   const rightArmRef = useRef<THREE.Group>(null);
 
-  // Smooth rotation tracking
-  const currentRotationRef = useRef<number>(0);
+  // Smooth rotation tracking via quaternion (Requirement 4)
+  const internalQuatRef = useRef<THREE.Quaternion>(new THREE.Quaternion());
+  const walkCyclePhaseRef = useRef<number>(0);
 
   // Memoized shared materials for optimal rendering performance
   const materials = useMemo(() => {
@@ -114,76 +122,87 @@ export const DeveloperAvatar3D: React.FC<DeveloperAvatar3DProps> = ({
   }, []);
 
   useFrame((_, delta) => {
+    if (typeof document !== 'undefined' && document.hidden) return;
     if (!rootGroupRef.current) return;
 
-    // 1. Sync avatar root position directly without React re-render
+    // 1. Clamped delta time for frame-rate independence (Requirement 2)
+    const dt = Math.min(delta, 0.05);
+
+    // 2. Sync avatar root position directly without React re-render (Requirement 3)
     rootGroupRef.current.position.copy(positionRef.current);
 
-    // 2. Smoothly interpolate yaw rotation toward target heading
-    const targetRot = rotationRef.current;
-    let diff = targetRot - currentRotationRef.current;
-    while (diff < -Math.PI) diff += Math.PI * 2;
-    while (diff > Math.PI) diff -= Math.PI * 2;
-    currentRotationRef.current += diff * Math.min(1, delta * 14);
-    rootGroupRef.current.rotation.y = currentRotationRef.current;
+    // 3. Smooth character rotation using quaternions (Requirement 4)
+    if (quaternionRef?.current) {
+      rootGroupRef.current.quaternion.copy(quaternionRef.current);
+    } else {
+      _targetQuat.setFromAxisAngle(_upAxis, rotationRef.current);
+      const rotFactor = 1 - Math.exp(-18.0 * dt);
+      internalQuatRef.current.slerp(_targetQuat, rotFactor);
+      rootGroupRef.current.quaternion.copy(internalQuatRef.current);
+    }
 
     const time = performance.now() * 0.001;
     const isMoving = isMovingRef.current;
+    const speed = currentSpeedRef ? currentSpeedRef.current : (isMoving ? 4.5 : 0);
 
-    // 3. Locomotion & Skeletal Kinematics
-    if (isMoving) {
-      // Natural walking stride frequency
-      const stride = Math.sin(time * 11);
-      const verticalBounce = Math.abs(Math.sin(time * 11)) * 0.045;
+    // 4. Locomotion & Skeletal Kinematics
+    if (isMoving && speed > 0.08) {
+      // Natural walking stride frequency scaled by actual velocity
+      const freq = Math.max(7.0, Math.min(14.0, speed * 2.1));
+      walkCyclePhaseRef.current += dt * freq;
+      const stride = Math.sin(walkCyclePhaseRef.current);
+      const amplitude = Math.min(1, speed / 4.0);
+      const verticalBounce = Math.abs(stride) * 0.045 * amplitude;
 
       // Leg stride oscillation
       if (leftLegRef.current && rightLegRef.current) {
-        leftLegRef.current.rotation.x = stride * 0.75;
-        rightLegRef.current.rotation.x = -stride * 0.75;
+        leftLegRef.current.rotation.x = stride * 0.75 * amplitude;
+        rightLegRef.current.rotation.x = -stride * 0.75 * amplitude;
       }
 
       // Arm swing (opposing legs)
       if (leftArmRef.current && rightArmRef.current) {
-        leftArmRef.current.rotation.x = -stride * 0.65;
-        rightArmRef.current.rotation.x = stride * 0.65;
+        leftArmRef.current.rotation.x = -stride * 0.65 * amplitude;
+        rightArmRef.current.rotation.x = stride * 0.65 * amplitude;
       }
 
       // Dynamic forward athletic lean and bounce
       if (bodyGroupRef.current) {
         bodyGroupRef.current.position.y = 0.52 + verticalBounce;
-        bodyGroupRef.current.rotation.x = 0.1;
-        bodyGroupRef.current.rotation.y = Math.sin(time * 11) * 0.04; // subtle pelvis sway
+        bodyGroupRef.current.rotation.x = 0.1 * amplitude;
+        bodyGroupRef.current.rotation.y = Math.sin(walkCyclePhaseRef.current) * 0.04 * amplitude; // subtle pelvis sway
       }
 
       if (headGroupRef.current) {
-        headGroupRef.current.rotation.x = -0.05;
-        headGroupRef.current.rotation.y = Math.sin(time * 5.5) * 0.03;
+        headGroupRef.current.rotation.x = -0.05 * amplitude;
+        headGroupRef.current.rotation.y = Math.sin(walkCyclePhaseRef.current * 0.5) * 0.03 * amplitude;
       }
     } else {
-      // Idle breathing and head sway
+      // Smooth damp back legs and arms when stopped, then idle breathing and head sway
+      const dampFactor = 1 - Math.exp(-12.0 * dt);
+      if (leftLegRef.current && rightLegRef.current) {
+        leftLegRef.current.rotation.x += (0 - leftLegRef.current.rotation.x) * dampFactor;
+        rightLegRef.current.rotation.x += (0 - rightLegRef.current.rotation.x) * dampFactor;
+      }
+
       const idleBreathing = Math.sin(time * 2.4) * 0.015;
       const headSway = Math.sin(time * 1.6) * 0.04;
       const armSway = Math.sin(time * 1.8) * 0.03;
 
+      if (leftArmRef.current && rightArmRef.current) {
+        leftArmRef.current.rotation.x += (armSway - leftArmRef.current.rotation.x) * dampFactor;
+        rightArmRef.current.rotation.x += (-armSway - rightArmRef.current.rotation.x) * dampFactor;
+      }
+
       if (bodyGroupRef.current) {
         bodyGroupRef.current.position.y = 0.52 + idleBreathing;
-        bodyGroupRef.current.rotation.x = 0;
-        bodyGroupRef.current.rotation.y = 0;
+        bodyGroupRef.current.rotation.x += (0 - bodyGroupRef.current.rotation.x) * dampFactor;
+        bodyGroupRef.current.rotation.y += (0 - bodyGroupRef.current.rotation.y) * dampFactor;
       }
 
       if (headGroupRef.current) {
-        headGroupRef.current.rotation.x = idleBreathing * 0.5;
+        headGroupRef.current.rotation.x += (0 - headGroupRef.current.rotation.x) * dampFactor;
         headGroupRef.current.rotation.y = headSway;
-      }
-
-      if (leftLegRef.current && rightLegRef.current) {
-        leftLegRef.current.rotation.x = 0;
-        rightLegRef.current.rotation.x = 0;
-      }
-
-      if (leftArmRef.current && rightArmRef.current) {
-        leftArmRef.current.rotation.x = armSway;
-        rightArmRef.current.rotation.x = -armSway;
       }
     }
   });

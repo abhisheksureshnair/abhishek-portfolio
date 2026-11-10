@@ -1,33 +1,77 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Gauge, Sparkles, Zap, Shield, Check } from 'lucide-react';
 
-export type PerformanceTier = 'auto' | 'high' | 'balanced' | 'low';
+export type PerformanceTier = 'auto' | 'high' | 'medium' | 'balanced' | 'low';
+export type EffectiveQualityTier = 'high' | 'medium' | 'low';
 
 interface PerformanceContextType {
   tier: PerformanceTier;
-  effectiveTier: 'high' | 'balanced' | 'low';
+  effectiveTier: EffectiveQualityTier;
   setTier: (tier: PerformanceTier) => void;
   prefersReducedMotion: boolean;
   fps: number;
+  avgFrameTime: number;
 }
 
 const PerformanceContext = createContext<PerformanceContextType>({
-  tier: 'balanced',
-  effectiveTier: 'balanced',
+  tier: 'auto',
+  effectiveTier: 'medium',
   setTier: () => {},
   prefersReducedMotion: false,
   fps: 60,
+  avgFrameTime: 16.6,
 });
 
 export const usePerformanceQuality = () => useContext(PerformanceContext);
 
+// Initial device tier determination
+function getHardwareInitialTier(): EffectiveQualityTier {
+  if (typeof navigator === 'undefined') return 'medium';
+  const cores = navigator.hardwareConcurrency || 4;
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (isMobile || cores <= 4) {
+    return 'low';
+  } else if (cores >= 8) {
+    return 'high';
+  }
+  return 'medium';
+}
+
+function normalizeTier(t: PerformanceTier): EffectiveQualityTier {
+  if (t === 'balanced' || t === 'medium') return 'medium';
+  if (t === 'high') return 'high';
+  if (t === 'low') return 'low';
+  return 'medium';
+}
+
 export const PerformanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [tier, setTierState] = useState<PerformanceTier>('balanced');
-  const [effectiveTier, setEffectiveTier] = useState<'high' | 'balanced' | 'low'>('balanced');
+  const [tier, setTierState] = useState<PerformanceTier>('auto');
+  const [effectiveTier, setEffectiveTier] = useState<EffectiveQualityTier>('medium');
   const [prefersReducedMotion, setPrefersReducedMotion] = useState<boolean>(false);
   const [fps, setFps] = useState<number>(60);
+  const [avgFrameTime, setAvgFrameTime] = useState<number>(16.6);
+
+  // Hysteresis refs for AUTO mode (Requirement 13)
+  const tierRef = useRef<PerformanceTier>('auto');
+  tierRef.current = tier;
+  const effectiveTierRef = useRef<EffectiveQualityTier>('medium');
+  effectiveTierRef.current = effectiveTier;
+
+  const lowFpsStartTimeRef = useRef<number | null>(null);
+  const highFpsStartTimeRef = useRef<number | null>(null);
+  const lastTierChangeTimeRef = useRef<number>(performance.now());
+
+  // Hysteresis constants:
+  // Down-switch threshold: < 45 FPS sustained for 3.0 seconds
+  // Up-switch threshold:   > 58 FPS sustained for 7.0 seconds (much stricter to avoid ping-pong)
+  // Cooldown period:       8.0 seconds between any automatic tier shifts
+  const HYSTERESIS_DOWN_FPS = 45;
+  const HYSTERESIS_DOWN_TIME = 3000;
+  const HYSTERESIS_UP_FPS = 58;
+  const HYSTERESIS_UP_TIME = 7000;
+  const HYSTERESIS_COOLDOWN = 8000;
 
   // Initialize preference from localStorage
   useEffect(() => {
@@ -42,48 +86,89 @@ export const PerformanceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     // Load saved tier
     const saved = localStorage.getItem('asn_performance_tier') as PerformanceTier | null;
-    const initialTier = saved && ['auto', 'high', 'balanced', 'low'].includes(saved) ? saved : 'balanced';
+    const initialTier = saved && ['auto', 'high', 'medium', 'balanced', 'low'].includes(saved) ? saved : 'auto';
     setTierState(initialTier);
 
-    // Determine effective tier
     if (initialTier === 'auto') {
-      const cores = navigator.hardwareConcurrency || 4;
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      if (isMobile || cores <= 4) {
-        setEffectiveTier('low');
-      } else if (cores >= 8) {
-        setEffectiveTier('high');
-      } else {
-        setEffectiveTier('balanced');
-      }
+      const hwTier = getHardwareInitialTier();
+      setEffectiveTier(hwTier);
     } else {
-      setEffectiveTier(initialTier);
+      setEffectiveTier(normalizeTier(initialTier));
     }
 
-    // Lightweight FPS monitor (runs only for 3 seconds to measure baseline)
-    let frames = 0;
-    let startTime = performance.now();
+    // Continuous Frame Time & FPS Telemetry Loop with Hysteresis
+    let frameCount = 0;
+    let lastTime = performance.now();
     let animId: number;
 
-    const measure = (now: number) => {
-      frames++;
-      if (now - startTime >= 1000) {
-        const measuredFps = Math.round((frames * 1000) / (now - startTime));
-        setFps(measuredFps);
-        frames = 0;
-        startTime = now;
+    const tick = (now: number) => {
+      frameCount++;
+      const elapsed = now - lastTime;
+
+      if (elapsed >= 500) {
+        const currentInstantFps = Math.round((frameCount * 1000) / elapsed);
+        const currentFrameTime = elapsed / frameCount;
+        setFps(currentInstantFps);
+        setAvgFrameTime(currentFrameTime);
+
+        // AUTO Mode Hysteresis Evaluation
+        if (tierRef.current === 'auto') {
+          const currentEffTier = effectiveTierRef.current;
+          const timeSinceLastChange = now - lastTierChangeTimeRef.current;
+
+          if (timeSinceLastChange > HYSTERESIS_COOLDOWN) {
+            // Check for degradation
+            if (currentInstantFps < HYSTERESIS_DOWN_FPS) {
+              highFpsStartTimeRef.current = null;
+              if (lowFpsStartTimeRef.current === null) {
+                lowFpsStartTimeRef.current = now;
+              } else if (now - lowFpsStartTimeRef.current >= HYSTERESIS_DOWN_TIME) {
+                // Demote quality tier
+                if (currentEffTier === 'high') {
+                  setEffectiveTier('medium');
+                  lastTierChangeTimeRef.current = now;
+                  lowFpsStartTimeRef.current = null;
+                } else if (currentEffTier === 'medium') {
+                  setEffectiveTier('low');
+                  lastTierChangeTimeRef.current = now;
+                  lowFpsStartTimeRef.current = null;
+                }
+              }
+            } else if (currentInstantFps >= HYSTERESIS_UP_FPS) {
+              lowFpsStartTimeRef.current = null;
+              if (highFpsStartTimeRef.current === null) {
+                highFpsStartTimeRef.current = now;
+              } else if (now - highFpsStartTimeRef.current >= HYSTERESIS_UP_TIME) {
+                // Promote quality tier
+                if (currentEffTier === 'low') {
+                  setEffectiveTier('medium');
+                  lastTierChangeTimeRef.current = now;
+                  highFpsStartTimeRef.current = null;
+                } else if (currentEffTier === 'medium') {
+                  setEffectiveTier('high');
+                  lastTierChangeTimeRef.current = now;
+                  highFpsStartTimeRef.current = null;
+                }
+              }
+            } else {
+              // Stable middle zone: reset timers
+              lowFpsStartTimeRef.current = null;
+              highFpsStartTimeRef.current = null;
+            }
+          }
+        }
+
+        frameCount = 0;
+        lastTime = now;
       }
-      animId = requestAnimationFrame(measure);
+
+      animId = requestAnimationFrame(tick);
     };
 
-    animId = requestAnimationFrame(measure);
-    const stopMeasure = setTimeout(() => {
-      cancelAnimationFrame(animId);
-    }, 4000);
+    animId = requestAnimationFrame(tick);
 
     return () => {
       motionQuery.removeEventListener('change', handleMotionChange);
-      clearTimeout(stopMeasure);
       cancelAnimationFrame(animId);
     };
   }, []);
@@ -95,17 +180,11 @@ export const PerformanceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
 
     if (newTier === 'auto') {
-      const cores = navigator.hardwareConcurrency || 4;
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      if (isMobile || cores <= 4) {
-        setEffectiveTier('low');
-      } else if (cores >= 8) {
-        setEffectiveTier('high');
-      } else {
-        setEffectiveTier('balanced');
-      }
+      const hwTier = getHardwareInitialTier();
+      setEffectiveTier(hwTier);
+      lastTierChangeTimeRef.current = performance.now();
     } else {
-      setEffectiveTier(newTier);
+      setEffectiveTier(normalizeTier(newTier));
     }
   }, []);
 
@@ -117,6 +196,7 @@ export const PerformanceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         setTier,
         prefersReducedMotion,
         fps,
+        avgFrameTime,
       }}
     >
       {children}
@@ -131,26 +211,26 @@ export const PerformanceSelector: React.FC<{ className?: string }> = ({ classNam
   const options: { id: PerformanceTier; label: string; desc: string; icon: any }[] = [
     {
       id: 'auto',
-      label: 'Auto Detect',
-      desc: 'Adapts dynamically to device CPU & refresh rate',
+      label: 'Auto Detect (Dynamic)',
+      desc: 'Adapts with hysteresis between Low, Medium and High based on live GPU frame times',
       icon: Gauge,
     },
     {
       id: 'high',
-      label: 'High Fidelity',
-      desc: 'Maximum particles, reflections & depth lighting',
+      label: 'High Quality',
+      desc: '2048x2048 shadow maps, PCF filtering, 1.75 DPR, full foliage instancing',
       icon: Sparkles,
     },
     {
-      id: 'balanced',
-      label: 'Balanced (Recommended)',
-      desc: 'Optimal 60 FPS performance with cinematic visual polish',
+      id: 'medium',
+      label: 'Medium Quality (Balanced)',
+      desc: '1024x1024 shadow maps, 1.25 DPR, instanced geometry, smooth 60 FPS',
       icon: Zap,
     },
     {
       id: 'low',
-      label: 'Battery & Low Power',
-      desc: 'Restricted particles & shadows for mobile or low-spec devices',
+      label: 'Low Quality (Battery Saver)',
+      desc: 'Disabled shadow maps, 1.0 DPR, zero point lights, maximum mobile battery efficiency',
       icon: Shield,
     },
   ];
@@ -164,7 +244,7 @@ export const PerformanceSelector: React.FC<{ className?: string }> = ({ classNam
         aria-label="Visual Quality & Performance Controls"
       >
         <Gauge className="w-3 h-3 text-cyan-400" />
-        <span className="uppercase">{tier}</span>
+        <span className="uppercase">{tier === 'balanced' ? 'MEDIUM' : tier}</span>
         <span className="hidden sm:inline text-zinc-600 font-sans">•</span>
         <span className="hidden sm:inline text-emerald-400">{fps > 0 ? `${fps} FPS` : '60 FPS'}</span>
       </button>
@@ -188,7 +268,7 @@ export const PerformanceSelector: React.FC<{ className?: string }> = ({ classNam
 
             <div className="space-y-1">
               {options.map((opt) => {
-                const isSelected = tier === opt.id;
+                const isSelected = tier === opt.id || (tier === 'balanced' && opt.id === 'medium');
                 const Icon = opt.icon;
                 return (
                   <button
@@ -221,4 +301,3 @@ export const PerformanceSelector: React.FC<{ className?: string }> = ({ classNam
     </div>
   );
 };
-
