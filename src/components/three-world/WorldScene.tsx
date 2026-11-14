@@ -1,32 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
 import { WORLD_DISTRICTS, WorldDistrict } from './WorldConfig';
-import { CityLighting, TimeOfDay } from './CityLighting';
-import { CityGround } from './CityGround';
-import { CityRoadNetwork } from './CityRoadNetwork';
-import { HeroBuilding } from './HeroBuilding';
 import { HeroBuildingOverlay } from './HeroBuildingOverlay';
-import { AboutBuilding } from './AboutBuilding';
 import { AboutBuildingOverlay } from './AboutBuildingOverlay';
-import { ProjectsBuilding } from './ProjectsBuilding';
 import { ProjectsBuildingOverlay } from './ProjectsBuildingOverlay';
-import { SkillsBuilding } from './SkillsBuilding';
 import { SkillsBuildingOverlay } from './SkillsBuildingOverlay';
-import { ExperienceBuilding } from './ExperienceBuilding';
 import { ExperienceBuildingOverlay } from './ExperienceBuildingOverlay';
-import { ContactBuilding } from './ContactBuilding';
 import { ContactBuildingOverlay } from './ContactBuildingOverlay';
-import { CityStreetFurniture } from './CityStreetFurniture';
-import { CityPlazaFountain } from './CityPlazaFountain';
-import { CityTrafficSystem } from './CityTrafficSystem';
-import { CityCameraController, SelectedBuildingType } from './CityCameraController';
-import { DeveloperAvatar3D } from './DeveloperAvatar3D';
-import { CityAvatarController, CITY_BUILDING_ZONES } from './CityAvatarController';
+import { SelectedBuildingType } from './CityCameraController';
+import { CITY_BUILDING_ZONES } from './CityAvatarController';
 import { CityLoadingScreen } from './CityLoadingScreen';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { WorldHUD } from './WorldHUD';
@@ -34,68 +21,43 @@ import { ProjectOverlay } from '@/components/experience/ProjectOverlay';
 import { FlowSyncModal } from '@/components/FlowSyncModal';
 import { usePerformanceQuality, usePerformanceTelemetry } from '../PerformanceControl';
 import { WebGLDiagnosticManager } from './WebGLDiagnosticManager';
-import { Sparkles, AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
-const _daySky = new THREE.Color('#bae6fd');
-const _nightSky = new THREE.Color('#0c1938');
-
-/**
- * Syncs tone mapping, exposure, sky background, and atmospheric fog with smooth transitions
- */
-function CanvasToneMappingManager({ timeOfDay }: { timeOfDay: TimeOfDay }) {
-  const { gl, scene } = useThree();
-  const { prefersReducedMotion } = usePerformanceQuality();
-  const progressRef = useRef(timeOfDay === 'night' ? 1.0 : 0.0);
-
-  useEffect(() => {
-    gl.toneMapping = THREE.ACESFilmicToneMapping;
-  }, [gl]);
-
-  useFrame((_, delta) => {
-    if (typeof document !== 'undefined' && document.hidden) return;
-
-    const target = timeOfDay === 'night' ? 1.0 : 0.0;
-    const dt = Math.min(delta, 0.1);
-
-    // Only update colors and uniforms when transitioning (saves CPU cycles when settled)
-    if (Math.abs(progressRef.current - target) > 0.0005) {
-      if (prefersReducedMotion) {
-        progressRef.current = target;
-      } else {
-        const damp = 1 - Math.exp(-4.2 * dt);
-        progressRef.current += (target - progressRef.current) * damp;
-      }
-
-      const t = progressRef.current;
-      gl.toneMappingExposure = THREE.MathUtils.lerp(1.25, 1.15, t);
-
-      // Smoothly transition scene background & fog
-      if (scene.background && (scene.background as THREE.Color).isColor) {
-        (scene.background as THREE.Color).lerpColors(_daySky, _nightSky, t);
-      }
-      if (scene.fog && (scene.fog as THREE.Fog).isFog) {
-        const fog = scene.fog as THREE.Fog;
-        fog.color.lerpColors(_daySky, _nightSky, t);
-        fog.near = THREE.MathUtils.lerp(45, 35, t);
-        fog.far = THREE.MathUtils.lerp(120, 105, t);
-      }
-    }
-  });
-
-  return null;
-}
+// New Photorealistic Space & City Components
+import { RealisticEarth, EARTH_LOCATIONS, EarthLocation } from './RealisticEarth';
+import { RealisticCity } from './RealisticCity';
+import {
+  SpaceToCityCameraController,
+  WorldViewMode,
+  CityCameraPerspective,
+} from './SpaceToCityCameraController';
+import {
+  AtmosphericWeatherSystem,
+  TimeOfDay,
+  WeatherType,
+} from './AtmosphericWeatherSystem';
 
 export const WorldScene: React.FC = () => {
   const router = useRouter();
   const { effectiveTier } = usePerformanceQuality();
   const { updateTelemetry } = usePerformanceTelemetry();
 
-  // HUD, Recovery & Game State
+  // Space-to-City View Mode state
+  const [viewMode, setViewMode] = useState<WorldViewMode>('space');
+  const [targetLocation, setTargetLocation] = useState<EarthLocation | null>(EARTH_LOCATIONS[0]);
+  const [transitionProgress, setTransitionProgress] = useState<number>(0);
+  const [transitionAltitude, setTransitionAltitude] = useState<number>(75);
+
+  // Weather & Lighting state
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('day');
+  const [weather, setWeather] = useState<WeatherType>('clear');
+  const [cityPerspective, setCityPerspective] = useState<CityCameraPerspective>('aerial');
+
+  // Controls, Overlays & Game State
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const [selectedBuilding, setSelectedBuilding] = useState<SelectedBuildingType>(null);
   const [isIntroActive, setIsIntroActive] = useState<boolean>(true);
   const [cameraMode, setCameraMode] = useState<'follow' | 'tactical'>('follow');
-  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('day');
   const [isSceneReady, setIsSceneReady] = useState<boolean>(false);
   const [soundMuted, setSoundMuted] = useState<boolean>(true);
   const [nearestDistrict, setNearestDistrict] = useState<WorldDistrict | null>(null);
@@ -114,26 +76,27 @@ export const WorldScene: React.FC = () => {
   const targetWalkPosRef = useRef<THREE.Vector3 | null>(null);
 
   // Ground and road click-to-walk handler
-  const handleGroundClick = useCallback((point: THREE.Vector3) => {
-    if (selectedBuilding !== null || isIntroActive) return;
-    targetWalkPosRef.current = point.clone();
-  }, [selectedBuilding, isIntroActive]);
+  const handleGroundClick = useCallback(
+    (point: THREE.Vector3) => {
+      if (selectedBuilding !== null || isIntroActive || viewMode !== 'city') return;
+      targetWalkPosRef.current = point.clone();
+    },
+    [selectedBuilding, isIntroActive, viewMode]
+  );
 
-  // Enterable Building Interiors (Image 3)
+  // Enterable Building Interiors
   const streetPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 14));
   const [activeInterior, setActiveInterior] = useState<'code-nexus' | 'echo-desktop-ai' | 'flowsync' | null>(null);
 
   const handleEnterInterior = useCallback((districtId: string) => {
     if (districtId === 'code-nexus' || districtId === 'echo-desktop-ai' || districtId === 'flowsync') {
       streetPosRef.current.copy(playerPosRef.current);
-      // Place player inside the high-tech interior room
       playerPosRef.current.set(0, 100, 4);
       setActiveInterior(districtId as any);
     }
   }, []);
 
   const handleExitInterior = useCallback(() => {
-    // Return player to street coordinates directly outside the building entrance
     playerPosRef.current.copy(streetPosRef.current);
     setActiveInterior(null);
   }, []);
@@ -143,7 +106,7 @@ export const WorldScene: React.FC = () => {
   const [canvasKey, setCanvasKey] = useState<number>(0);
   const retryCountRef = useRef<number>(0);
 
-  // Check WebGL support & check if intro was already seen in this session
+  // Check WebGL support & session intro state
   useEffect(() => {
     try {
       const canvas = document.createElement('canvas');
@@ -158,21 +121,19 @@ export const WorldScene: React.FC = () => {
       setIsIntroActive(false);
     }
 
-    // Check if player returned from /github-universe
     const savedPos = sessionStorage.getItem('universe_return_pos');
     if (savedPos) {
       try {
         const parsed = JSON.parse(savedPos);
         playerPosRef.current.set(parsed.x, 0, parsed.z);
         sessionStorage.removeItem('universe_return_pos');
-      } catch (e) { }
+      } catch (e) {}
     }
   }, []);
 
   // District Interaction Dispatcher
   const handleDistrictInteraction = useCallback(
     (districtId: string) => {
-      // Enter interactive 3D interior for supported buildings (Image 3)
       if (districtId === 'code-nexus' || districtId === 'echo-desktop-ai' || districtId === 'flowsync') {
         handleEnterInterior(districtId);
         return;
@@ -195,7 +156,7 @@ export const WorldScene: React.FC = () => {
     [handleEnterInterior, router]
   );
 
-  // Keyboard Event Handlers (Bound once with ref dependencies to avoid re-binding)
+  // Keyboard Event Handlers
   const nearestDistrictRef = useRef<WorldDistrict | null>(null);
   nearestDistrictRef.current = nearestDistrict;
   const activeInteriorRef = useRef<string | null>(null);
@@ -207,20 +168,17 @@ export const WorldScene: React.FC = () => {
       keysPressedRef.current[e.key] = true;
       if (e.code) keysPressedRef.current[e.code] = true;
 
-      // Escape closes open building modal
       if (e.key === 'Escape') {
         setSelectedBuilding(null);
         return;
       }
 
-      // Handle 'E' or Space interaction trigger
       if (e.key === 'e' || e.key === 'E' || e.key === ' ') {
         if (activeInteriorRef.current) {
           handleExitInterior();
           return;
         }
 
-        // Check if player is near any of the 6 city buildings
         const px = playerPosRef.current.x;
         const pz = playerPosRef.current.z;
         for (let i = 0; i < CITY_BUILDING_ZONES.length; i++) {
@@ -257,16 +215,18 @@ export const WorldScene: React.FC = () => {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
     };
-  }, [handleDistrictInteraction]);
+  }, [handleDistrictInteraction, handleExitInterior]);
 
-  // Proximity detection loop (Runs at 8Hz; updates React state ONLY when nearest district changes!)
+  // Proximity detection loop (8Hz)
   useEffect(() => {
+    if (viewMode !== 'city') return;
+
     const proximityTimer = setInterval(() => {
       const px = playerPosRef.current.x;
       const pz = playerPosRef.current.z;
 
       let closest: WorldDistrict | null = null;
-      let minDist = 7.5; // Trigger threshold radius
+      let minDist = 7.5;
 
       for (let i = 0; i < WORLD_DISTRICTS.length; i++) {
         const d = WORLD_DISTRICTS[i];
@@ -280,7 +240,6 @@ export const WorldScene: React.FC = () => {
         }
       }
 
-      // Only trigger state update if district changes, preventing constant re-renders
       setNearestDistrict((prev) => (prev?.id === closest?.id ? prev : closest));
 
       if (closest) {
@@ -291,7 +250,7 @@ export const WorldScene: React.FC = () => {
     }, 125);
 
     return () => clearInterval(proximityTimer);
-  }, []);
+  }, [viewMode]);
 
   const handleSkipIntro = () => {
     setIsIntroActive(false);
@@ -307,10 +266,15 @@ export const WorldScene: React.FC = () => {
     keysPressedRef.current[key] = isDown;
   };
 
+  // Location select handler from space mode
+  const handleSelectEarthLocation = (loc: EarthLocation) => {
+    setTargetLocation(loc);
+    setViewMode('descending');
+  };
+
   // Graceful WebGL Context Management
   const handleContextLost = useCallback(() => {
     setContextStatus('lost');
-    // Allow up to 3 seconds for driver auto-restoration before displaying interactive fallback
     setTimeout(() => {
       setContextStatus((curr) => (curr === 'lost' ? 'failed' : curr));
     }, 3000);
@@ -318,7 +282,6 @@ export const WorldScene: React.FC = () => {
 
   const handleContextRestored = useCallback(() => {
     setContextStatus('normal');
-    // Increment canvas key to cleanly remount scene graph with fresh GL state
     setCanvasKey((prev) => prev + 1);
   }, []);
 
@@ -359,30 +322,32 @@ export const WorldScene: React.FC = () => {
     );
   }
 
-  // Adaptive Graphics settings directly controlling R3F Canvas
   const dprConfig: number | [number, number] =
-    effectiveTier === 'low'
-      ? 1.0
-      : effectiveTier === 'medium'
-        ? [1, 1.25]
-        : [1, 1.75];
+    effectiveTier === 'low' ? 1.0 : effectiveTier === 'medium' ? [1, 1.25] : [1, 1.75];
 
-  const shadowSetting = effectiveTier === 'low' ? false : 'percentage';
+  // Dynamic background color based on viewMode & timeOfDay
+  const canvasBgColor =
+    viewMode === 'space'
+      ? '#020617'
+      : timeOfDay === 'night'
+      ? '#0c1938'
+      : timeOfDay === 'sunset'
+      ? '#fdba74'
+      : '#bae6fd';
 
   return (
     <div
-      className={`relative w-full h-screen min-h-screen ${timeOfDay === 'night' ? 'bg-[#0c1938]' : 'bg-[#bae6fd]'
-        } overflow-hidden select-none`}
+      className="relative w-full h-screen min-h-screen overflow-hidden select-none bg-black"
       style={{ width: '100%', height: '100vh', minHeight: '100vh' }}
     >
       {/* 3D Loading Screen with Progress & Instant Bypass */}
       <CityLoadingScreen isReady={isSceneReady} onDismiss={() => setIsSceneReady(true)} />
 
-      {/* 3D Canvas Viewport with Auto-Recovery Key */}
+      {/* 3D Canvas Viewport */}
       <Canvas
         key={canvasKey}
-        shadows={effectiveTier === 'low' ? false : 'percentage'}
-        camera={{ position: [18, 16, 22], fov: 45, near: 0.1, far: 500 }}
+        shadows={effectiveTier !== 'low'}
+        camera={{ position: [0, 16, 75], fov: 45, near: 0.1, far: 800 }}
         dpr={dprConfig}
         gl={{
           antialias: effectiveTier !== 'low',
@@ -406,21 +371,18 @@ export const WorldScene: React.FC = () => {
         style={{ width: '100%', height: '100%' }}
       >
         <React.Suspense fallback={null}>
-          {/* Tone Mapping & Exposure Manager */}
-          <CanvasToneMappingManager timeOfDay={timeOfDay} />
-
-          {/* Soft Sunny Daylight vs Deep Midnight Sapphire Atmosphere & Fog */}
-          <color attach="background" args={[timeOfDay === 'night' ? '#0c1938' : '#bae6fd']} />
+          {/* Background color and atmospheric distance fog */}
+          <color attach="background" args={[canvasBgColor]} />
           <fog
             attach="fog"
             args={[
-              timeOfDay === 'night' ? '#0c1938' : '#bae6fd',
-              timeOfDay === 'night' ? 35 : 45,
-              timeOfDay === 'night' ? 105 : 120,
+              canvasBgColor,
+              viewMode === 'space' ? 150 : 35,
+              viewMode === 'space' ? 500 : 125,
             ]}
           />
 
-          {/* WebGL Context Interruption & Telemetry Monitor */}
+          {/* WebGL Diagnostic Manager */}
           <WebGLDiagnosticManager
             onContextLost={handleContextLost}
             onContextRestored={handleContextRestored}
@@ -429,119 +391,69 @@ export const WorldScene: React.FC = () => {
             }}
           />
 
-          {/* OrbitControls for Smooth Camera Rotation & Debugging */}
+          {/* Orbit Controls (Used for free camera orbit) */}
           <OrbitControls
             ref={controlsRef}
             makeDefault
             target={[0, 0, 0]}
-            minDistance={8}
-            maxDistance={70}
-            maxPolarAngle={Math.PI / 2 - 0.05}
-            minPolarAngle={0.1}
+            minDistance={viewMode === 'space' ? 32 : 6}
+            maxDistance={viewMode === 'space' ? 140 : 65}
+            maxPolarAngle={viewMode === 'space' ? Math.PI : Math.PI / 2 - 0.04}
             enableDamping
             dampingFactor={0.05}
           />
 
-          {/* Reusable Stylized Diorama Lighting with Day / Night Mode */}
-          <CityLighting timeOfDay={timeOfDay} />
-
-          {/* Reusable 60x60 Raised Ground Platform */}
-          <CityGround size={60} onGroundClick={handleGroundClick} />
-
-          {/* Reusable City Road & Sidewalk Network */}
-          <CityRoadNetwork onRoadClick={handleGroundClick} />
-
-          {/* Environmental Details: Trees (with ambient sway), Bushes, Streetlights, Signals & Parked Cars */}
-          <CityStreetFurniture timeOfDay={timeOfDay} />
-
-          {/* Civic Central Plaza Animated Fountain */}
-          <CityPlazaFountain position={[3.85, 0.74, -3.85]} />
-
-          {/* Animated Traffic System: 5 Moving Low-Poly Vehicles on Road Circuits */}
-          <CityTrafficSystem />
-
-          {/* Stylized 3D Developer Avatar Movement & Building Proximity Controller */}
-          <CityAvatarController
-            playerPosRef={playerPosRef}
-            rotationRef={rotationRef}
-            quaternionRef={quaternionRef}
-            currentSpeedRef={currentSpeedRef}
-            isMovingRef={isMovingRef}
-            keysPressedRef={keysPressedRef}
-            targetWalkPosRef={targetWalkPosRef}
-            onSelectBuilding={(bId) => setSelectedBuilding(bId)}
-            isModalOpen={selectedBuilding !== null}
-          />
-
-          {/* Stylized 3D Developer Avatar (Chibi Casual Outfit, Head, Backpack, Sneakers, Locomotion) */}
-          <DeveloperAvatar3D
-            positionRef={playerPosRef}
-            rotationRef={rotationRef}
-            quaternionRef={quaternionRef}
-            currentSpeedRef={currentSpeedRef}
-            isMovingRef={isMovingRef}
-          />
-
-          {/* Frame-Rate Independent Camera Controller: mounted AFTER avatar to guarantee zero 1-frame lag */}
-          <CityCameraController
+          {/* Cinematic Space-to-City Smooth Camera Controller */}
+          <SpaceToCityCameraController
             controlsRef={controlsRef}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            targetLocation={targetLocation}
+            cityPerspective={cityPerspective}
             selectedBuilding={selectedBuilding}
-            cameraMode={cameraMode}
             playerPosRef={playerPosRef}
-            isIntroActive={isIntroActive}
-            onIntroComplete={() => {
-              setIsIntroActive(false);
-              sessionStorage.setItem('developer_universe_intro_done', 'true');
+            rotationRef={rotationRef}
+            onTransitionProgress={(prog, alt) => {
+              setTransitionProgress(prog);
+              setTransitionAltitude(alt);
             }}
-            heroPosition={[-7.85, 0.74, -7.35]}
-            aboutPosition={[7.85, 0.74, -7.35]}
-            projectsPosition={[-7.85, 0.74, 7.35]}
-            skillsPosition={[7.85, 0.74, 7.35]}
-            experiencePosition={[0, 0.74, 21.5]}
-            contactPosition={[0, 0.74, -21.5]}
           />
 
-          {/* Hero Headquarters: 3-Floor Interactive Flagship Building (Plot 01) */}
-          <HeroBuilding
-            position={[-7.85, 0.74, -7.35]}
-            onSelect={() => setSelectedBuilding('hero')}
-            isSelected={selectedBuilding === 'hero'}
+          {/* Dynamic Sunlight / Moonlight & Weather System */}
+          <AtmosphericWeatherSystem
+            timeOfDay={timeOfDay}
+            weather={weather}
+            castShadows={viewMode === 'city'}
           />
 
-          {/* About Me Creative Studio: 2-Story Studio with Terrace & Balcony (Plot 02) */}
-          <AboutBuilding
-            position={[7.85, 0.74, -7.35]}
-            onSelect={() => setSelectedBuilding('about')}
-            isSelected={selectedBuilding === 'about'}
-          />
+          {/* 1. Realistic 3D Earth (Rendered in Space & during transitions) */}
+          {(viewMode === 'space' || viewMode === 'descending' || viewMode === 'ascending') && (
+            <RealisticEarth
+              radius={24}
+              onSelectLocation={handleSelectEarthLocation}
+              selectedLocationId={targetLocation?.id}
+              isZooming={viewMode === 'descending'}
+              autoRotate={viewMode === 'space'}
+            />
+          )}
 
-          {/* Projects Innovation Center: Futuristic Purple & Blue Exhibition Building (Plot 03) */}
-          <ProjectsBuilding
-            position={[-7.85, 0.74, 7.35]}
-            onSelect={() => setSelectedBuilding('projects')}
-            isSelected={selectedBuilding === 'projects'}
-          />
-
-          {/* Skills Tech Tower: Tall Futuristic Skyscraper with Glowing Windows & Antenna (Plot 04) */}
-          <SkillsBuilding
-            position={[7.85, 0.74, 7.35]}
-            onSelect={() => setSelectedBuilding('skills')}
-            isSelected={selectedBuilding === 'skills'}
-          />
-
-          {/* Experience Office: Professional Blue-and-White Corporate Office Complex (Plot 06) */}
-          <ExperienceBuilding
-            position={[0, 0.74, 21.5]}
-            onSelect={() => setSelectedBuilding('experience')}
-            isSelected={selectedBuilding === 'experience'}
-          />
-
-          {/* Contact Hub: Friendly Modern Communication Hub with Pink & Blue Accents (Plot 05) */}
-          <ContactBuilding
-            position={[0, 0.74, -21.5]}
-            onSelect={() => setSelectedBuilding('contact')}
-            isSelected={selectedBuilding === 'contact'}
-          />
+          {/* 2. Realistic 3D City (Rendered in City & during transitions) */}
+          {(viewMode === 'city' || viewMode === 'descending' || viewMode === 'ascending') && (
+            <RealisticCity
+              visible={true}
+              timeOfDay={timeOfDay}
+              selectedBuilding={selectedBuilding}
+              onSelectBuilding={setSelectedBuilding}
+              playerPosRef={playerPosRef}
+              rotationRef={rotationRef}
+              quaternionRef={quaternionRef}
+              currentSpeedRef={currentSpeedRef}
+              isMovingRef={isMovingRef}
+              keysPressedRef={keysPressedRef}
+              targetWalkPosRef={targetWalkPosRef}
+              onGroundClick={handleGroundClick}
+            />
+          )}
         </React.Suspense>
       </Canvas>
 
@@ -585,7 +497,7 @@ export const WorldScene: React.FC = () => {
         onClose={() => setSelectedBuilding(null)}
       />
 
-      {/* 2D Interactive HUD & Radar MiniMap (Zero-React-Rerender) */}
+      {/* Upgraded 2D Interactive HUD with Space / City Modes */}
       <WorldHUD
         isIntroActive={isIntroActive}
         onSkipIntro={handleSkipIntro}
@@ -604,9 +516,30 @@ export const WorldScene: React.FC = () => {
         activeInterior={activeInterior}
         onExitInterior={handleExitInterior}
         timeOfDay={timeOfDay}
-        onToggleTimeOfDay={() => setTimeOfDay((prev) => (prev === 'day' ? 'night' : 'day'))}
+        onToggleTimeOfDay={() => {
+          setTimeOfDay((prev) =>
+            prev === 'day' ? 'sunset' : prev === 'sunset' ? 'night' : 'day'
+          );
+        }}
         selectedBuilding={selectedBuilding}
         onSelectBuilding={(bId) => setSelectedBuilding(bId)}
+        // Space-to-City Controls
+        viewMode={viewMode}
+        onSetViewMode={setViewMode}
+        targetLocation={targetLocation}
+        onSelectLocation={handleSelectEarthLocation}
+        weather={weather}
+        onToggleWeather={() => {
+          setWeather((prev) => (prev === 'clear' ? 'rain' : prev === 'rain' ? 'fog' : 'clear'));
+        }}
+        cityPerspective={cityPerspective}
+        onToggleCityPerspective={() => {
+          setCityPerspective((prev) =>
+            prev === 'aerial' ? 'street' : prev === 'street' ? 'first-person' : prev === 'first-person' ? 'drone' : 'aerial'
+          );
+        }}
+        transitionProgress={transitionProgress}
+        transitionAltitude={transitionAltitude}
       />
 
       {/* Selected District Project Overlay Modal */}
@@ -627,7 +560,7 @@ export const WorldScene: React.FC = () => {
         onClose={() => setIsFlowSyncCaseStudyOpen(false)}
       />
 
-      {/* Interactive WebGL Context Interruption Fallback with Retry */}
+      {/* Interactive WebGL Context Interruption Fallback */}
       {(contextStatus === 'failed' || contextStatus === 'lost') && (
         <div className="absolute inset-0 z-50 bg-[#030509]/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center font-mono">
           <div className="max-w-md space-y-5 p-8 rounded-3xl bg-zinc-950 border border-amber-500/30 shadow-[0_0_50px_rgba(245,158,11,0.15)]">
@@ -664,7 +597,6 @@ export const WorldScene: React.FC = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };
