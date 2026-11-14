@@ -36,6 +36,7 @@ import { usePerformanceQuality, usePerformanceTelemetry, PerformanceSelector } f
 import { WorldViewMode, CityCameraPerspective } from './SpaceToCityCameraController';
 import { EARTH_LOCATIONS, EarthLocation } from './RealisticEarth';
 import { TimeOfDay, WeatherType } from './AtmosphericWeatherSystem';
+import { urbanAudio } from './CityUrbanAudio';
 
 interface WorldHUDProps {
   isIntroActive: boolean;
@@ -408,6 +409,23 @@ export const WorldHUD: React.FC<WorldHUDProps> = ({
 
               {/* Visual Quality Selector */}
               <PerformanceSelector />
+
+              {/* Urban Audio SFX Toggle */}
+              <button
+                onClick={() => {
+                  urbanAudio.toggleMute();
+                  onToggleSound();
+                }}
+                className="p-2 rounded-xl bg-zinc-950/85 hover:bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95"
+                title={soundMuted ? 'Unmute Urban SFX & Footsteps' : 'Mute Urban SFX'}
+                aria-label="Toggle Audio"
+              >
+                {soundMuted ? (
+                  <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
+                ) : (
+                  <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
+                )}
+              </button>
 
               {/* Replay Intro Button */}
               <button

@@ -18,6 +18,7 @@ import { RealisticStreets } from './RealisticStreets';
 import { RealisticNature } from './RealisticNature';
 import { RealisticAvatar, AmbientPedestrians } from './RealisticAvatar';
 import { RealisticTraffic } from './RealisticTraffic';
+import { RealisticTrafficSignals } from './RealisticTrafficSignals';
 import { CityPlazaFountain } from './CityPlazaFountain';
 import { getRealisticLawnTexture, getRealisticGlassFacadeTexture } from './realisticCityTextures';
 
@@ -214,14 +215,19 @@ export const RealisticCity: React.FC<RealisticCityProps> = ({
       <CityPlazaFountain position={[3.85, 0.74, -3.85]} />
 
       {/* ======================================================== */}
-      {/* 7. REALISTIC TRAFFIC & MOVING VEHICLES                   */}
+      {/* 7. COINCIDENT 4-CORNER INTERSECTION TRAFFIC SIGNALS      */}
       {/* ======================================================== */}
-      <RealisticTraffic timeOfDay={timeOfDay} />
+      <RealisticTrafficSignals timeOfDay={timeOfDay} />
 
       {/* ======================================================== */}
-      {/* 8. AMBIENT SIDEWALK PEDESTRIANS                          */}
+      {/* 8. REALISTIC TRAFFIC & MOVING VEHICLES                   */}
       {/* ======================================================== */}
-      <AmbientPedestrians />
+      <RealisticTraffic timeOfDay={timeOfDay} playerPosRef={playerPosRef} />
+
+      {/* ======================================================== */}
+      {/* 9. AMBIENT SIDEWALK PEDESTRIANS & CROSSWALK AI          */}
+      {/* ======================================================== */}
+      <AmbientPedestrians playerPosRef={playerPosRef} />
 
       {/* ======================================================== */}
       {/* 9. AVATAR MOVEMENT CONTROLLER                            */}

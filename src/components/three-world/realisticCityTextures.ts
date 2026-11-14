@@ -211,3 +211,4 @@ export function getRealisticLawnTexture(): THREE.CanvasTexture {
   textureCache.set('real_lawn', texture);
   return texture;
 }
+
