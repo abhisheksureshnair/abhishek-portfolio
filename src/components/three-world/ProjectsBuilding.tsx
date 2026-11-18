@@ -4,6 +4,13 @@ import React, { useRef, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { usePerformanceQuality } from '../PerformanceControl';
+import {
+  getArchitecturalConcreteTexture,
+  getCurtainWallGlassTexture,
+  getLobbyShowroomGlassTexture,
+  getArchitecturalLouversTexture,
+  getGranitePaverTexture,
+} from './architecturalTextures';
 
 export interface ProjectsBuildingProps {
   position?: [number, number, number];
@@ -12,9 +19,10 @@ export interface ProjectsBuildingProps {
 }
 
 /**
- * Procedural Texture for Sign: "PROJECTS // INNOVATION CENTER"
+ * Creates high-res architectural signage texture:
+ * "PROJECTS // INNOVATION CENTER"
  */
-function createProjectsSignTexture(): THREE.CanvasTexture {
+function createArchitecturalProjectsSignTexture(): THREE.CanvasTexture {
   if (typeof window === 'undefined') {
     return new THREE.CanvasTexture(document?.createElement('canvas') as any);
   }
@@ -23,42 +31,27 @@ function createProjectsSignTexture(): THREE.CanvasTexture {
   canvas.height = 140;
   const ctx = canvas.getContext('2d')!;
 
-  // Deep obsidian violet-slate glass background
-  ctx.fillStyle = '#0a0817';
+  // Dark violet-slate architectural backing
+  ctx.fillStyle = '#0b0f19';
   ctx.fillRect(0, 0, 512, 140);
 
-  // Glowing violet border
+  // High-tech violet border
   ctx.strokeStyle = '#a855f7';
-  ctx.lineWidth = 6;
-  ctx.strokeRect(6, 6, 500, 128);
+  ctx.lineWidth = 3;
+  ctx.strokeRect(4, 4, 504, 132);
 
-  // Inner subtle cyan accent frame
-  ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(14, 14, 484, 112);
-
-  // Tech crosshair markings in corners
-  ctx.fillStyle = '#38bdf8';
-  ctx.fillRect(16, 16, 12, 3);
-  ctx.fillRect(16, 16, 3, 12);
-  ctx.fillRect(484, 16, 12, 3);
-  ctx.fillRect(493, 16, 3, 12);
-
-  // Main Title: "PROJECTS"
+  // Title: "PROJECTS"
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = '900 56px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.font = '700 48px "Segoe UI", Roboto, system-ui, sans-serif';
   ctx.fillStyle = '#ffffff';
-  ctx.shadowColor = '#c084fc';
-  ctx.shadowBlur = 18;
-  ctx.fillText('PROJECTS', 256, 56);
+  ctx.fillText('PROJECTS', 256, 52);
 
-  // Subtitle: "INNOVATION CENTER • AI LABS"
-  ctx.shadowBlur = 0;
-  ctx.font = 'bold 15px monospace';
-  ctx.fillStyle = '#38bdf8';
-  ctx.letterSpacing = '5px';
-  ctx.fillText('INNOVATION CENTER • AI LABS', 256, 106);
+  // Subtitle: "INNOVATION CENTER // AI LABS"
+  ctx.font = '600 14px monospace';
+  ctx.fillStyle = '#c084fc';
+  ctx.letterSpacing = '4px';
+  ctx.fillText('INNOVATION CENTER // AI LABS', 256, 100);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -66,94 +59,47 @@ function createProjectsSignTexture(): THREE.CanvasTexture {
 }
 
 /**
- * Procedural Dynamic Digital Billboard Texture Generator
+ * Procedural Dynamic Digital Project Display for Ground Floor Showroom
  */
-function createBillboardCanvas(): { canvas: HTMLCanvasElement; updateTicker: (time: number) => void } {
+function createProjectDisplayTexture(): THREE.CanvasTexture {
   if (typeof window === 'undefined') {
-    return {
-      canvas: (document?.createElement('canvas') as any) || {},
-      updateTicker: () => {},
-    };
+    return new THREE.CanvasTexture(document?.createElement('canvas') as any);
   }
-
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 256;
   const ctx = canvas.getContext('2d')!;
 
-  const items = [
-    { title: 'FLOWSYNC', sub: 'Real-Time AI Sprint Collaboration' },
-    { title: 'ECHO DESKTOP AI', sub: 'Cross-Platform AI Desktop Co-Pilot' },
-    { title: 'TRAQINN VTS', sub: 'Real-Time GPS Bus & Fleet Tracking' },
-    { title: 'TELEMEDICINE', sub: 'Bluetooth BLE Medical IoT Vitals' },
-  ];
+  ctx.fillStyle = '#070b14';
+  ctx.fillRect(0, 0, 512, 256);
 
-  const updateTicker = (time: number) => {
-    // Cyberpunk dark background
-    ctx.fillStyle = '#070614';
-    ctx.fillRect(0, 0, 512, 256);
+  ctx.strokeStyle = '#a855f7';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(8, 8, 496, 240);
 
-    // Cyan grid scanlines
-    ctx.strokeStyle = 'rgba(168, 85, 247, 0.15)';
-    ctx.lineWidth = 1;
-    for (let y = 0; y < 256; y += 16) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(512, y);
-      ctx.stroke();
-    }
+  ctx.font = '700 24px monospace';
+  ctx.fillStyle = '#c084fc';
+  ctx.fillText('FEATURED INNOVATION PROJECTS', 28, 48);
 
-    // Active project cycle (changes every 2.4s)
-    const index = Math.floor(time / 2.4) % items.length;
-    const current = items[index];
+  ctx.font = '600 16px "Segoe UI", sans-serif';
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillText('• FLOWSYNC: Real-Time AI Sprint Collaboration', 28, 96);
+  ctx.fillText('• ECHO DESKTOP AI: Cross-Platform Co-Pilot', 28, 136);
+  ctx.fillText('• TRAQINN VTS: Real-Time GPS Fleet Engine', 28, 176);
+  ctx.fillText('• BLE TELEMEDICINE: Vital Telemetry Nodes', 28, 216);
 
-    // Animated scanline laser bar
-    const scanY = (time * 120) % 256;
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
-    ctx.fillRect(0, scanY, 512, 8);
-
-    // Glowing border
-    ctx.strokeStyle = '#a855f7';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(8, 8, 496, 240);
-
-    // Header label
-    ctx.font = 'bold 16px monospace';
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillText('FEATURED EXHIBIT // VERIFIED BUILD', 32, 48);
-
-    // Title
-    ctx.font = 'bold 42px system-ui, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = '#00f0ff';
-    ctx.shadowBlur = 12;
-    ctx.fillText(current.title, 32, 116);
-
-    // Subtitle description
-    ctx.shadowBlur = 0;
-    ctx.font = '18px monospace';
-    ctx.fillStyle = '#c084fc';
-    ctx.fillText(current.sub, 32, 168);
-
-    // Bottom telemetry bar
-    const progressWidth = ((time % 2.4) / 2.4) * 448;
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(32, 206, progressWidth, 4);
-  };
-
-  return { canvas, updateTicker };
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
 }
 
 /**
- * ProjectsBuilding Component
- * Architecturally Upgraded Futuristic Innovation Center:
- * - Refined glass geodesic dome with structural meridian ribs and top spire antenna
- * - Chamfered deep-violet composite hull with titanium corner pylons and horizontal louvers
- * - High-tech entrance portal with illuminated sliding doors and canopy tie-rods
- * - Animated digital billboard ticker display (throttled to 20 FPS)
- * - Sculpted hexagonal exhibition pedestal with rotating floating holographic artifact
- * - Deep panoramic exhibition viewing galleries with opaque reflective glass
- * - Illuminated "PROJECTS" marquee sign
+ * ProjectsBuilding — Contemporary High-Tech Innovation Center
+ * 4 articulated storeys with dark zinc and curtain-wall architecture:
+ * - Horizontal aluminum sunshade louvers (brise-soleil fins)
+ * - Double-height exhibition showroom with digital project boards behind glass
+ * - Eastern entrance facing the main avenue with glass canopy & tension rods
+ * - Rooftop mechanical penthouse, solar arrays, and telecom link
  */
 export const ProjectsBuilding: React.FC<ProjectsBuildingProps> = ({
   position = [-7.85, 0.74, 7.35],
@@ -162,32 +108,92 @@ export const ProjectsBuilding: React.FC<ProjectsBuildingProps> = ({
 }) => {
   const { effectiveTier, prefersReducedMotion } = usePerformanceQuality();
   const allowPointLights = effectiveTier === 'high';
-
   const [isHovered, setIsHovered] = useState(false);
+
   const rootGroupRef = useRef<THREE.Group>(null);
-  const hologramRef = useRef<THREE.Group>(null);
-  const spireLightRef = useRef<THREE.Mesh>(null);
-  const purpleAccentMatRef = useRef<THREE.MeshStandardMaterial>(null);
-  const billboardTextureRef = useRef<THREE.CanvasTexture | null>(null);
-  const lastTickerTimeRef = useRef<number>(0);
+  const beaconMeshRef = useRef<THREE.Mesh>(null);
 
-  const signTex = useMemo(() => createProjectsSignTexture(), []);
+  // Textures
+  const concreteTex = useMemo(() => getArchitecturalConcreteTexture(), []);
+  const curtainGlassTex = useMemo(() => getCurtainWallGlassTexture(), []);
+  const showroomGlassTex = useMemo(() => getLobbyShowroomGlassTexture(), []);
+  const louversTex = useMemo(() => getArchitecturalLouversTexture(), []);
+  const paverTex = useMemo(() => getGranitePaverTexture(), []);
+  const signTex = useMemo(() => createArchitecturalProjectsSignTexture(), []);
+  const displayTex = useMemo(() => createProjectDisplayTexture(), []);
 
-  const billboardEngine = useMemo(() => {
-    const engine = createBillboardCanvas();
-    const texture = new THREE.CanvasTexture(engine.canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    billboardTextureRef.current = texture;
-    return { engine, texture };
-  }, []);
+  // Shared reusable materials
+  const materials = useMemo(() => {
+    return {
+      concreteSlab: new THREE.MeshStandardMaterial({
+        map: concreteTex,
+        roughness: 0.75,
+        metalness: 0.1,
+        color: '#e2e8f0',
+      }),
+      darkZinc: new THREE.MeshStandardMaterial({
+        color: '#0f172a',
+        roughness: 0.35,
+        metalness: 0.75,
+      }),
+      curtainGlass: new THREE.MeshStandardMaterial({
+        map: curtainGlassTex,
+        roughness: 0.1,
+        metalness: 0.88,
+        emissive: '#c084fc',
+        emissiveIntensity: 0.16,
+      }),
+      showroomGlass: new THREE.MeshStandardMaterial({
+        map: showroomGlassTex,
+        roughness: 0.08,
+        metalness: 0.9,
+        emissive: '#fde047',
+        emissiveIntensity: 0.35,
+      }),
+      sunshades: new THREE.MeshStandardMaterial({
+        color: '#64748b',
+        roughness: 0.3,
+        metalness: 0.85,
+      }),
+      louvers: new THREE.MeshStandardMaterial({
+        map: louversTex,
+        roughness: 0.5,
+        metalness: 0.6,
+      }),
+      plazaPavers: new THREE.MeshStandardMaterial({
+        map: paverTex,
+        roughness: 0.8,
+        metalness: 0.15,
+      }),
+      steelRod: new THREE.MeshStandardMaterial({
+        color: '#94a3b8',
+        roughness: 0.25,
+        metalness: 0.9,
+      }),
+      foliage: new THREE.MeshStandardMaterial({
+        color: '#15803d',
+        roughness: 0.8,
+        metalness: 0.05,
+      }),
+      canopyGlass: new THREE.MeshPhysicalMaterial({
+        color: '#a855f7',
+        roughness: 0.1,
+        metalness: 0.2,
+        transmission: 0.8,
+        transparent: true,
+        opacity: 0.8,
+      }),
+      displayScreen: new THREE.MeshBasicMaterial({
+        map: displayTex,
+      }),
+    };
+  }, [concreteTex, curtainGlassTex, showroomGlassTex, louversTex, paverTex, displayTex]);
 
-  // Frame-rate independent animations
   useFrame((_, delta) => {
     if (typeof document !== 'undefined' && document.hidden) return;
 
-    // 1. Smooth vertical lift on hover/selection
     if (rootGroupRef.current) {
-      const targetY = position[1] + ((isHovered || isSelected) && !prefersReducedMotion ? 0.12 : 0);
+      const targetY = position[1] + ((isHovered || isSelected) && !prefersReducedMotion ? 0.1 : 0);
       if (prefersReducedMotion) {
         rootGroupRef.current.position.y = targetY;
       } else {
@@ -197,110 +203,24 @@ export const ProjectsBuilding: React.FC<ProjectsBuildingProps> = ({
 
     const time = Date.now() * 0.001;
 
-    // 2. Floating Holographic Artifact Rotation
-    if (hologramRef.current && !prefersReducedMotion) {
-      hologramRef.current.rotation.x += delta * 1.1;
-      hologramRef.current.rotation.y += delta * 1.5;
-      hologramRef.current.position.y = 1.65 + Math.sin(time * 2.5) * 0.12;
-    }
-
-    // 3. Dome Spire Beacon Flash
-    if (spireLightRef.current && spireLightRef.current.material && !prefersReducedMotion) {
-      const beaconCycle = (Math.sin(time * 4.5) + 1) * 0.5;
-      const flash = Math.pow(beaconCycle, 4);
-      (spireLightRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.2 + flash * 4.0;
-    }
-
-    // 4. Dynamic Billboard Ticker Update (Strictly throttled to 20 FPS)
-    if (billboardTextureRef.current && time - lastTickerTimeRef.current >= 0.05 && !prefersReducedMotion) {
-      lastTickerTimeRef.current = time;
-      billboardEngine.engine.updateTicker(time);
-      billboardTextureRef.current.needsUpdate = true;
-    }
-
-    // 5. Subtle dome window illumination breathing
-    if (domeGlassMat && !prefersReducedMotion) {
-      domeGlassMat.emissiveIntensity = 0.32 + Math.sin(time * 1.3) * 0.06;
-    }
-
-    // 6. Emissive hover glow
-    if (purpleAccentMatRef.current) {
-      if (isHovered || isSelected) {
-        const pulse = 2.0 + Math.sin(time * 5.0) * 0.6;
-        purpleAccentMatRef.current.emissiveIntensity = pulse;
-      } else {
-        purpleAccentMatRef.current.emissiveIntensity = 1.2;
-      }
+    // Red beacon pulse
+    if (beaconMeshRef.current && !prefersReducedMotion) {
+      const cycle = (Math.sin(time * 5.0) + 1) * 0.5;
+      const flash = Math.pow(cycle, 5);
+      const mat = beaconMeshRef.current.material as THREE.MeshStandardMaterial;
+      mat.emissiveIntensity = 1.0 + flash * 4.0;
     }
   });
 
-  const width = 6.0;
-  const depth = 5.0;
-  const halfW = width / 2; // 3.0
-  const halfD = depth / 2; // 2.5
-
-  // Shared Reusable Architectural Materials
-  const purpleCompositeMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#581c87', // Deep Royal Violet
-        roughness: 0.32,
-        metalness: 0.45,
-      }),
-    []
-  );
-
-  const titaniumSlateMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#0f172a',
-        roughness: 0.45,
-        metalness: 0.5,
-      }),
-    []
-  );
-
-  const reflectiveGlassMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#0284c7',
-        emissive: '#7c3aed',
-        emissiveIntensity: 0.25,
-        roughness: 0.1,
-        metalness: 0.88,
-        transparent: false,
-      }),
-    []
-  );
-
-  const domeGlassMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#38bdf8',
-        emissive: '#0284c7',
-        emissiveIntensity: 0.35,
-        roughness: 0.12,
-        metalness: 0.75,
-        transparent: false,
-      }),
-    []
-  );
-
-  const cyanAccentMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#00f0ff',
-        emissive: '#00f0ff',
-        emissiveIntensity: 2.0,
-      }),
-    []
-  );
+  const bW = 6.4;
+  const bD = 5.8;
+  const halfW = bW / 2; // 3.2
+  const halfD = bD / 2; // 2.9
 
   return (
     <group
       ref={rootGroupRef}
       position={position}
-      name="ProjectsInnovationCenter"
       onClick={(e) => {
         e.stopPropagation();
         onSelect();
@@ -308,227 +228,245 @@ export const ProjectsBuilding: React.FC<ProjectsBuildingProps> = ({
       onPointerOver={(e) => {
         e.stopPropagation();
         setIsHovered(true);
-        if (typeof document !== 'undefined') {
-          document.body.style.cursor = 'pointer';
-        }
+        document.body.style.cursor = 'pointer';
       }}
       onPointerOut={() => {
         setIsHovered(false);
-        if (typeof document !== 'undefined') {
-          document.body.style.cursor = 'auto';
-        }
+        document.body.style.cursor = 'default';
       }}
     >
       {/* ======================================================== */}
-      {/* 1. FOUNDATION PODIUM & PLAZA APRON                       */}
+      {/* 1. ARCHITECTURAL GRANITE PLAZA & EAST STEPS              */}
       {/* ======================================================== */}
-      {/* Dark Titanium Base Plinth */}
-      <mesh position={[0, -0.06, 0.2]} receiveShadow material={titaniumSlateMat}>
-        <boxGeometry args={[width + 1.2, 0.22, depth + 1.4]} />
-      </mesh>
-      {/* Glowing Violet Step Trim */}
-      <mesh position={[0, 0.08, halfD + 0.88]}>
-        <boxGeometry args={[3.6, 0.03, 0.04]} />
-        <meshStandardMaterial color="#c084fc" emissive="#c084fc" emissiveIntensity={2.0} />
+      <mesh position={[0, 0.05, 0]} receiveShadow material={materials.plazaPavers}>
+        <boxGeometry args={[7.2, 0.1, 6.6]} />
       </mesh>
 
-      {/* ======================================================== */}
-      {/* 2. MAIN EXHIBITION PAVILION MASS (y = 0 to 3.6)          */}
-      {/* ======================================================== */}
-      {/* Primary Purple Composite Pavilion Body */}
-      <mesh position={[0, 1.8, 0]} castShadow receiveShadow material={purpleCompositeMat}>
-        <boxGeometry args={[width, 3.6, depth]} />
-      </mesh>
+      {/* East Steps facing Avenue (X = +halfW) */}
+      <group position={[halfW + 0.35, 0.05, 0]}>
+        <mesh position={[0, -0.02, 0]} receiveShadow material={materials.plazaPavers}>
+          <boxGeometry args={[0.7, 0.06, 3.2]} />
+        </mesh>
+        <mesh position={[-0.15, 0.02, 0]} receiveShadow material={materials.plazaPavers}>
+          <boxGeometry args={[0.5, 0.06, 3.0]} />
+        </mesh>
+        {/* Step purple LED accent */}
+        <mesh position={[0.34, 0.01, 0]}>
+          <boxGeometry args={[0.03, 0.02, 3.1]} />
+          <meshBasicMaterial color="#a855f7" />
+        </mesh>
+      </group>
 
-      {/* Titanium Cylindrical Corner Pylons with Inset LED Strips */}
+      {/* Planters flanking approach */}
       {[
-        [-halfW + 0.1, -halfD + 0.1],
-        [halfW - 0.1, -halfD + 0.1],
-        [-halfW + 0.1, halfD - 0.1],
-        [halfW - 0.1, halfD - 0.1],
-      ].map(([cx, cz], idx) => (
-        <group key={`corner-pylon-${idx}`} position={[cx, 1.8, cz]}>
-          <mesh material={titaniumSlateMat}>
-            <cylinderGeometry args={[0.26, 0.26, 3.65, 16]} />
+        [halfW + 0.2, 0.2, 2.2],
+        [halfW + 0.2, 0.2, -2.2],
+      ].map(([px, py, pz], idx) => (
+        <group key={`proj-planter-${idx}`} position={[px, py, pz]}>
+          <mesh castShadow receiveShadow material={materials.darkZinc}>
+            <boxGeometry args={[0.6, 0.35, 1.2]} />
           </mesh>
-          <mesh position={[0, 0, 0.2]}>
-            <boxGeometry args={[0.04, 3.4, 0.04]} />
-            <meshStandardMaterial color="#00f0ff" emissive="#00f0ff" emissiveIntensity={1.8} />
+          <mesh position={[0, 0.25, 0]} castShadow material={materials.foliage}>
+            <boxGeometry args={[0.48, 0.35, 1.05]} />
           </mesh>
         </group>
       ))}
 
-      {/* Horizontal Architectural Ribbon Band */}
-      <mesh position={[0, 1.8, halfD + 0.03]}>
-        <boxGeometry args={[width + 0.1, 0.12, 0.04]} />
-        <meshStandardMaterial
-          ref={purpleAccentMatRef}
+      {/* ======================================================== */}
+      {/* 2. GROUND FLOOR: HIGH-TECH EXHIBITION SHOWROOM           */}
+      {/* ======================================================== */}
+      <group position={[0, 2.0, 0]}>
+        {/* Corner Zinc Columns */}
+        {[
+          [-halfW + 0.25, 0, -halfD + 0.25],
+          [halfW - 0.25, 0, -halfD + 0.25],
+          [-halfW + 0.25, 0, halfD - 0.25],
+          [halfW - 0.25, 0, halfD - 0.25],
+        ].map(([cx, cy, cz], idx) => (
+          <mesh key={`p-col-${idx}`} position={[cx, cy, cz]} castShadow receiveShadow material={materials.darkZinc}>
+            <boxGeometry args={[0.5, 3.8, 0.5]} />
+          </mesh>
+        ))}
+
+        {/* Double-Height Glass Curtain Showroom */}
+        {/* East (Entrance Facade facing Avenue) */}
+        <mesh position={[halfW - 0.05, 0, 0]} rotation={[0, Math.PI / 2, 0]} material={materials.showroomGlass}>
+          <planeGeometry args={[bD - 0.6, 3.6]} />
+        </mesh>
+        {/* North */}
+        <mesh position={[0, 0, -halfD + 0.05]} rotation={[0, Math.PI, 0]} material={materials.showroomGlass}>
+          <planeGeometry args={[bW - 0.6, 3.6]} />
+        </mesh>
+        {/* South */}
+        <mesh position={[0, 0, halfD - 0.05]} material={materials.showroomGlass}>
+          <planeGeometry args={[bW - 0.6, 3.6]} />
+        </mesh>
+        {/* West */}
+        <mesh position={[-halfW + 0.05, 0, 0]} rotation={[0, -Math.PI / 2, 0]} material={materials.showroomGlass}>
+          <planeGeometry args={[bD - 0.6, 3.6]} />
+        </mesh>
+
+        {/* Interior Digital Project Showcase Display Board */}
+        <mesh position={[-0.8, 0, 0]} rotation={[0, Math.PI / 2, 0]} material={materials.displayScreen}>
+          <planeGeometry args={[2.8, 1.4]} />
+        </mesh>
+
+        {/* East Entrance Glass Double Doors */}
+        <group position={[halfW + 0.02, -0.65, 0]}>
+          <mesh castShadow material={materials.darkZinc}>
+            <boxGeometry args={[0.08, 2.3, 2.0]} />
+          </mesh>
+          <mesh position={[0, 0, -0.48]} material={materials.showroomGlass}>
+            <boxGeometry args={[0.04, 2.15, 0.88]} />
+          </mesh>
+          <mesh position={[0, 0, 0.48]} material={materials.showroomGlass}>
+            <boxGeometry args={[0.04, 2.15, 0.88]} />
+          </mesh>
+          <mesh position={[0.04, 0, -0.06]} material={materials.steelRod}>
+            <cylinderGeometry args={[0.015, 0.015, 0.8, 8]} />
+          </mesh>
+          <mesh position={[0.04, 0, 0.06]} material={materials.steelRod}>
+            <cylinderGeometry args={[0.015, 0.015, 0.8, 8]} />
+          </mesh>
+        </group>
+
+        {/* Cantilevered Glass & Steel Entrance Canopy */}
+        <group position={[halfW + 0.8, 0.8, 0]}>
+          <mesh castShadow receiveShadow material={materials.canopyGlass}>
+            <boxGeometry args={[1.5, 0.08, 2.8]} />
+          </mesh>
+          <mesh castShadow material={materials.darkZinc}>
+            <boxGeometry args={[1.54, 0.1, 2.84]} />
+          </mesh>
+          {/* Tension Rods */}
+          {[-1.2, 1.2].map((rz, idx) => (
+            <mesh
+              key={`proj-tension-${idx}`}
+              position={[-0.55, 0.7, rz]}
+              rotation={[0, 0, Math.PI / 6]}
+              material={materials.steelRod}
+            >
+              <cylinderGeometry args={[0.018, 0.018, 1.6, 8]} />
+            </mesh>
+          ))}
+          {/* Signboard above Canopy */}
+          <mesh position={[0.76, 0.25, 0]} rotation={[0, Math.PI / 2, 0]}>
+            <planeGeometry args={[2.6, 0.55]} />
+            <meshBasicMaterial map={signTex} transparent />
+          </mesh>
+        </group>
+      </group>
+
+      {/* ======================================================== */}
+      {/* 3. STOREYS 2 THROUGH 4: CURTAIN WALL WITH BRISE-SOLEIL   */}
+      {/* ======================================================== */}
+      {[
+        { floor: 2, yBase: 3.9, height: 2.3 },
+        { floor: 3, yBase: 6.2, height: 2.3 },
+        { floor: 4, yBase: 8.5, height: 2.3 },
+      ].map(({ floor, yBase, height }) => {
+        const slabY = yBase + 0.1;
+        const windowY = yBase + 0.2 + (height - 0.4) / 2;
+        const windowH = height - 0.4;
+
+        return (
+          <group key={`proj-level-${floor}`}>
+            {/* Horizontal Projecting Slab */}
+            <mesh position={[0, slabY, 0]} castShadow receiveShadow material={materials.concreteSlab}>
+              <boxGeometry args={[bW + 0.3, 0.22, bD + 0.3]} />
+            </mesh>
+
+            {/* Recessed Curtain Wall Glazing */}
+            <mesh position={[halfW - 0.02, windowY, 0]} rotation={[0, Math.PI / 2, 0]} material={materials.curtainGlass}>
+              <planeGeometry args={[bD - 0.2, windowH]} />
+            </mesh>
+            <mesh position={[-halfW + 0.02, windowY, 0]} rotation={[0, -Math.PI / 2, 0]} material={materials.curtainGlass}>
+              <planeGeometry args={[bD - 0.2, windowH]} />
+            </mesh>
+            <mesh position={[0, windowY, halfD - 0.02]} material={materials.curtainGlass}>
+              <planeGeometry args={[bW - 0.2, windowH]} />
+            </mesh>
+            <mesh position={[0, windowY, -halfD + 0.02]} rotation={[0, Math.PI, 0]} material={materials.curtainGlass}>
+              <planeGeometry args={[bW - 0.2, windowH]} />
+            </mesh>
+
+            {/* Horizontal Brise-Soleil Architectural Sunshade Blades */}
+            {[-0.4, 0.4].map((sy, idx) => (
+              <React.Fragment key={`sunshade-${floor}-${idx}`}>
+                <mesh position={[0, windowY + sy, halfD + 0.15]} castShadow material={materials.sunshades}>
+                  <boxGeometry args={[bW + 0.1, 0.04, 0.25]} />
+                </mesh>
+                <mesh position={[0, windowY + sy, -halfD - 0.15]} castShadow material={materials.sunshades}>
+                  <boxGeometry args={[bW + 0.1, 0.04, 0.25]} />
+                </mesh>
+              </React.Fragment>
+            ))}
+          </group>
+        );
+      })}
+
+      {/* ======================================================== */}
+      {/* 4. ROOFTOP MECHANICAL EQUIPMENT & SOLAR ARRAYS           */}
+      {/* ======================================================== */}
+      <group position={[0, 10.9, 0]}>
+        {/* Roof Slab */}
+        <mesh position={[0, 0.1, 0]} castShadow receiveShadow material={materials.concreteSlab}>
+          <boxGeometry args={[bW + 0.3, 0.2, bD + 0.3]} />
+        </mesh>
+
+        {/* Louvered Mechanical Enclosure */}
+        <mesh position={[-1.2, 0.7, 0]} castShadow receiveShadow material={materials.louvers}>
+          <boxGeometry args={[2.0, 1.4, 2.4]} />
+        </mesh>
+        <mesh position={[-1.2, 1.45, 0]} material={materials.concreteSlab}>
+          <boxGeometry args={[2.2, 0.12, 2.6]} />
+        </mesh>
+
+        {/* Dual Industrial HVAC Units */}
+        <group position={[1.4, 0.4, -0.4]}>
+          <mesh castShadow receiveShadow material={materials.darkZinc}>
+            <boxGeometry args={[1.4, 0.7, 0.9]} />
+          </mesh>
+          <mesh position={[-0.35, 0.37, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.28, 0.28, 0.05, 16]} />
+            <meshStandardMaterial color="#475569" metalness={0.8} />
+          </mesh>
+          <mesh position={[0.35, 0.37, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.28, 0.28, 0.05, 16]} />
+            <meshStandardMaterial color="#475569" metalness={0.8} />
+          </mesh>
+        </group>
+
+        {/* Rooftop Parapet Railing */}
+        {[-halfW - 0.1, halfW + 0.1].map((rx, idx) => (
+          <mesh key={`proj-rail-${idx}`} position={[rx, 0.45, 0]} material={materials.steelRod}>
+            <boxGeometry args={[0.04, 0.9, bD]} />
+          </mesh>
+        ))}
+
+        {/* Spire & Aviation Beacon */}
+        <group position={[-1.2, 1.5, 0]}>
+          <mesh position={[0, 0.8, 0]} material={materials.steelRod}>
+            <cylinderGeometry args={[0.02, 0.06, 1.6, 8]} />
+          </mesh>
+          <mesh ref={beaconMeshRef} position={[0, 1.65, 0]}>
+            <sphereGeometry args={[0.08, 12, 12]} />
+            <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={2.5} />
+          </mesh>
+        </group>
+      </group>
+
+      {/* ======================================================== */}
+      {/* 5. HOVER / SELECTION ACCENT GLOW                         */}
+      {/* ======================================================== */}
+      {allowPointLights && (isHovered || isSelected) && (
+        <pointLight
+          position={[3.5, 3.0, 0]}
           color="#a855f7"
-          emissive="#a855f7"
-          emissiveIntensity={isHovered || isSelected ? 2.5 : 1.2}
+          intensity={isSelected ? 3.0 : 1.8}
+          distance={8.0}
+          decay={2}
         />
-      </mesh>
-
-      {/* Grand Entrance Double Glass Doors */}
-      <group position={[0, 1.2, halfD + 0.04]}>
-        <mesh material={reflectiveGlassMat}>
-          <boxGeometry args={[2.0, 2.2, 0.06]} />
-        </mesh>
-        <mesh material={titaniumSlateMat}>
-          <boxGeometry args={[0.06, 2.2, 0.08]} />
-        </mesh>
-        {/* Handles */}
-        {[-0.14, 0.14].map((hx, idx) => (
-          <mesh key={`p-handle-${idx}`} position={[hx, 0, 0.07]} material={cyanAccentMat}>
-            <boxGeometry args={[0.03, 0.6, 0.03]} />
-          </mesh>
-        ))}
-        {/* Entrance Portal Frame */}
-        <mesh position={[0, 1.15, 0.35]} castShadow material={titaniumSlateMat}>
-          <boxGeometry args={[2.4, 0.1, 0.8]} />
-        </mesh>
-      </group>
-
-      {/* Side Exhibition Viewing Windows (East Facade) */}
-      <group position={[halfW + 0.04, 1.8, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <mesh material={reflectiveGlassMat}>
-          <boxGeometry args={[3.2, 2.3, 0.06]} />
-        </mesh>
-        {/* Vertical Mullions */}
-        {[-1.0, 0, 1.0].map((mx, idx) => (
-          <mesh key={`p-mullion-${idx}`} position={[mx, 0, 0.04]} material={titaniumSlateMat}>
-            <boxGeometry args={[0.08, 2.3, 0.04]} />
-          </mesh>
-        ))}
-      </group>
-
-      {/* ======================================================== */}
-      {/* 3. REFINED GLASS GEODESIC DOME & OBSERVATION ROOF        */}
-      {/* ======================================================== */}
-      {/* Roof Deck Slab */}
-      <mesh position={[0, 3.65, 0]} castShadow material={titaniumSlateMat}>
-        <boxGeometry args={[width + 0.35, 0.18, depth + 0.35]} />
-      </mesh>
-
-      {/* Circular Observation Gallery Collar */}
-      <mesh position={[0, 3.75, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[2.2, 2.36, 32]} />
-        <meshStandardMaterial color="#00f0ff" emissive="#00f0ff" emissiveIntensity={2.2} />
-      </mesh>
-
-      {/* Central Refined Hemispherical Glass Dome */}
-      <mesh position={[0, 3.75, 0]} material={domeGlassMat}>
-        <sphereGeometry args={[2.2, 28, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-      </mesh>
-
-      {/* Dome Structural Metallic Meridian Ribs & Latitudinal Rings */}
-      {[0, Math.PI / 4, Math.PI / 2, (3 * Math.PI) / 4].map((angle, idx) => (
-        <mesh key={`dome-rib-${idx}`} position={[0, 3.75, 0]} rotation={[0, angle, 0]}>
-          <torusGeometry args={[2.22, 0.04, 8, 28, Math.PI]} />
-          <meshStandardMaterial color="#a855f7" metalness={0.85} roughness={0.2} />
-        </mesh>
-      ))}
-      <mesh position={[0, 4.8, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[1.5, 0.035, 8, 28]} />
-        <meshStandardMaterial color="#00f0ff" emissive="#00f0ff" emissiveIntensity={1.5} />
-      </mesh>
-
-      {/* Top Spire Antenna with Flashing Cyan Beacon */}
-      <group position={[0, 5.95, 0]}>
-        <mesh position={[0, 0.45, 0]} material={titaniumSlateMat}>
-          <cylinderGeometry args={[0.03, 0.07, 0.9, 8]} />
-        </mesh>
-        <mesh ref={spireLightRef} position={[0, 0.95, 0]}>
-          <sphereGeometry args={[0.08, 12, 12]} />
-          <meshStandardMaterial color="#00f0ff" emissive="#00f0ff" emissiveIntensity={2.5} />
-        </mesh>
-      </group>
-
-      {/* ======================================================== */}
-      {/* 4. ILLUMINATED "PROJECTS" MARQUEE SIGN                   */}
-      {/* ======================================================== */}
-      <group position={[0, 3.2, halfD + 0.35]} rotation={[-0.14, 0, 0]}>
-        <mesh castShadow material={titaniumSlateMat}>
-          <boxGeometry args={[3.2, 0.9, 0.1]} />
-        </mesh>
-        <mesh position={[0, 0, 0.055]}>
-          <boxGeometry args={[3.24, 0.94, 0.02]} />
-          <meshStandardMaterial color="#a855f7" emissive="#a855f7" emissiveIntensity={isHovered || isSelected ? 2.5 : 1.4} />
-        </mesh>
-        <mesh position={[0, 0, 0.07]}>
-          <planeGeometry args={[3.1, 0.82]} />
-          <meshStandardMaterial
-            map={signTex}
-            emissive="#ffffff"
-            emissiveIntensity={isHovered || isSelected ? 1.7 : 1.1}
-            roughness={0.2}
-          />
-        </mesh>
-      </group>
-
-      {/* ======================================================== */}
-      {/* 5. ANIMATED DIGITAL BILLBOARD DISPLAY AT ENTRANCE        */}
-      {/* ======================================================== */}
-      <group position={[halfW - 0.5, 1.4, halfD + 0.7]} rotation={[0, -0.32, 0]}>
-        {/* Chassis Frame */}
-        <mesh castShadow material={titaniumSlateMat}>
-          <boxGeometry args={[2.2, 1.3, 0.1]} />
-        </mesh>
-        {/* Support Base Pylon */}
-        <mesh position={[0, -0.9, 0]} material={titaniumSlateMat}>
-          <cylinderGeometry args={[0.09, 0.12, 0.8, 12]} />
-        </mesh>
-        {/* Animated Display Face */}
-        <mesh position={[0, 0, 0.055]}>
-          <planeGeometry args={[2.1, 1.2]} />
-          <meshBasicMaterial map={billboardEngine.texture} />
-        </mesh>
-      </group>
-
-      {/* ======================================================== */}
-      {/* 6. OUTDOOR EXHIBITION PLATFORM & FLOATING HOLOGRAM       */}
-      {/* ======================================================== */}
-      <group position={[-halfW + 0.9, 0.02, halfD + 0.9]}>
-        {/* Hexagonal Exhibition Plinth */}
-        <mesh position={[0, 0.14, 0]} castShadow receiveShadow material={titaniumSlateMat}>
-          <cylinderGeometry args={[0.95, 1.05, 0.28, 6]} />
-        </mesh>
-        {/* Glowing Cyan Perimeter Ring */}
-        <mesh position={[0, 0.285, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.72, 0.86, 6]} />
-          <meshStandardMaterial color="#00f0ff" emissive="#00f0ff" emissiveIntensity={2.5} />
-        </mesh>
-
-        {/* Floating Rotating Holographic Artifact */}
-        <group ref={hologramRef} position={[0, 1.65, 0]}>
-          {/* Inner Glowing Octahedron */}
-          <mesh>
-            <octahedronGeometry args={[0.44, 0]} />
-            <meshStandardMaterial
-              color="#a855f7"
-              emissive="#a855f7"
-              emissiveIntensity={2.8}
-              transparent
-              opacity={0.88}
-              roughness={0.1}
-            />
-          </mesh>
-          {/* Outer Gyroscope Rings */}
-          <mesh rotation={[0.4, 0.4, 0]}>
-            <torusGeometry args={[0.62, 0.026, 12, 28]} />
-            <meshStandardMaterial color="#38bdf8" emissive="#38bdf8" emissiveIntensity={2.5} />
-          </mesh>
-        </group>
-
-        {/* Pedestal Projector Spotlight (High tier only) */}
-        {allowPointLights && (
-          <pointLight position={[0, 0.4, 0]} color="#38bdf8" intensity={1.5} distance={3.5} />
-        )}
-      </group>
-
-      {/* Ambient Violet Pool on Hover (High tier only) */}
-      {(isHovered || isSelected) && allowPointLights && (
-        <pointLight position={[0, 2.0, halfD + 1.2]} color="#c084fc" intensity={2.2} distance={6.0} />
       )}
     </group>
   );

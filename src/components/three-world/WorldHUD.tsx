@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useRef, useEffect } from 'react';
@@ -163,7 +164,7 @@ export const WorldHUD: React.FC<WorldHUDProps> = ({
 
   return (
     <div className="fixed inset-0 pointer-events-none z-30 flex flex-col justify-between p-3 sm:p-5 font-mono select-none">
-      
+
       {/* ======================================================== */}
       {/* 1. ATMOSPHERIC TRANSITION TELEMETRY HUD                 */}
       {/* ======================================================== */}
@@ -274,7 +275,7 @@ export const WorldHUD: React.FC<WorldHUDProps> = ({
       {!isIntroActive && (
         <div className="space-y-2 w-full">
           <div className="pointer-events-auto flex items-center justify-between gap-3 w-full">
-            
+
             {/* Top Left: Navigation & Mode Indicator */}
             <div className="flex items-center gap-2">
               <Link
@@ -294,11 +295,10 @@ export const WorldHUD: React.FC<WorldHUDProps> = ({
                     onSetViewMode?.('ascending');
                   }
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95 ${
-                  isSpace
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95 ${isSpace
                     ? 'bg-gradient-to-r from-purple-900/80 to-indigo-900/80 border-purple-500/40 text-purple-200'
                     : 'bg-gradient-to-r from-cyan-900/80 to-blue-900/80 border-cyan-500/40 text-cyan-200'
-                }`}
+                  }`}
                 title={isSpace ? 'Descend to Surface 3D City' : 'Ascend to Planet Earth Orbit'}
               >
                 {isSpace ? (
@@ -328,11 +328,10 @@ export const WorldHUD: React.FC<WorldHUDProps> = ({
                       key={item.label}
                       onClick={() => onSelectBuilding?.(item.id)}
                       aria-current={isActive ? 'page' : undefined}
-                      className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
-                        isActive
+                      className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${isActive
                           ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-md shadow-cyan-500/25 font-bold'
                           : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                      }`}
+                        }`}
                     >
                       {item.label}
                     </button>
@@ -353,11 +352,10 @@ export const WorldHUD: React.FC<WorldHUDProps> = ({
                     <button
                       key={loc.id}
                       onClick={() => onSelectLocation?.(loc)}
-                      className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all ${
-                        isTarget
+                      className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all ${isTarget
                           ? 'bg-cyan-500 text-black font-bold shadow-md shadow-cyan-500/30'
                           : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                      }`}
+                        }`}
                     >
                       {loc.name}
                     </button>
@@ -451,11 +449,10 @@ export const WorldHUD: React.FC<WorldHUDProps> = ({
                     key={`m-${item.label}`}
                     onClick={() => onSelectBuilding?.(item.id)}
                     aria-current={isActive ? 'page' : undefined}
-                    className={`flex-shrink-0 px-3 py-1 rounded-xl text-[11px] font-semibold backdrop-blur-md transition-all ${
-                      isActive
+                    className={`flex-shrink-0 px-3 py-1 rounded-xl text-[11px] font-semibold backdrop-blur-md transition-all ${isActive
                         ? 'bg-cyan-500 text-black font-bold shadow-md shadow-cyan-500/30'
                         : 'bg-zinc-950/85 border border-white/10 text-zinc-400 hover:text-white'
-                    }`}
+                      }`}
                   >
                     {item.label}
                   </button>
@@ -506,12 +503,12 @@ export const WorldHUD: React.FC<WorldHUDProps> = ({
               >
                 <span>
                   {nearestDistrict.id === 'code-nexus' ||
-                  nearestDistrict.id === 'echo-desktop-ai' ||
-                  nearestDistrict.id === 'flowsync'
+                    nearestDistrict.id === 'echo-desktop-ai' ||
+                    nearestDistrict.id === 'flowsync'
                     ? 'ENTER INTERIOR'
                     : nearestDistrict.isPortal
-                    ? 'ENTER WARP'
-                    : 'INSPECT'}
+                      ? 'ENTER WARP'
+                      : 'INSPECT'}
                 </span>
                 <span className="hidden sm:inline text-[10px] opacity-75">[E]</span>
               </button>
@@ -525,7 +522,7 @@ export const WorldHUD: React.FC<WorldHUDProps> = ({
       {/* ======================================================== */}
       {!isIntroActive && (
         <div className="pointer-events-auto flex items-end justify-between gap-4 w-full">
-          
+
           {/* Bottom Left: Controls Legend */}
           <div className="hidden sm:flex flex-col gap-1 p-3 rounded-2xl bg-zinc-950/85 border border-white/10 backdrop-blur-md text-[10px] text-zinc-400 shadow-xl">
             <div className="flex items-center gap-1.5 text-cyan-300 font-bold mb-0.5">
@@ -629,13 +626,12 @@ export const WorldHUD: React.FC<WorldHUDProps> = ({
                       <button
                         key={d.id}
                         onClick={() => onInteractDistrict(d.id)}
-                        className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full transition-transform hover:scale-150 z-10 ${
-                          d.isPortal
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full transition-transform hover:scale-150 z-10 ${d.isPortal
                             ? 'w-3.5 h-3.5 bg-purple-400 border border-white shadow-md shadow-purple-400'
                             : isDiscovered
-                            ? 'w-2.5 h-2.5 bg-emerald-400 border border-white'
-                            : 'w-2 h-2 bg-indigo-400 border border-zinc-700'
-                        }`}
+                              ? 'w-2.5 h-2.5 bg-emerald-400 border border-white'
+                              : 'w-2 h-2 bg-indigo-400 border border-zinc-700'
+                          }`}
                         style={{ left: `${leftPercent}%`, top: `${topPercent}%` }}
                         title={`${d.name} (${d.category})`}
                       />

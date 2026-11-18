@@ -370,6 +370,42 @@ export const RealisticTrafficAI: React.FC<RealisticTrafficAIProps> = ({
       z: 10,
       heading: 0,
     },
+    // Compact Crossover Hatchback (District Ring)
+    {
+      id: 'v-hatch-1',
+      type: 'hatchback',
+      color: '#06b6d4',
+      circuitIdx: 2,
+      distance: 12.0,
+      currentSpeed: 7.0,
+      targetSpeed: 7.0,
+      steeringAngle: 0,
+      wheelRotation: 0,
+      isBraking: false,
+      isTurningLeft: false,
+      isTurningRight: false,
+      x: 0,
+      z: 1.45,
+      heading: Math.PI / 2,
+    },
+    // Pearl White Luxury Sedan (Northbound Avenue)
+    {
+      id: 'v-sedan-2',
+      type: 'sedan',
+      color: '#f1f5f9',
+      circuitIdx: 0,
+      distance: 38.0,
+      currentSpeed: 7.4,
+      targetSpeed: 7.4,
+      steeringAngle: 0,
+      wheelRotation: 0,
+      isBraking: false,
+      isTurningLeft: false,
+      isTurningRight: false,
+      x: 1.45,
+      z: 5,
+      heading: Math.PI,
+    },
   ]);
 
   // Group references for Three.js scene graph direct transformations (zero re-render churn)
@@ -384,9 +420,9 @@ export const RealisticTrafficAI: React.FC<RealisticTrafficAIProps> = ({
 
   // Filter vehicles according to performance tier
   const activeCount = useMemo(() => {
-    if (effectiveTier === 'low') return 3;
-    if (effectiveTier === 'medium') return 4;
-    return vehiclesRef.current.length; // 6 on high
+    if (effectiveTier === 'low') return 4;
+    if (effectiveTier === 'medium') return 6;
+    return vehiclesRef.current.length; // 8 on high
   }, [effectiveTier]);
 
   useFrame((_, delta) => {
@@ -548,7 +584,16 @@ export const RealisticTrafficAI: React.FC<RealisticTrafficAIProps> = ({
         <group position={[4.2, 0, 16]} rotation={[0, Math.PI, 0]}>
           <RealisticVehicleModel type="taxi" isNight={isNight} />
         </group>
+        {/* Parked Delivery Van (Waterfront Service Bay) */}
+        <group position={[-19.6, 0, 12]} rotation={[0, -Math.PI / 2, 0]}>
+          <RealisticVehicleModel type="van" color="#f8fafc" isNight={isNight} />
+        </group>
+        {/* Parked Motorcycle (Café Barrio Promenade) */}
+        <group position={[-3.2, 0.12, 4.0]} rotation={[0, Math.PI * 0.45, 0]}>
+          <RealisticVehicleModel type="motorcycle" color="#ef4444" isNight={isNight} />
+        </group>
       </group>
     </group>
   );
 };
+

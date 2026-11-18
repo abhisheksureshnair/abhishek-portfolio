@@ -1,5 +1,6 @@
+import { Suspense } from 'react';
 import { Metadata } from 'next';
-import { WorldScene } from '@/components/three-world/WorldScene';
+import { WorldScene } from '@/world/WorldScene';
 
 export const metadata: Metadata = {
   title: 'Abhishek // Developer Universe (3D World Simulation)',
@@ -14,5 +15,9 @@ export const metadata: Metadata = {
 };
 
 export default function WorldPage() {
-  return <WorldScene />;
+  return (
+    <Suspense fallback={<div className="w-full h-screen bg-[#090d16]" />}>
+      <WorldScene />
+    </Suspense>
+  );
 }

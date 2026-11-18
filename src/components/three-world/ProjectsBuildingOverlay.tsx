@@ -23,6 +23,7 @@ import { ALL_PROJECTS, Project } from '@/data/portfolioData';
 interface ProjectsBuildingOverlayProps {
   isOpen: boolean;
   onClose: () => void;
+  initialProjectId?: string | null;
 }
 
 /**
@@ -37,6 +38,7 @@ interface DisplayProject extends Project {
 export const ProjectsBuildingOverlay: React.FC<ProjectsBuildingOverlayProps> = ({
   isOpen,
   onClose,
+  initialProjectId,
 }) => {
   const [selectedFilter, setSelectedFilter] = useState<'ALL' | 'AI & WEB' | 'GPS & MOBILE' | 'SYSTEMS & TOOLS'>('ALL');
   const [activeProject, setActiveProject] = useState<DisplayProject | null>(null);
@@ -54,6 +56,18 @@ export const ProjectsBuildingOverlay: React.FC<ProjectsBuildingOverlayProps> = (
       displayTitle: p.title,
     };
   });
+
+  // Sync initialProjectId when opened from 3D Kiosk
+  useEffect(() => {
+    if (initialProjectId && isOpen) {
+      const match = projectsList.find((p) => p.id === initialProjectId);
+      if (match) {
+        setActiveProject(match);
+      }
+    } else if (!isOpen) {
+      setActiveProject(null);
+    }
+  }, [initialProjectId, isOpen]);
 
   // Filter projects by domain
   const filteredProjects = projectsList.filter((p) => {

@@ -1,596 +1,603 @@
 'use client';
 
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { getTrafficSignalState } from './CityTrafficSignals';
 import { usePerformanceQuality } from '../PerformanceControl';
+import { getTreeContactShadowTexture } from './architecturalTextures';
+
+// Preload all rigged character models and skeletal animation libraries
+useGLTF.preload('/models/characters/Michelle.glb');
+useGLTF.preload('/models/characters/Soldier.glb');
+useGLTF.preload('/models/characters/Walking.glb');
+useGLTF.preload('/models/characters/Standing_Idle.glb');
+useGLTF.preload('/models/characters/Sitting_Idle.glb');
+useGLTF.preload('/models/characters/Talking.glb');
+useGLTF.preload('/models/characters/Texting_While_Standing.glb');
 
 interface RealisticPedestriansAIProps {
   playerPosRef?: React.MutableRefObject<THREE.Vector3>;
 }
 
-// ============================================================================
-// SHARED MATERIALS FOR HUMANS (Zero GC Heap Duplication)
-// ============================================================================
-const _skinTones = [
-  new THREE.MeshStandardMaterial({ color: '#f5d0b0', roughness: 0.65 }), // Light
-  new THREE.MeshStandardMaterial({ color: '#e2ba99', roughness: 0.65 }), // Medium warm
-  new THREE.MeshStandardMaterial({ color: '#c68642', roughness: 0.65 }), // Tan / olive
-  new THREE.MeshStandardMaterial({ color: '#8d5524', roughness: 0.65 }), // Deep bronze
-];
+export type PedestrianAction = 'walk' | 'idle' | 'sit' | 'talk' | 'text';
 
-const _hairColors = [
-  new THREE.MeshStandardMaterial({ color: '#1c1917', roughness: 0.8 }), // Black
-  new THREE.MeshStandardMaterial({ color: '#451a03', roughness: 0.8 }), // Dark Brown
-  new THREE.MeshStandardMaterial({ color: '#78350f', roughness: 0.75 }), // Chestnut
-  new THREE.MeshStandardMaterial({ color: '#ca8a04', roughness: 0.75 }), // Blonde
-];
-
-const _clothingPants = [
-  new THREE.MeshStandardMaterial({ color: '#090d16', roughness: 0.8 }), // Charcoal dark
-  new THREE.MeshStandardMaterial({ color: '#1e3a8a', roughness: 0.8 }), // Denim blue
-  new THREE.MeshStandardMaterial({ color: '#334155', roughness: 0.8 }), // Slate
-  new THREE.MeshStandardMaterial({ color: '#d97706', roughness: 0.75 }), // Khaki
-];
-
-const _shoesMat = new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.4 });
-const _darkShoesMat = new THREE.MeshStandardMaterial({ color: '#18181b', roughness: 0.5 });
-const _phoneMat = new THREE.MeshStandardMaterial({
-  color: '#0f172a',
-  emissive: '#38bdf8',
-  emissiveIntensity: 0.8,
-  roughness: 0.2,
-});
-const _briefcaseMat = new THREE.MeshStandardMaterial({ color: '#451a03', roughness: 0.4, metalness: 0.2 });
-
-const _pedContactShadowMat = new THREE.MeshBasicMaterial({
-  color: '#020617',
-  transparent: true,
-  opacity: 0.4,
-});
-
-export type PedestrianArchetype = 'commuter' | 'casual' | 'urban' | 'tech' | 'seated';
-
-export interface PedestrianConfig {
+export interface PedestrianState {
   id: string;
-  archetype: PedestrianArchetype;
-  jacketColor: string;
-  skinToneIdx: number;
-  hairIdx: number;
-  pantsIdx: number;
-  heightScale: number;
-  // Sidewalk or Crosswalk Route
-  routeType: 'sidewalk-loop' | 'crosswalk-ns' | 'crosswalk-ew' | 'bench-seated';
+  model: 'michelle' | 'soldier';
+  clothingColor?: string;
+  routeType: 'sidewalk-loop' | 'crosswalk-ns' | 'crosswalk-ew' | 'building-entrance' | 'static-talk' | 'static-text' | 'bench-seated';
   startX: number;
   startZ: number;
   targetX: number;
   targetZ: number;
-  walkingSpeed: number; // m/s
-  seatedPosition?: [number, number, number];
-  seatedRotationY?: number;
+  x: number;
+  y: number;
+  z: number;
+  heading: number;
+  progress: number;
+  walkingSpeed: number;
+  currentAction: PedestrianAction;
+  initialAction: PedestrianAction;
+  lateralAvoidX: number;
+  lateralAvoidZ: number;
+  phoneTimer?: number;
 }
 
 /**
- * Detailed 3D Human Model with Articulated Limbs and Clothing Styles
+ * Remove root-motion Z forward translation from walk clip
+ * Ensures character walks in-place cleanly while pathing handles world navigation.
  */
-function DetailedHumanMesh({
-  config,
-  stridePhase = 0,
-  isWalking = true,
-  isHoldingPhone = false,
-  isSeated = false,
-}: {
-  config: PedestrianConfig;
-  stridePhase?: number;
-  isWalking?: boolean;
-  isHoldingPhone?: boolean;
-  isSeated?: boolean;
-}) {
-  const skinMat = _skinTones[config.skinToneIdx % _skinTones.length];
-  const hairMat = _hairColors[config.hairIdx % _hairColors.length];
-  const pantsMat = _clothingPants[config.pantsIdx % _clothingPants.length];
-  const jacketMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: config.jacketColor, roughness: 0.7 }),
-    [config.jacketColor]
-  );
-
-  const stride = isWalking ? Math.sin(stridePhase) * 0.48 : 0;
-  const armStride = isWalking ? -Math.sin(stridePhase) * 0.42 : 0;
-  const bounce = isWalking ? Math.abs(Math.sin(stridePhase)) * 0.04 : 0;
-
-  if (isSeated) {
-    // Seated Pose on Park Bench
-    return (
-      <group scale={[config.heightScale, config.heightScale, config.heightScale]}>
-        {/* Soft Shadow */}
-        <mesh position={[0, -0.28, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.55, 0.55]} />
-          <primitive object={_pedContactShadowMat} attach="material" />
-        </mesh>
-
-        {/* Torso & Head */}
-        <group position={[0, 0.42, 0]}>
-          <mesh castShadow>
-            <boxGeometry args={[0.38, 0.48, 0.22]} />
-            <primitive object={jacketMat} attach="material" />
-          </mesh>
-          <mesh position={[0, 0.38, 0]} castShadow>
-            <sphereGeometry args={[0.12, 12, 12]} />
-            <primitive object={skinMat} attach="material" />
-          </mesh>
-          <mesh position={[0, 0.42, -0.02]} castShadow>
-            <sphereGeometry args={[0.125, 12, 12]} />
-            <primitive object={hairMat} attach="material" />
-          </mesh>
-        </group>
-
-        {/* Thighs Horizontal Forward */}
-        <mesh position={[-0.1, 0.16, 0.16]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <capsuleGeometry args={[0.07, 0.32, 4, 6]} />
-          <primitive object={pantsMat} attach="material" />
-        </mesh>
-        <mesh position={[0.1, 0.16, 0.16]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <capsuleGeometry args={[0.07, 0.32, 4, 6]} />
-          <primitive object={pantsMat} attach="material" />
-        </mesh>
-
-        {/* Calves Vertical Down */}
-        <mesh position={[-0.1, -0.08, 0.34]} castShadow>
-          <capsuleGeometry args={[0.065, 0.32, 4, 6]} />
-          <primitive object={pantsMat} attach="material" />
-        </mesh>
-        <mesh position={[0.1, -0.08, 0.34]} castShadow>
-          <capsuleGeometry args={[0.065, 0.32, 4, 6]} />
-          <primitive object={pantsMat} attach="material" />
-        </mesh>
-
-        {/* Hands Resting on Lap */}
-        <mesh position={[-0.1, 0.22, 0.28]} castShadow>
-          <sphereGeometry args={[0.04, 6, 6]} />
-          <primitive object={skinMat} attach="material" />
-        </mesh>
-        <mesh position={[0.1, 0.22, 0.28]} castShadow>
-          <sphereGeometry args={[0.04, 6, 6]} />
-          <primitive object={skinMat} attach="material" />
-        </mesh>
-      </group>
-    );
+function makeWalkInPlace(clip: THREE.AnimationClip): THREE.AnimationClip {
+  const cloned = clip.clone();
+  for (const track of cloned.tracks) {
+    if (track.name.endsWith('.position')) {
+      const vals = track.values;
+      for (let i = 2; i < vals.length; i += 3) {
+        vals[i] = 0; // Lock forward displacement to zero
+      }
+    }
   }
+  return cloned;
+}
+
+/**
+ * Individual Rigged 3D Character Instance
+ * Features unique skeletal clone, smooth animation blending, contact shadow,
+ * and distance-based LOD throttling.
+ */
+function RiggedPedestrianInstance({
+  ped,
+  model,
+  clothingColor,
+  michelleScene,
+  soldierScene,
+  walkClip,
+  idleClip,
+  sitClip,
+  talkClip,
+  textClip,
+  contactShadowTex,
+  playerPosRef,
+}: {
+  ped: PedestrianState;
+  model: 'michelle' | 'soldier';
+  clothingColor?: string;
+  michelleScene: THREE.Group;
+  soldierScene: THREE.Group;
+  walkClip: THREE.AnimationClip;
+  idleClip: THREE.AnimationClip;
+  sitClip: THREE.AnimationClip;
+  talkClip: THREE.AnimationClip;
+  textClip: THREE.AnimationClip;
+  contactShadowTex: THREE.Texture;
+  playerPosRef?: React.MutableRefObject<THREE.Vector3>;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
+  const actionsRef = useRef<Record<PedestrianAction, THREE.AnimationAction | null>>({
+    walk: null,
+    idle: null,
+    sit: null,
+    talk: null,
+    text: null,
+  });
+  const currentActionRef = useRef<PedestrianAction>(ped.initialAction);
+  const frameCountRef = useRef<number>(0);
+
+  // 1. Clone Unique Skinned Mesh Hierarchy for this character
+  const charScene = useMemo(() => {
+    const baseScene = model === 'michelle' ? michelleScene : soldierScene;
+    const cloned = clone(baseScene);
+    cloned.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        if (clothingColor && mesh.material) {
+          const mat = (mesh.material as THREE.Material).clone() as THREE.MeshStandardMaterial;
+          if (mat.color) {
+            mat.color.set(clothingColor);
+          }
+          mesh.material = mat;
+        }
+      }
+    });
+    return cloned;
+  }, [model, michelleScene, soldierScene, clothingColor]);
+
+  // 2. Initialize Animation Mixer and bind all animation actions
+  useEffect(() => {
+    if (!charScene) return;
+    const mixer = new THREE.AnimationMixer(charScene);
+    mixerRef.current = mixer;
+
+    actionsRef.current = {
+      walk: walkClip ? mixer.clipAction(walkClip) : null,
+      idle: idleClip ? mixer.clipAction(idleClip) : null,
+      sit: sitClip ? mixer.clipAction(sitClip) : null,
+      talk: talkClip ? mixer.clipAction(talkClip) : null,
+      text: textClip ? mixer.clipAction(textClip) : null,
+    };
+
+    const initial = actionsRef.current[ped.initialAction];
+    if (initial) {
+      initial.play();
+      currentActionRef.current = ped.initialAction;
+    }
+
+    return () => {
+      mixer.stopAllAction();
+    };
+  }, [charScene, walkClip, idleClip, sitClip, talkClip, textClip, ped.initialAction]);
+
+  // 3. Animation Blending, Navigation Synchronization & LOD
+  useFrame((_, delta) => {
+    if (typeof document !== 'undefined' && document.hidden) return;
+    const dt = Math.min(delta, 0.08);
+
+    // Distance-Based LOD Optimization
+    const pPos = playerPosRef?.current;
+    let distToPlayer = 10;
+    if (pPos) {
+      distToPlayer = Math.hypot(pPos.x - ped.x, pPos.z - ped.z);
+    }
+
+    // Skip skeletal update entirely if beyond 65 meters
+    if (distToPlayer > 65) return;
+
+    // Sub-sample updates for distant pedestrians (35m - 65m)
+    frameCountRef.current++;
+    if (distToPlayer > 35 && frameCountRef.current % 2 !== 0) {
+      return;
+    }
+
+    // Smooth Cross-Fade Animation Blending when action state changes
+    if (currentActionRef.current !== ped.currentAction) {
+      const prevAction = actionsRef.current[currentActionRef.current];
+      const nextAction = actionsRef.current[ped.currentAction];
+
+      if (prevAction && nextAction && prevAction !== nextAction) {
+        nextAction.reset();
+        nextAction.crossFadeFrom(prevAction, 0.25, true);
+        nextAction.play();
+        currentActionRef.current = ped.currentAction;
+      }
+    }
+
+    // Adjust walking stride timescale to synchronize with velocity
+    if (ped.currentAction === 'walk' && actionsRef.current.walk) {
+      actionsRef.current.walk.timeScale = Math.max(0.75, Math.min(1.4, ped.walkingSpeed / 1.3));
+    }
+
+    // Advance skeletal animation mixer
+    mixerRef.current?.update(dt);
+
+    // Update Three.js world transform
+    if (groupRef.current) {
+      groupRef.current.position.set(ped.x, ped.y, ped.z);
+      groupRef.current.rotation.y = ped.heading;
+    }
+  });
+
+  const scaleVal = model === 'michelle' ? 1.05 : 1.0;
 
   return (
-    <group scale={[config.heightScale, config.heightScale, config.heightScale]}>
-      {/* Contact Shadow Decal under feet */}
-      <mesh position={[0, 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[0.55, 0.55]} />
-        <primitive object={_pedContactShadowMat} attach="material" />
+    <group ref={groupRef} position={[ped.x, ped.y, ped.z]} rotation={[0, ped.heading, 0]} scale={[scaleVal, scaleVal, scaleVal]}>
+      {/* Contact Shadow Decal under feet / bench */}
+      <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[0.7, 0.7]} />
+        <meshBasicMaterial
+          map={contactShadowTex}
+          transparent
+          opacity={0.6}
+          depthWrite={false}
+        />
       </mesh>
 
-      {/* Pelvis & Upper Body with Walk Bounce */}
-      <group position={[0, 0.88 + bounce, 0]}>
-        {/* Torso / Jacket */}
-        <mesh position={[0, 0.26, 0]} castShadow>
-          <boxGeometry args={[0.38, 0.48, 0.22]} />
-          <primitive object={jacketMat} attach="material" />
-        </mesh>
-
-        {/* Neck */}
-        <mesh position={[0, 0.54, 0]} castShadow>
-          <cylinderGeometry args={[0.06, 0.07, 0.1, 8]} />
-          <primitive object={skinMat} attach="material" />
-        </mesh>
-
-        {/* Head Cranium */}
-        <mesh position={[0, 0.68, 0]} castShadow>
-          <sphereGeometry args={[0.12, 12, 12]} />
-          <primitive object={skinMat} attach="material" />
-        </mesh>
-
-        {/* Hair */}
-        <mesh position={[0, 0.73, -0.02]} castShadow>
-          <sphereGeometry args={[0.13, 12, 12]} />
-          <primitive object={hairMat} attach="material" />
-        </mesh>
-        <mesh position={[0, 0.78, 0.05]} rotation={[0.2, 0, 0]} castShadow>
-          <boxGeometry args={[0.14, 0.06, 0.08]} />
-          <primitive object={hairMat} attach="material" />
-        </mesh>
-
-        {/* Left Arm */}
-        <group position={[-0.24, 0.42, 0]} rotation={[armStride, 0, 0]}>
-          <mesh position={[0, -0.2, 0]} castShadow>
-            <capsuleGeometry args={[0.055, 0.3, 4, 6]} />
-            <primitive object={jacketMat} attach="material" />
-          </mesh>
-          <mesh position={[0, -0.38, 0]} castShadow>
-            <sphereGeometry args={[0.04, 6, 6]} />
-            <primitive object={skinMat} attach="material" />
-          </mesh>
-          {/* Commuter Briefcase */}
-          {config.archetype === 'commuter' && (
-            <mesh position={[-0.08, -0.42, 0]} castShadow>
-              <boxGeometry args={[0.08, 0.26, 0.36]} />
-              <primitive object={_briefcaseMat} attach="material" />
-            </mesh>
-          )}
-        </group>
-
-        {/* Right Arm (Normal Swing or Holding Smartphone) */}
-        {isHoldingPhone ? (
-          <group position={[0.24, 0.42, 0]} rotation={[-0.95, -0.4, 0]}>
-            <mesh position={[0, -0.18, 0]} castShadow>
-              <capsuleGeometry args={[0.055, 0.28, 4, 6]} />
-              <primitive object={jacketMat} attach="material" />
-            </mesh>
-            <mesh position={[0, -0.34, 0]} castShadow>
-              <sphereGeometry args={[0.04, 6, 6]} />
-              <primitive object={skinMat} attach="material" />
-            </mesh>
-            {/* Illuminated Smartphone */}
-            <mesh position={[0, -0.36, 0.06]} rotation={[0.4, 0, 0]}>
-              <boxGeometry args={[0.08, 0.14, 0.015]} />
-              <primitive object={_phoneMat} attach="material" />
-            </mesh>
-          </group>
-        ) : (
-          <group position={[0.24, 0.42, 0]} rotation={[-armStride, 0, 0]}>
-            <mesh position={[0, -0.2, 0]} castShadow>
-              <capsuleGeometry args={[0.055, 0.3, 4, 6]} />
-              <primitive object={jacketMat} attach="material" />
-            </mesh>
-            <mesh position={[0, -0.38, 0]} castShadow>
-              <sphereGeometry args={[0.04, 6, 6]} />
-              <primitive object={skinMat} attach="material" />
-            </mesh>
-          </group>
-        )}
-
-        {/* Left Leg */}
-        <group position={[-0.11, 0, 0]} rotation={[stride, 0, 0]}>
-          <mesh position={[0, -0.38, 0]} castShadow>
-            <capsuleGeometry args={[0.07, 0.54, 4, 6]} />
-            <primitive object={pantsMat} attach="material" />
-          </mesh>
-          <mesh position={[0, -0.82, 0.04]} castShadow>
-            <boxGeometry args={[0.1, 0.08, 0.22]} />
-            <primitive object={config.archetype === 'commuter' ? _darkShoesMat : _shoesMat} attach="material" />
-          </mesh>
-        </group>
-
-        {/* Right Leg */}
-        <group position={[0.11, 0, 0]} rotation={[-stride, 0, 0]}>
-          <mesh position={[0, -0.38, 0]} castShadow>
-            <capsuleGeometry args={[0.07, 0.54, 4, 6]} />
-            <primitive object={pantsMat} attach="material" />
-          </mesh>
-          <mesh position={[0, -0.82, 0.04]} castShadow>
-            <boxGeometry args={[0.1, 0.08, 0.22]} />
-            <primitive object={config.archetype === 'commuter' ? _darkShoesMat : _shoesMat} attach="material" />
-          </mesh>
-        </group>
-      </group>
+      {/* Rigged Skinned Mesh */}
+      <primitive object={charScene} />
     </group>
   );
 }
 
 /**
- * Intelligent Pedestrian AI System Component
+ * Master Pedestrian AI System Component
+ * Simulates active urban street life:
+ * - Natural sidewalk walking loops
+ * - Traffic light compliant crosswalk crossings
+ * - Street cafe diners talking in small groups
+ * - Seated pedestrians on park benches
+ * - Smartphone texting pedestrians
+ * - Local avoidance of player and approaching traffic
  */
 export const RealisticPedestriansAI: React.FC<RealisticPedestriansAIProps> = ({
   playerPosRef,
 }) => {
   const { effectiveTier } = usePerformanceQuality();
 
-  // Diverse Pedestrian Roster Populating Sidewalks, Crossings & Benches
-  const pedestriansRef = useRef<(PedestrianConfig & {
-    x: number;
-    y: number;
-    z: number;
-    heading: number;
-    progress: number;
-    stridePhase: number;
-    isWalking: boolean;
-    isHoldingPhone: boolean;
-    waitingForSignal: boolean;
-  })[]>([
-    // 1. Commuter Crossing North-South Avenue on West Crosswalk
+  // Load Character Base Models
+  const michelleGLTF = useGLTF('/models/characters/Michelle.glb');
+  const soldierGLTF = useGLTF('/models/characters/Soldier.glb');
+
+  // Load Skeletal Animation Libraries
+  const walkGLTF = useGLTF('/models/characters/Walking.glb');
+  const idleGLTF = useGLTF('/models/characters/Standing_Idle.glb');
+  const sitGLTF = useGLTF('/models/characters/Sitting_Idle.glb');
+  const talkGLTF = useGLTF('/models/characters/Talking.glb');
+  const textGLTF = useGLTF('/models/characters/Texting_While_Standing.glb');
+
+  const contactShadowTex = useMemo(() => getTreeContactShadowTexture(), []);
+
+  // Process In-Place Walking Animation Clip
+  const walkClip = useMemo(() => {
+    return walkGLTF.animations[0] ? makeWalkInPlace(walkGLTF.animations[0]) : null;
+  }, [walkGLTF]);
+
+  const idleClip = idleGLTF.animations[0] || null;
+  const sitClip = sitGLTF.animations[0] || null;
+  const talkClip = talkGLTF.animations[0] || null;
+  const textClip = textGLTF.animations[0] || null;
+
+  // Pedestrian Population Roster (13 Distinct Urban Characters)
+  const pedestriansRef = useRef<PedestrianState[]>([
+    // 1. Urban Shopper (Female - Michelle) on Northwest Sidewalk Promenade
     {
-      id: 'ped-cross-ns-1',
-      archetype: 'commuter',
-      jacketColor: '#1e293b',
-      skinToneIdx: 1,
-      hairIdx: 0,
-      pantsIdx: 0,
-      heightScale: 1.0,
-      routeType: 'crosswalk-ns',
-      startX: -3.8,
-      startZ: -3.8,
-      targetX: 3.8,
-      targetZ: -3.8,
-      walkingSpeed: 1.3,
-      x: -3.8,
-      y: 0.74,
-      z: -3.8,
-      heading: Math.PI / 2,
-      progress: 0.1,
-      stridePhase: 0,
-      isWalking: true,
-      isHoldingPhone: false,
-      waitingForSignal: false,
-    },
-    // 2. Tech Urbanite with Smartphone Crossing North-South Avenue on East Crosswalk
-    {
-      id: 'ped-cross-ns-2',
-      archetype: 'tech',
-      jacketColor: '#0284c7',
-      skinToneIdx: 2,
-      hairIdx: 1,
-      pantsIdx: 1,
-      heightScale: 1.02,
-      routeType: 'crosswalk-ns',
-      startX: 3.8,
-      startZ: 3.8,
-      targetX: -3.8,
-      targetZ: 3.8,
-      walkingSpeed: 1.25,
-      x: 3.8,
-      y: 0.74,
-      z: 3.8,
-      heading: -Math.PI / 2,
-      progress: 0.7,
-      stridePhase: 1.5,
-      isWalking: true,
-      isHoldingPhone: true,
-      waitingForSignal: false,
-    },
-    // 3. Casual Pedestrian Crossing East-West Boulevard
-    {
-      id: 'ped-cross-ew-1',
-      archetype: 'casual',
-      jacketColor: '#dc2626',
-      skinToneIdx: 0,
-      hairIdx: 2,
-      pantsIdx: 2,
-      heightScale: 0.98,
-      routeType: 'crosswalk-ew',
-      startX: -3.8,
-      startZ: -3.8,
-      targetX: -3.8,
-      targetZ: 3.8,
-      walkingSpeed: 1.35,
-      x: -3.8,
-      y: 0.74,
-      z: -3.8,
-      heading: 0,
-      progress: 0.3,
-      stridePhase: 2.2,
-      isWalking: true,
-      isHoldingPhone: false,
-      waitingForSignal: false,
-    },
-    // 4. Urban Commuter Crossing East-West Boulevard (East Side)
-    {
-      id: 'ped-cross-ew-2',
-      archetype: 'urban',
-      jacketColor: '#059669',
-      skinToneIdx: 3,
-      hairIdx: 0,
-      pantsIdx: 0,
-      heightScale: 1.04,
-      routeType: 'crosswalk-ew',
-      startX: 3.8,
-      startZ: 3.8,
-      targetX: 3.8,
-      targetZ: -3.8,
-      walkingSpeed: 1.2,
-      x: 3.8,
-      y: 0.74,
-      z: 3.8,
-      heading: Math.PI,
-      progress: 0.85,
-      stridePhase: 3.0,
-      isWalking: true,
-      isHoldingPhone: false,
-      waitingForSignal: false,
-    },
-    // 5. Strolling on Northwest Sidewalk Promenade
-    {
-      id: 'ped-sidewalk-1',
-      archetype: 'urban',
-      jacketColor: '#9333ea',
-      skinToneIdx: 1,
-      hairIdx: 3,
-      pantsIdx: 1,
-      heightScale: 0.96,
+      id: 'ped-walker-1',
+      model: 'michelle',
+      clothingColor: '#0284c7', // Cyan / Sapphire dress
       routeType: 'sidewalk-loop',
-      startX: -4.2,
-      startZ: -6.0,
-      targetX: -4.2,
-      targetZ: -24.0,
-      walkingSpeed: 1.15,
-      x: -4.2,
-      y: 0.74,
-      z: -12.0,
-      heading: Math.PI,
-      progress: 0.4,
-      stridePhase: 0.8,
-      isWalking: true,
-      isHoldingPhone: true,
-      waitingForSignal: false,
-    },
-    // 6. Strolling on Northeast Sidewalk Promenade
-    {
-      id: 'ped-sidewalk-2',
-      archetype: 'casual',
-      jacketColor: '#f59e0b',
-      skinToneIdx: 2,
-      hairIdx: 1,
-      pantsIdx: 2,
-      heightScale: 1.0,
-      routeType: 'sidewalk-loop',
-      startX: 4.2,
+      startX: -5.8,
       startZ: -22.0,
-      targetX: 4.2,
-      targetZ: -6.0,
-      walkingSpeed: 1.3,
-      x: 4.2,
+      targetX: -5.8,
+      targetZ: -6.5,
+      x: -5.8,
       y: 0.74,
       z: -14.0,
       heading: 0,
-      progress: 0.6,
-      stridePhase: 1.9,
-      isWalking: true,
-      isHoldingPhone: false,
-      waitingForSignal: false,
-    },
-    // 7. Strolling on Southeast Sidewalk near Skills Tower
-    {
-      id: 'ped-sidewalk-3',
-      archetype: 'tech',
-      jacketColor: '#06b6d4',
-      skinToneIdx: 0,
-      hairIdx: 0,
-      pantsIdx: 0,
-      heightScale: 1.02,
-      routeType: 'sidewalk-loop',
-      startX: 4.2,
-      startZ: 6.0,
-      targetX: 4.2,
-      targetZ: 24.0,
+      progress: 0.5,
       walkingSpeed: 1.25,
-      x: 4.2,
+      currentAction: 'walk',
+      initialAction: 'walk',
+      lateralAvoidX: 0,
+      lateralAvoidZ: 0,
+    },
+    // 2. Tech Professional (Male - Soldier) on Northeast Sidewalk Promenade
+    {
+      id: 'ped-walker-2',
+      model: 'soldier',
+      clothingColor: '#1e293b', // Slate / Charcoal
+      routeType: 'sidewalk-loop',
+      startX: 5.8,
+      startZ: -22.0,
+      targetX: 5.8,
+      targetZ: -6.5,
+      x: 5.8,
+      y: 0.74,
+      z: -18.0,
+      heading: 0,
+      progress: 0.25,
+      walkingSpeed: 1.3,
+      currentAction: 'walk',
+      initialAction: 'walk',
+      lateralAvoidX: 0,
+      lateralAvoidZ: 0,
+    },
+    // 3. Creative Consultant (Female - Michelle) on Southeast Sidewalk near Skills Tower
+    {
+      id: 'ped-walker-3',
+      model: 'michelle',
+      clothingColor: '#ea580c', // Terracotta dress
+      routeType: 'sidewalk-loop',
+      startX: 5.8,
+      startZ: 6.5,
+      targetX: 5.8,
+      targetZ: 22.0,
+      x: 5.8,
       y: 0.74,
       z: 14.0,
       heading: 0,
-      progress: 0.35,
-      stridePhase: 2.7,
-      isWalking: true,
-      isHoldingPhone: false,
-      waitingForSignal: false,
+      progress: 0.45,
+      walkingSpeed: 1.2,
+      currentAction: 'walk',
+      initialAction: 'walk',
+      lateralAvoidX: 0,
+      lateralAvoidZ: 0,
     },
-    // 8. Seated on Park Bench (West Promenade at [-4.2, 0.74, -7.5])
+    // 4. Boardwalk Stroller (Male - Soldier) along Waterfront Canal Promenade
+    {
+      id: 'ped-walker-4',
+      model: 'soldier',
+      clothingColor: '#059669', // Emerald jacket
+      routeType: 'sidewalk-loop',
+      startX: -19.6,
+      startZ: -18.0,
+      targetX: -19.6,
+      targetZ: 18.0,
+      x: -19.6,
+      y: 0.74,
+      z: 0.0,
+      heading: 0,
+      progress: 0.5,
+      walkingSpeed: 1.35,
+      currentAction: 'walk',
+      initialAction: 'walk',
+      lateralAvoidX: 0,
+      lateralAvoidZ: 0,
+    },
+    // 5. Commuter Crossing North-South Avenue on North Zebra Crossing (Z = -3.8m)
+    {
+      id: 'ped-cross-ns-1',
+      model: 'soldier',
+      clothingColor: '#334155', // Charcoal commuter
+      routeType: 'crosswalk-ns',
+      startX: -5.8,
+      startZ: -3.8,
+      targetX: 5.8,
+      targetZ: -3.8,
+      x: -5.8,
+      y: 0.74,
+      z: -3.8,
+      heading: Math.PI / 2,
+      progress: 0.05,
+      walkingSpeed: 1.3,
+      currentAction: 'idle',
+      initialAction: 'idle',
+      lateralAvoidX: 0,
+      lateralAvoidZ: 0,
+    },
+    // 6. Commuter Crossing North-South Avenue on South Zebra Crossing (Z = 3.8m)
+    {
+      id: 'ped-cross-ns-2',
+      model: 'michelle',
+      clothingColor: '#16a34a', // Forest green dress
+      routeType: 'crosswalk-ns',
+      startX: 5.8,
+      startZ: 3.8,
+      targetX: -5.8,
+      targetZ: 3.8,
+      x: 5.8,
+      y: 0.74,
+      z: 3.8,
+      heading: -Math.PI / 2,
+      progress: 0.1,
+      walkingSpeed: 1.25,
+      currentAction: 'idle',
+      initialAction: 'idle',
+      lateralAvoidX: 0,
+      lateralAvoidZ: 0,
+    },
+    // 7. Pedestrian Crossing East-West Boulevard on West Crosswalk (X = -3.8m)
+    {
+      id: 'ped-cross-ew-1',
+      model: 'michelle',
+      clothingColor: '#dc2626', // Crimson red dress
+      routeType: 'crosswalk-ew',
+      startX: -3.8,
+      startZ: -5.8,
+      targetX: -3.8,
+      targetZ: 5.8,
+      x: -3.8,
+      y: 0.74,
+      z: -5.8,
+      heading: 0,
+      progress: 0.08,
+      walkingSpeed: 1.3,
+      currentAction: 'idle',
+      initialAction: 'idle',
+      lateralAvoidX: 0,
+      lateralAvoidZ: 0,
+    },
+    // 8. Pedestrian Crossing East-West Boulevard on East Crosswalk (X = 3.8m)
+    {
+      id: 'ped-cross-ew-2',
+      model: 'soldier',
+      clothingColor: '#d97706', // Warm amber
+      routeType: 'crosswalk-ew',
+      startX: 3.8,
+      startZ: 5.8,
+      targetX: 3.8,
+      targetZ: -5.8,
+      x: 3.8,
+      y: 0.74,
+      z: 5.8,
+      heading: Math.PI,
+      progress: 0.06,
+      walkingSpeed: 1.25,
+      currentAction: 'idle',
+      initialAction: 'idle',
+      lateralAvoidX: 0,
+      lateralAvoidZ: 0,
+    },
+    // 9. Smartphone Checking Pedestrian near Transit Pylon (X = -5.2m, Z = -10.5m)
+    {
+      id: 'ped-phone-1',
+      model: 'michelle',
+      clothingColor: '#9333ea', // Royal purple
+      routeType: 'static-text',
+      startX: -5.2,
+      startZ: -10.5,
+      targetX: -5.2,
+      targetZ: -10.5,
+      x: -5.2,
+      y: 0.74,
+      z: -10.5,
+      heading: Math.PI * 0.25,
+      progress: 0,
+      walkingSpeed: 0,
+      currentAction: 'text',
+      initialAction: 'text',
+      lateralAvoidX: 0,
+      lateralAvoidZ: 0,
+    },
+    // 10. Café Patio Conversational Group A (Talking Pedestrian)
+    {
+      id: 'ped-talk-1',
+      model: 'michelle',
+      clothingColor: '#e11d48', // Rose dress
+      routeType: 'static-talk',
+      startX: -0.6,
+      startZ: 2.1,
+      targetX: -0.6,
+      targetZ: 2.1,
+      x: -0.6,
+      y: 0.74,
+      z: 2.1,
+      heading: Math.PI * 0.15, // Facing companion
+      progress: 0,
+      walkingSpeed: 0,
+      currentAction: 'talk',
+      initialAction: 'talk',
+      lateralAvoidX: 0,
+      lateralAvoidZ: 0,
+    },
+    // 11. Café Patio Conversational Group B (Listening Companion)
+    {
+      id: 'ped-talk-2',
+      model: 'soldier',
+      clothingColor: '#0f172a', // Navy suit
+      routeType: 'static-talk',
+      startX: 0.2,
+      startZ: 2.3,
+      targetX: 0.2,
+      targetZ: 2.3,
+      x: 0.2,
+      y: 0.74,
+      z: 2.3,
+      heading: -Math.PI * 0.85, // Facing companion
+      progress: 0,
+      walkingSpeed: 0,
+      currentAction: 'idle',
+      initialAction: 'idle',
+      lateralAvoidX: 0,
+      lateralAvoidZ: 0,
+    },
+    // 12. Seated Pedestrian on West Promenade Park Bench ([-4.2, 0.74, -7.5])
     {
       id: 'ped-bench-1',
-      archetype: 'seated',
-      jacketColor: '#475569',
-      skinToneIdx: 1,
-      hairIdx: 2,
-      pantsIdx: 3,
-      heightScale: 1.0,
+      model: 'michelle',
+      clothingColor: '#64748b', // Slate dress
       routeType: 'bench-seated',
       startX: -4.2,
       startZ: -7.5,
       targetX: -4.2,
       targetZ: -7.5,
-      walkingSpeed: 0,
       x: -4.2,
       y: 0.74,
       z: -7.5,
       heading: Math.PI / 2, // Facing avenue
       progress: 0,
-      stridePhase: 0,
-      isWalking: false,
-      isHoldingPhone: false,
-      waitingForSignal: false,
-      seatedPosition: [-4.2, 0.74, -7.5],
-      seatedRotationY: Math.PI / 2,
+      walkingSpeed: 0,
+      currentAction: 'sit',
+      initialAction: 'sit',
+      lateralAvoidX: 0,
+      lateralAvoidZ: 0,
     },
-    // 9. Seated on Park Bench (East Promenade at [4.2, 0.74, 7.5])
+    // 13. Seated Pedestrian on East Promenade Park Bench ([4.2, 0.74, 7.5])
     {
       id: 'ped-bench-2',
-      archetype: 'seated',
-      jacketColor: '#ea580c',
-      skinToneIdx: 2,
-      hairIdx: 0,
-      pantsIdx: 1,
-      heightScale: 0.98,
+      model: 'soldier',
+      clothingColor: '#475569', // Casual grey
       routeType: 'bench-seated',
       startX: 4.2,
       startZ: 7.5,
       targetX: 4.2,
       targetZ: 7.5,
-      walkingSpeed: 0,
       x: 4.2,
       y: 0.74,
       z: 7.5,
       heading: -Math.PI / 2, // Facing avenue
       progress: 0,
-      stridePhase: 0,
-      isWalking: false,
-      isHoldingPhone: true,
-      waitingForSignal: false,
-      seatedPosition: [4.2, 0.74, 7.5],
-      seatedRotationY: -Math.PI / 2,
+      walkingSpeed: 0,
+      currentAction: 'sit',
+      initialAction: 'sit',
+      lateralAvoidX: 0,
+      lateralAvoidZ: 0,
     },
   ]);
 
-  const groupRefs = useRef<(THREE.Group | null)[]>([]);
-
-  // Filter according to quality tier
+  // Scaled according to quality tier
   const activeCount = useMemo(() => {
-    if (effectiveTier === 'low') return 4;
-    if (effectiveTier === 'medium') return 6;
-    return pedestriansRef.current.length; // 9 on high
+    if (effectiveTier === 'low') return 6;
+    if (effectiveTier === 'medium') return 9;
+    return pedestriansRef.current.length; // 13 on high
   }, [effectiveTier]);
 
+  // Master AI Simulation Loop
   useFrame((_, delta) => {
     if (typeof document !== 'undefined' && document.hidden) return;
     const dt = Math.min(delta, 0.08);
     const timeSec = performance.now() * 0.001;
     const signalState = getTrafficSignalState(timeSec);
-
     const pPos = playerPosRef?.current;
     const peds = pedestriansRef.current;
 
     for (let i = 0; i < activeCount; i++) {
       const p = peds[i];
-      if (p.routeType === 'bench-seated') continue;
+      if (p.routeType === 'bench-seated' || p.routeType === 'static-talk' || p.routeType === 'static-text') {
+        continue;
+      }
 
       let canWalk = true;
 
-      // 1. Crosswalk Traffic Signal Compliance
+      // 1. Crosswalk Traffic Light Compliance
       if (p.routeType === 'crosswalk-ns') {
-        // Crossing across North-South Avenue: only safe if nsCrosswalkWalk is TRUE!
-        const isNearCurb = p.progress < 0.15 || p.progress > 0.85;
+        const isNearCurb = p.progress < 0.12 || p.progress > 0.88;
         if (isNearCurb && !signalState.nsCrosswalkWalk) {
           canWalk = false;
-          p.waitingForSignal = true;
-        } else {
-          p.waitingForSignal = false;
         }
       } else if (p.routeType === 'crosswalk-ew') {
-        // Crossing across East-West Boulevard: only safe if ewCrosswalkWalk is TRUE!
-        const isNearCurb = p.progress < 0.15 || p.progress > 0.85;
+        const isNearCurb = p.progress < 0.12 || p.progress > 0.88;
         if (isNearCurb && !signalState.ewCrosswalkWalk) {
           canWalk = false;
-          p.waitingForSignal = true;
-        } else {
-          p.waitingForSignal = false;
         }
       }
 
       // 2. Local Avoidance of Player Avatar
-      let lateralAvoidanceX = 0;
-      let lateralAvoidanceZ = 0;
+      let avoidX = 0;
+      let avoidZ = 0;
       if (pPos) {
-        const toPlayerX = pPos.x - p.x;
-        const toPlayerZ = pPos.z - p.z;
-        const distToPlayer = Math.hypot(toPlayerX, toPlayerZ);
-
-        if (distToPlayer < 1.6 && distToPlayer > 0.01) {
-          // Gently push lateral direction perpendicular to travel
-          const push = (1.6 - distToPlayer) * 0.8;
-          lateralAvoidanceX = (-toPlayerX / distToPlayer) * push;
-          lateralAvoidanceZ = (-toPlayerZ / distToPlayer) * push;
+        const dx = pPos.x - p.x;
+        const dz = pPos.z - p.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist < 1.7 && dist > 0.02) {
+          const push = (1.7 - dist) * 0.75;
+          avoidX = (-dx / dist) * push;
+          avoidZ = (-dz / dist) * push;
         }
       }
+      p.lateralAvoidX = p.lateralAvoidX * 0.88 + avoidX * 0.12;
+      p.lateralAvoidZ = p.lateralAvoidZ * 0.88 + avoidZ * 0.12;
 
-      // 3. Advance Progress along Route
+      // 3. Navigation Update
       if (canWalk) {
-        p.isWalking = true;
-        p.progress += (p.walkingSpeed * dt) / Math.hypot(p.targetX - p.startX, p.targetZ - p.startZ);
+        p.currentAction = 'walk';
+        const routeDist = Math.hypot(p.targetX - p.startX, p.targetZ - p.startZ);
+        p.progress += (p.walkingSpeed * dt) / Math.max(1, routeDist);
 
-        // Turn around upon reaching end of path
+        // Turn around upon reaching destination
         if (p.progress >= 1.0) {
           p.progress = 0;
           const tempX = p.startX;
@@ -602,58 +609,47 @@ export const RealisticPedestriansAI: React.FC<RealisticPedestriansAIProps> = ({
         }
 
         // Interpolate world position
-        p.x = p.startX + (p.targetX - p.startX) * p.progress + lateralAvoidanceX;
-        p.z = p.startZ + (p.targetZ - p.startZ) * p.progress + lateralAvoidanceZ;
+        p.x = p.startX + (p.targetX - p.startX) * p.progress + p.lateralAvoidX;
+        p.z = p.startZ + (p.targetZ - p.startZ) * p.progress + p.lateralAvoidZ;
 
-        // Street level vs Sidewalk step down:
-        // When crossing road (progress between 0.12 and 0.88), step down to road height Y = 0.62
-        const isCrossingRoad =
+        // Elevation step between Sidewalk (0.74m) and Roadway (0.62m)
+        const isCrossingRoadway =
           (p.routeType === 'crosswalk-ns' || p.routeType === 'crosswalk-ew') &&
-          p.progress > 0.12 &&
-          p.progress < 0.88;
-        p.y = isCrossingRoad ? 0.62 : 0.74;
+          p.progress > 0.14 &&
+          p.progress < 0.86;
+        p.y = isCrossingRoadway ? 0.62 : 0.74;
 
         // Heading direction
-        const dx = p.targetX - p.startX;
-        const dz = p.targetZ - p.startZ;
-        p.heading = Math.atan2(dx, dz);
-
-        // Stride cadence
-        p.stridePhase += dt * (p.walkingSpeed * 6.5);
+        const hdx = p.targetX - p.startX;
+        const hdz = p.targetZ - p.startZ;
+        p.heading = Math.atan2(hdx, hdz);
       } else {
-        // Idle Waiting State
-        p.isWalking = false;
-        p.stridePhase = 0;
-      }
-
-      // 4. Update Three.js Group Directly
-      const grp = groupRefs.current[i];
-      if (grp) {
-        grp.position.set(p.x, p.y, p.z);
-        grp.rotation.y = p.heading;
+        // Waiting at Curb: Switch to Idle or Texting animation
+        p.currentAction = p.model === 'michelle' ? 'text' : 'idle';
       }
     }
   });
 
+  if (!walkClip || !idleClip) return null;
+
   return (
     <group name="RealisticPedestriansAI">
-      {pedestriansRef.current.slice(0, activeCount).map((p, idx) => (
-        <group
+      {pedestriansRef.current.slice(0, activeCount).map((p) => (
+        <RiggedPedestrianInstance
           key={p.id}
-          ref={(el) => {
-            groupRefs.current[idx] = el;
-          }}
-          position={p.seatedPosition || [p.x, p.y, p.z]}
-          rotation={[0, p.seatedRotationY ?? p.heading, 0]}
-        >
-          <DetailedHumanMesh
-            config={p}
-            stridePhase={p.stridePhase}
-            isWalking={p.isWalking}
-            isHoldingPhone={p.isHoldingPhone}
-            isSeated={p.routeType === 'bench-seated'}
-          />
-        </group>
+          ped={p}
+          model={p.model}
+          clothingColor={p.clothingColor}
+          michelleScene={michelleGLTF.scene}
+          soldierScene={soldierGLTF.scene}
+          walkClip={walkClip}
+          idleClip={idleClip}
+          sitClip={sitClip || idleClip}
+          talkClip={talkClip || idleClip}
+          textClip={textClip || idleClip}
+          contactShadowTex={contactShadowTex}
+          playerPosRef={playerPosRef}
+        />
       ))}
     </group>
   );

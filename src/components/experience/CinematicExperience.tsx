@@ -16,7 +16,7 @@ import { ExperienceCapabilities } from './ExperienceCapabilities';
 import { ExperienceTimeline } from './ExperienceTimeline';
 import { ExperienceContact } from './ExperienceContact';
 import { ExperienceFooter } from './ExperienceFooter';
-import { WorldScene } from '@/components/three-world/WorldScene';
+import { WorldScene } from '@/world/WorldScene';
 
 export const CinematicExperience: React.FC = () => {
   const searchParams = useSearchParams();

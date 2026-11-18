@@ -12,137 +12,40 @@ import {
   ArrowRight,
   Cpu,
   Layers,
-  Database,
   Terminal,
+  Database,
+  Cloud,
+  Eye,
   GitBranch,
-  Flame,
-  CheckCircle2,
+  ExternalLink,
 } from 'lucide-react';
-import { SKILL_CATEGORIES } from '@/data/portfolioData';
+import { SKILLS_TOWER_METADATA, SkillFloorData } from '@/world/buildings/skills/skillsMetadata';
+import { worldStore } from '@/world/stores/worldStore';
 
 interface SkillsBuildingOverlayProps {
   isOpen: boolean;
+  initialFloor?: number | string | null;
+  onSelectFloor3D?: (floorIndex: number) => void;
   onClose: () => void;
 }
 
-interface SkillItem {
-  name: string;
-  category: 'Frontend' | 'Mobile' | 'Backend' | 'Other';
-  context: string;
-  isFlagship?: boolean;
-}
-
-/**
- * Verified Skills Grouped Strictly According to Requirements:
- * Frontend: React.js, JavaScript, HTML, CSS.
- * Mobile: React Native, Flutter.
- * Backend: Node.js, REST API development.
- * Other: Python, Git, Firebase, etc.
- * NO arbitrary percentages or fake proficiency levels.
- */
-const VERIFIED_SKILLS: SkillItem[] = [
-  // 1. FRONTEND
-  {
-    name: 'React.js',
-    category: 'Frontend',
-    context: 'Interactive component systems, hooks, virtual DOM, SPAs (FlowSync, Echo Desktop AI)',
-    isFlagship: true,
-  },
-  {
-    name: 'JavaScript (ES6+)',
-    category: 'Frontend',
-    context: 'Modern asynchronous workflows, closures, promises, event-driven DOM architectures',
-    isFlagship: true,
-  },
-  {
-    name: 'HTML5',
-    category: 'Frontend',
-    context: 'Semantic markup, accessible DOM hierarchies, canvas APIs, web components',
-  },
-  {
-    name: 'CSS3 / Tailwind',
-    category: 'Frontend',
-    context: 'Responsive grid systems, flexbox, CSS variables, hardware-accelerated animations',
-  },
-
-  // 2. MOBILE
-  {
-    name: 'React Native',
-    category: 'Mobile',
-    context: 'Cross-platform Android & iOS engineering, platform APIs, Bluetooth BLE integrations',
-    isFlagship: true,
-  },
-  {
-    name: 'Flutter',
-    category: 'Mobile',
-    context: 'High-performance mobile rendering, Dart state management, live GPS map telemetry',
-    isFlagship: true,
-  },
-
-  // 3. BACKEND
-  {
-    name: 'Node.js',
-    category: 'Backend',
-    context: 'Asynchronous event-loop servers, microservices, background job orchestration',
-    isFlagship: true,
-  },
-  {
-    name: 'REST API Development',
-    category: 'Backend',
-    context: 'Express.js endpoint contracts, JWT authentication, defensive validation, caching',
-    isFlagship: true,
-  },
-  {
-    name: 'WebSockets & Socket.IO',
-    category: 'Backend',
-    context: 'Low-latency bi-directional channels, rooms, telemetry streaming, live signalling',
-  },
-
-  // 4. OTHER & VERIFIED TOOLS
-  {
-    name: 'Python',
-    category: 'Other',
-    context: 'Backend scripting, algorithmic data pipelines, FastAPI endpoints, AI experimentation',
-    isFlagship: true,
-  },
-  {
-    name: 'Git & GitHub',
-    category: 'Other',
-    context: 'Version control, atomic commit histories, trunk-based branching, collaborative PRs',
-    isFlagship: true,
-  },
-  {
-    name: 'Firebase',
-    category: 'Other',
-    context: 'Realtime database synchronization, push notifications, authentication services',
-  },
-  {
-    name: 'MongoDB',
-    category: 'Other',
-    context: 'Document store design, Mongoose schema modeling, aggregation pipelines (FlowSync)',
-  },
-  {
-    name: 'MySQL',
-    category: 'Other',
-    context: 'Relational data structures, foreign keys, normalized schemas, indexed queries',
-  },
-  {
-    name: 'Postman & VS Code',
-    category: 'Other',
-    context: 'REST API verification, mock servers, automated testing collections, debugging',
-  },
-  {
-    name: 'AI / LLM Integration',
-    category: 'Other',
-    context: 'Structured output schemas, NVIDIA NIM APIs, prompt engineering, streaming chat',
-  },
-];
-
 export const SkillsBuildingOverlay: React.FC<SkillsBuildingOverlayProps> = ({
   isOpen,
+  initialFloor = null,
+  onSelectFloor3D,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'All' | 'Frontend' | 'Mobile' | 'Backend' | 'Other'>('All');
+  const [selectedFloor, setSelectedFloor] = useState<number | string | 'all'>('all');
+  const [selectedSkillName, setSelectedSkillName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialFloor !== null && initialFloor !== undefined) {
+      setSelectedFloor(initialFloor);
+    } else {
+      setSelectedFloor('all');
+    }
+    setSelectedSkillName(null);
+  }, [isOpen, initialFloor]);
 
   // ESC key listener to restore city camera
   useEffect(() => {
@@ -158,20 +61,48 @@ export const SkillsBuildingOverlay: React.FC<SkillsBuildingOverlayProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const filteredSkills = activeTab === 'All'
-    ? VERIFIED_SKILLS
-    : VERIFIED_SKILLS.filter((s) => s.category === activeTab);
+  const activeFloors: SkillFloorData[] = selectedFloor === 'all'
+    ? SKILLS_TOWER_METADATA.floors
+    : SKILLS_TOWER_METADATA.floors.filter(
+        (f) => f.floorNumber === selectedFloor || f.floorIndex === selectedFloor
+      );
+
+  const allSkills = activeFloors.flatMap((f) =>
+    f.skills.map((s) => ({
+      ...s,
+      floorNumber: f.floorNumber,
+      floorIndex: f.floorIndex,
+      department: f.department,
+      category: f.category,
+      themeColor: f.themeColor,
+      technologies: f.technologies,
+    }))
+  );
+
+  const activeSkillDetail = allSkills.find((s) => s.name === selectedSkillName) || allSkills[0];
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'Frontend':
+      case 'FRONTEND':
         return <Code2 className="w-3.5 h-3.5 text-cyan-400" />;
-      case 'Mobile':
-        return <Smartphone className="w-3.5 h-3.5 text-teal-400" />;
-      case 'Backend':
-        return <Server className="w-3.5 h-3.5 text-blue-400" />;
+      case 'MOBILE':
+        return <Smartphone className="w-3.5 h-3.5 text-emerald-400" />;
+      case 'BACKEND':
+        return <Server className="w-3.5 h-3.5 text-indigo-400" />;
+      case 'FULL STACK':
+        return <Layers className="w-3.5 h-3.5 text-purple-400" />;
+      case 'LANGUAGES':
+        return <Terminal className="w-3.5 h-3.5 text-amber-400" />;
+      case 'DATA & APIS':
+        return <Database className="w-3.5 h-3.5 text-teal-400" />;
+      case 'DEVOPS & TOOLS':
+        return <GitBranch className="w-3.5 h-3.5 text-pink-400" />;
+      case 'AI & EMERGING TECH':
+        return <Cpu className="w-3.5 h-3.5 text-violet-400" />;
+      case 'OBSERVATORY':
+        return <Eye className="w-3.5 h-3.5 text-orange-400" />;
       default:
-        return <Wrench className="w-3.5 h-3.5 text-indigo-400" />;
+        return <Wrench className="w-3.5 h-3.5 text-sky-400" />;
     }
   };
 
@@ -179,7 +110,7 @@ export const SkillsBuildingOverlay: React.FC<SkillsBuildingOverlayProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/65 backdrop-blur-md font-mono pointer-events-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md font-mono pointer-events-auto"
           onClick={onClose}
         >
           <motion.div
@@ -188,25 +119,25 @@ export const SkillsBuildingOverlay: React.FC<SkillsBuildingOverlayProps> = ({
             exit={{ opacity: 0, scale: 0.94, y: 16 }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-3xl max-h-[90vh] rounded-3xl bg-slate-950/95 border border-cyan-500/30 p-5 sm:p-7 shadow-[0_0_70px_rgba(6,182,212,0.22)] text-white overflow-hidden flex flex-col"
+            className="relative w-full max-w-5xl max-h-[92vh] rounded-3xl bg-slate-950/95 border border-cyan-500/30 p-5 sm:p-7 shadow-[0_0_80px_rgba(6,182,212,0.22)] text-white overflow-hidden flex flex-col"
           >
-            {/* Cyan & Teal Decorative Background Flare */}
+            {/* Ambient Cyan & Bronze Glowing Flares */}
             <div className="absolute -top-28 -right-28 w-72 h-72 rounded-full bg-cyan-500/15 blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-28 -left-28 w-72 h-72 rounded-full bg-teal-500/15 blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-28 -left-28 w-72 h-72 rounded-full bg-amber-500/15 blur-3xl pointer-events-none" />
 
             {/* Header with Title & Close Button */}
             <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4 shrink-0">
               <div className="space-y-1">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs tracking-wider uppercase font-semibold">
-                  <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>SKILLS TECH TOWER // TECHNICAL TOOLBOX</span>
+                  <Layers className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>SKILLS & TECHNOLOGY TOWER // 10 FLOORS</span>
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2">
-                  <span>Engineering Stack</span>
-                  <Sparkles className="w-5 h-5 text-cyan-400" />
+                  <span>Skills & Technology Matrix</span>
+                  <Sparkles className="w-5 h-5 text-amber-400" />
                 </h2>
-                <p className="text-xs text-cyan-200/80">
-                  Verified tools, runtime frameworks, and system architectures applied in production
+                <p className="text-xs text-zinc-400">
+                  Full Stack • Mobile • Cloud • AI — Categorized across 10 interactive tower floors
                 </p>
               </div>
 
@@ -219,76 +150,204 @@ export const SkillsBuildingOverlay: React.FC<SkillsBuildingOverlayProps> = ({
               </button>
             </div>
 
-            {/* Interactive Category Tabs */}
-            <div className="flex flex-wrap items-center gap-2 pt-3 pb-2 border-b border-white/5 shrink-0 text-xs font-mono">
-              {(['All', 'Frontend', 'Mobile', 'Backend', 'Other'] as const).map((tab) => (
+            {/* Interactive 10-Floor Directory Tabs */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-3 pb-3 border-b border-white/5 shrink-0 text-xs font-mono overflow-x-auto">
+              <button
+                onClick={() => {
+                  setSelectedFloor('all');
+                  setSelectedSkillName(null);
+                  if (onSelectFloor3D) onSelectFloor3D(-1);
+                }}
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                  selectedFloor === 'all'
+                    ? 'bg-cyan-500/30 border border-cyan-400 text-cyan-300 font-bold shadow-lg shadow-cyan-500/20'
+                    : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-transparent'
+                }`}
+              >
+                <span>ALL FLOORS</span>
+              </button>
+
+              {SKILLS_TOWER_METADATA.floors.map((fl) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
-                    activeTab === tab
-                      ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 font-bold shadow-lg shadow-cyan-500/15'
-                      : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  key={`tab-${fl.floorIndex}`}
+                  onClick={() => {
+                    setSelectedFloor(fl.floorNumber);
+                    setSelectedSkillName(fl.skills[0]?.name || null);
+                    if (onSelectFloor3D) onSelectFloor3D(fl.floorIndex);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                    selectedFloor === fl.floorNumber
+                      ? 'border font-bold shadow-lg'
+                      : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border-transparent'
                   }`}
+                  style={{
+                    backgroundColor: selectedFloor === fl.floorNumber ? `${fl.themeColor}25` : undefined,
+                    borderColor: selectedFloor === fl.floorNumber ? fl.themeColor : undefined,
+                    color: selectedFloor === fl.floorNumber ? '#ffffff' : undefined,
+                  }}
                 >
-                  {tab === 'Frontend' && <Code2 className="w-3.5 h-3.5" />}
-                  {tab === 'Mobile' && <Smartphone className="w-3.5 h-3.5" />}
-                  {tab === 'Backend' && <Server className="w-3.5 h-3.5" />}
-                  {tab === 'Other' && <Wrench className="w-3.5 h-3.5" />}
-                  <span>{tab === 'All' ? 'All Skills' : tab}</span>
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: fl.themeColor }}
+                  />
+                  <span>
+                    {fl.floorNumber === 'G'
+                      ? 'G: PROFILE'
+                      : fl.floorNumber === 'R'
+                      ? 'ROOF'
+                      : `FL ${fl.floorNumber}: ${fl.department.split(' ')[0].toUpperCase()}`}
+                  </span>
                 </button>
               ))}
             </div>
 
-            {/* Skills Grid */}
-            <div className="overflow-y-auto pr-1 py-4 font-sans text-xs sm:text-sm text-zinc-300 leading-relaxed custom-scrollbar flex-1">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {filteredSkills.map((skill, idx) => (
-                  <motion.div
-                    key={skill.name}
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: idx * 0.02 }}
-                    className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-cyan-500/30 transition-all flex flex-col justify-between space-y-2 group"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <div className="flex items-center gap-1.5 font-bold text-white group-hover:text-cyan-300 transition-colors">
-                          {getCategoryIcon(skill.category)}
-                          <span className="text-sm">{skill.name}</span>
+            {/* Main Content Body */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pt-4 overflow-y-auto flex-1 pr-1">
+              {/* Left Column: Skill Matrix Cards (7 Columns) */}
+              <div className="lg:col-span-7 space-y-3">
+                <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
+                  <span>TECHNICAL PROFICIENCIES ({allSkills.length})</span>
+                  <span className="text-[11px] text-zinc-500">Click a skill to view production details</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {allSkills.map((skill) => {
+                    const isSelected = activeSkillDetail?.name === skill.name;
+                    return (
+                      <div
+                        key={skill.name}
+                        onClick={() => setSelectedSkillName(skill.name)}
+                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
+                          isSelected
+                            ? 'bg-slate-900/90 border-cyan-400 shadow-lg shadow-cyan-500/10'
+                            : 'bg-slate-900/40 hover:bg-slate-900/70 border-white/5 hover:border-white/15'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            {getCategoryIcon(skill.category)}
+                            <span className="text-xs font-bold text-white tracking-wide">
+                              {skill.name}
+                            </span>
+                          </div>
+                          <span
+                            className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                            style={{
+                              backgroundColor: `${skill.themeColor}20`,
+                              color: skill.themeColor,
+                            }}
+                          >
+                            {skill.level}
+                          </span>
                         </div>
-                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-zinc-400 border border-white/5 uppercase">
-                          {skill.category}
+
+                        <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
+                          {skill.description}
+                        </p>
+
+                        <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[10px] text-zinc-500">
+                          <span className="truncate max-w-[140px]">
+                            {skill.projects[0] || 'Core Architecture'}
+                          </span>
+                          <span className="text-cyan-400/80 font-mono">
+                            Floor {skill.floorNumber}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Right Column: Detailed Spotlight Card (5 Columns) */}
+              <div className="lg:col-span-5 flex flex-col gap-4">
+                {activeSkillDetail ? (
+                  <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950/90 border border-white/10 flex flex-col gap-4 shadow-xl">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                      <div className="flex items-center gap-2">
+                        {getCategoryIcon(activeSkillDetail.category)}
+                        <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                          Floor {activeSkillDetail.floorNumber} • {activeSkillDetail.department}
                         </span>
                       </div>
-                      <p className="text-xs text-zinc-400 font-sans leading-normal">
-                        {skill.context}
+                      <span
+                        className="px-2.5 py-1 rounded-full text-xs font-bold"
+                        style={{
+                          backgroundColor: `${activeSkillDetail.themeColor}25`,
+                          color: activeSkillDetail.themeColor,
+                        }}
+                      >
+                        {activeSkillDetail.level}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-xl font-black text-white">
+                        {activeSkillDetail.name}
+                      </h3>
+                      <p className="text-xs text-zinc-300 mt-2 leading-relaxed">
+                        {activeSkillDetail.description}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-cyan-300/80 pt-1">
-                      <CheckCircle2 className="w-3 h-3 text-cyan-400" />
-                      <span>Verified Production Stack</span>
+                    {/* Associated Portfolio Projects */}
+                    <div className="space-y-2 pt-2 border-t border-white/10">
+                      <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                        Production Deployments & Projects
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {activeSkillDetail.projects.map((proj) => (
+                          <span
+                            key={proj}
+                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-zinc-200"
+                          >
+                            {proj}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
 
-            {/* Bottom Footer Action */}
-            <div className="flex items-center justify-between pt-4 border-t border-white/10 shrink-0 font-mono text-xs">
-              <div className="text-[11px] text-zinc-400 hidden sm:block">
-                Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white font-bold">ESC</kbd> to return
-              </div>
+                    {/* Department Technologies */}
+                    {activeSkillDetail.technologies && (
+                      <div className="space-y-1.5 pt-2 border-t border-white/10">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                          Floor Technology Stack
+                        </span>
+                        <div className="flex flex-wrap gap-1 text-[11px] text-cyan-300">
+                          {activeSkillDetail.technologies.join(' • ')}
+                        </div>
+                      </div>
+                    )}
 
-              <button
-                onClick={onClose}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-600 hover:from-cyan-600 hover:to-teal-700 text-white font-bold text-xs tracking-wider uppercase transition-all shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2"
-              >
-                <span>Back to City</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+                    {/* Navigation Actions */}
+                    <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
+                      <button
+                        onClick={() => {
+                          worldStore.getState().setSelectedLandmark('skills');
+                          worldStore.getState().setCameraView('orbit', 'skills_front_entrance');
+                          onClose();
+                        }}
+                        className="w-full py-2.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/50 text-cyan-200 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Focus Skills Tower in 3D City</span>
+                      </button>
+
+                      {activeSkillDetail.link && (
+                        <a
+                          href={activeSkillDetail.link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs transition-all flex items-center justify-center gap-2"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>View Code on GitHub</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </motion.div>
         </div>
@@ -296,4 +355,3 @@ export const SkillsBuildingOverlay: React.FC<SkillsBuildingOverlayProps> = ({
     </AnimatePresence>
   );
 };
-

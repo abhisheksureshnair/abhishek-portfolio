@@ -4,6 +4,14 @@ import React, { useRef, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { usePerformanceQuality } from '../PerformanceControl';
+import {
+  getArchitecturalConcreteTexture,
+  getCurtainWallGlassTexture,
+  getLobbyShowroomGlassTexture,
+  getArchitecturalLouversTexture,
+  getGranitePaverTexture,
+  getArchitecturalWoodTexture,
+} from './architecturalTextures';
 
 export interface AboutBuildingProps {
   position?: [number, number, number];
@@ -12,46 +20,39 @@ export interface AboutBuildingProps {
 }
 
 /**
- * Procedural High-Res Texture for Sign: "ABOUT ME"
+ * Creates high-res architectural signage texture:
+ * "ABOUT ME // CREATIVE DESIGN STUDIO"
  */
-function createAboutSignTexture(): THREE.CanvasTexture {
+function createArchitecturalAboutSignTexture(): THREE.CanvasTexture {
   if (typeof window === 'undefined') {
     return new THREE.CanvasTexture(document?.createElement('canvas') as any);
   }
   const canvas = document.createElement('canvas');
   canvas.width = 512;
-  canvas.height = 160;
+  canvas.height = 140;
   const ctx = canvas.getContext('2d')!;
 
-  // Deep obsidian slate backing
-  ctx.fillStyle = '#0a0d14';
-  ctx.fillRect(0, 0, 512, 160);
+  // Deep warm slate-charcoal backing
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, 512, 140);
 
-  // Warm orange glowing border
+  // Warm terracotta accent border
   ctx.strokeStyle = '#f97316';
-  ctx.lineWidth = 6;
-  ctx.strokeRect(6, 6, 500, 148);
+  ctx.lineWidth = 3;
+  ctx.strokeRect(4, 4, 504, 132);
 
-  // Inner subtle accent frame
-  ctx.strokeStyle = 'rgba(251, 146, 60, 0.45)';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(14, 14, 484, 132);
-
-  // Main Title: "ABOUT ME"
+  // Main Header: "ABOUT ME"
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = '900 62px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.font = '700 48px "Segoe UI", Roboto, system-ui, sans-serif';
   ctx.fillStyle = '#ffffff';
-  ctx.shadowColor = '#f97316';
-  ctx.shadowBlur = 18;
-  ctx.fillText('ABOUT ME', 256, 68);
+  ctx.fillText('ABOUT ME', 256, 52);
 
   // Subtitle: "CREATIVE STUDIO & DESIGN"
-  ctx.shadowBlur = 0;
-  ctx.font = 'bold 20px monospace';
+  ctx.font = '600 14px monospace';
   ctx.fillStyle = '#fdba74';
-  ctx.letterSpacing = '5px';
-  ctx.fillText('CREATIVE STUDIO & DESIGN', 256, 122);
+  ctx.letterSpacing = '4px';
+  ctx.fillText('CREATIVE STUDIO & DESIGN', 256, 100);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -59,14 +60,14 @@ function createAboutSignTexture(): THREE.CanvasTexture {
 }
 
 /**
- * AboutBuilding Component
- * Architecturally Upgraded Creative Design Studio:
- * - Stepped Scandinavian/modernist massing with warm terracotta, cedar slats & crisp white frames
- * - Ground floor gallery showroom with glazed double entrance doors & warm downlight sconces
- * - Cantilevered second-floor terrace with glass balustrade & flourishing planter boxes
- * - Rooftop garden with timber pergola slats, spinning aeration fan, ornamental trees & roof hatch
- * - Deep window reveals with aluminum mullion frames and warm reflective glass
- * - Illuminated "ABOUT ME" marquee signage with rear bracket mounts
+ * AboutBuilding — Contemporary Scandinavian Modernist Creative Studio
+ * Inspired by contemporary warm-wood and glass architectural atelier pavilions:
+ * - 3 articulated storeys with limestone concrete horizontal slabs
+ * - Warm vertical cedar / teak architectural wood screen slats
+ * - Double-height ground floor gallery showroom with warm interior lighting
+ * - West-facing main entrance with cantilevered canopy and double glass doors
+ * - Cantilevered second-floor terrace garden with glass balustrade & planters
+ * - Rooftop architectural pergola deck with timber beams & rotating ventilation cowl
  */
 export const AboutBuilding: React.FC<AboutBuildingProps> = ({
   position = [7.85, 0.74, -7.35],
@@ -74,22 +75,99 @@ export const AboutBuilding: React.FC<AboutBuildingProps> = ({
   isSelected = false,
 }) => {
   const { effectiveTier, prefersReducedMotion } = usePerformanceQuality();
-  const allowPointLight = effectiveTier === 'high';
-
+  const allowPointLights = effectiveTier === 'high';
   const [isHovered, setIsHovered] = useState(false);
+
   const rootGroupRef = useRef<THREE.Group>(null);
-  const fanBladesRef = useRef<THREE.Group>(null);
-  const orangeAccentMatRef = useRef<THREE.MeshStandardMaterial>(null);
+  const ventFanRef = useRef<THREE.Group>(null);
 
-  const signTex = useMemo(() => createAboutSignTexture(), []);
+  // Textures
+  const concreteTex = useMemo(() => getArchitecturalConcreteTexture(), []);
+  const curtainGlassTex = useMemo(() => getCurtainWallGlassTexture(), []);
+  const showroomGlassTex = useMemo(() => getLobbyShowroomGlassTexture(), []);
+  const louversTex = useMemo(() => getArchitecturalLouversTexture(), []);
+  const paverTex = useMemo(() => getGranitePaverTexture(), []);
+  const woodTex = useMemo(() => getArchitecturalWoodTexture(), []);
+  const signTex = useMemo(() => createArchitecturalAboutSignTexture(), []);
 
-  // Frame-rate independent animations
+  // Shared reusable architectural materials
+  const materials = useMemo(() => {
+    return {
+      concreteSlab: new THREE.MeshStandardMaterial({
+        map: concreteTex,
+        roughness: 0.75,
+        metalness: 0.1,
+        color: '#f8fafc',
+      }),
+      woodSlats: new THREE.MeshStandardMaterial({
+        map: woodTex,
+        roughness: 0.65,
+        metalness: 0.1,
+      }),
+      darkMullion: new THREE.MeshStandardMaterial({
+        color: '#1e293b',
+        roughness: 0.35,
+        metalness: 0.7,
+      }),
+      curtainGlass: new THREE.MeshStandardMaterial({
+        map: curtainGlassTex,
+        roughness: 0.1,
+        metalness: 0.85,
+        emissive: '#fed7aa',
+        emissiveIntensity: 0.2,
+      }),
+      showroomGlass: new THREE.MeshStandardMaterial({
+        map: showroomGlassTex,
+        roughness: 0.08,
+        metalness: 0.9,
+        emissive: '#fef08a',
+        emissiveIntensity: 0.35,
+      }),
+      clearBalustrade: new THREE.MeshPhysicalMaterial({
+        color: '#e0f2fe',
+        roughness: 0.05,
+        metalness: 0.1,
+        transmission: 0.85,
+        transparent: true,
+        opacity: 0.7,
+        ior: 1.5,
+      }),
+      louvers: new THREE.MeshStandardMaterial({
+        map: louversTex,
+        roughness: 0.5,
+        metalness: 0.6,
+      }),
+      plazaPavers: new THREE.MeshStandardMaterial({
+        map: paverTex,
+        roughness: 0.8,
+        metalness: 0.15,
+      }),
+      steelRod: new THREE.MeshStandardMaterial({
+        color: '#94a3b8',
+        roughness: 0.25,
+        metalness: 0.9,
+      }),
+      foliage: new THREE.MeshStandardMaterial({
+        color: '#166534',
+        roughness: 0.8,
+        metalness: 0.05,
+      }),
+      canopyGlass: new THREE.MeshPhysicalMaterial({
+        color: '#fdba74',
+        roughness: 0.1,
+        metalness: 0.2,
+        transmission: 0.8,
+        transparent: true,
+        opacity: 0.8,
+      }),
+    };
+  }, [concreteTex, curtainGlassTex, showroomGlassTex, louversTex, paverTex, woodTex]);
+
   useFrame((_, delta) => {
     if (typeof document !== 'undefined' && document.hidden) return;
 
-    // 1. Smooth vertical lift on hover/selection
     if (rootGroupRef.current) {
-      const targetY = position[1] + ((isHovered || isSelected) && !prefersReducedMotion ? 0.12 : 0);
+      const targetY = position[1] + ((isHovered || isSelected) && !prefersReducedMotion ? 0.1 : 0);
       if (prefersReducedMotion) {
         rootGroupRef.current.position.y = targetY;
       } else {
@@ -97,122 +175,20 @@ export const AboutBuilding: React.FC<AboutBuildingProps> = ({
       }
     }
 
-    const time = Date.now() * 0.001;
-
-    // 2. Rooftop Fan Rotation
-    if (fanBladesRef.current && !prefersReducedMotion) {
-      fanBladesRef.current.rotation.y += delta * 3.8;
-    }
-
-    // 3. Subtle glass window breathing
-    if (reflectiveGlassMat && !prefersReducedMotion) {
-      reflectiveGlassMat.emissiveIntensity = 0.22 + Math.sin(time * 1.1 + 1.2) * 0.05;
-    }
-
-    // 4. Breathing Orange Neon Glow on Hover/Selection
-    if (orangeAccentMatRef.current) {
-      if (isHovered || isSelected) {
-        const pulse = 1.8 + Math.sin(time * 5.0) * 0.5;
-        orangeAccentMatRef.current.emissiveIntensity = pulse;
-      } else {
-        orangeAccentMatRef.current.emissiveIntensity = 1.1;
-      }
+    if (ventFanRef.current && !prefersReducedMotion) {
+      ventFanRef.current.rotation.y += delta * 1.5;
     }
   });
 
-  const width = 5.8;
-  const depth = 4.8;
-  const halfW = width / 2; // 2.9
-  const halfD = depth / 2; // 2.4
-
-  // Shared Reusable Architectural Materials
-  const warmTerracottaMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#c2410c', // Warm Terracotta Orange
-        roughness: 0.5,
-        metalness: 0.1,
-      }),
-    []
-  );
-
-  const whiteStuccoMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#f8fafc', // Crisp Architectural White
-        roughness: 0.28,
-        metalness: 0.08,
-      }),
-    []
-  );
-
-  const cedarTimberMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#9a3412', // Warm Cedar Slat
-        roughness: 0.7,
-        metalness: 0.05,
-      }),
-    []
-  );
-
-  const reflectiveGlassMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#0284c7',
-        emissive: '#ea580c',
-        emissiveIntensity: 0.22,
-        roughness: 0.1,
-        metalness: 0.85,
-        transparent: false,
-      }),
-    []
-  );
-
-  const deckWoodMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#5c2d13',
-        roughness: 0.75,
-        metalness: 0.05,
-      }),
-    []
-  );
-
-  const darkSlateMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#0f172a',
-        roughness: 0.55,
-        metalness: 0.25,
-      }),
-    []
-  );
-
-  const foliageMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#16a34a',
-        roughness: 0.7,
-        metalness: 0.05,
-      }),
-    []
-  );
-
-  const flowersMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: '#f97316',
-        roughness: 0.5,
-      }),
-    []
-  );
+  const bW = 6.4;
+  const bD = 5.6;
+  const halfW = bW / 2; // 3.2
+  const halfD = bD / 2; // 2.8
 
   return (
     <group
       ref={rootGroupRef}
       position={position}
-      name="AboutBuilding"
       onClick={(e) => {
         e.stopPropagation();
         onSelect();
@@ -220,305 +196,252 @@ export const AboutBuilding: React.FC<AboutBuildingProps> = ({
       onPointerOver={(e) => {
         e.stopPropagation();
         setIsHovered(true);
-        if (typeof document !== 'undefined') {
-          document.body.style.cursor = 'pointer';
-        }
+        document.body.style.cursor = 'pointer';
       }}
       onPointerOut={() => {
         setIsHovered(false);
-        if (typeof document !== 'undefined') {
-          document.body.style.cursor = 'auto';
-        }
+        document.body.style.cursor = 'default';
       }}
     >
       {/* ======================================================== */}
-      {/* 1. FOUNDATION PLINTH & APPROACH STEPS                    */}
+      {/* 1. ARCHITECTURAL GRANITE PLAZA & WEST APPROACH STEPS     */}
       {/* ======================================================== */}
-      {/* Base Foundation Slab */}
-      <mesh position={[0, -0.06, 0.2]} receiveShadow material={darkSlateMat}>
-        <boxGeometry args={[width + 1.2, 0.22, depth + 1.4]} />
+      <mesh position={[0, 0.05, 0]} receiveShadow material={materials.plazaPavers}>
+        <boxGeometry args={[7.2, 0.1, 6.4]} />
       </mesh>
 
-      {/* Front Entrance Paved Porch */}
-      <mesh position={[-1.2, 0.06, halfD + 0.6]} receiveShadow material={whiteStuccoMat}>
-        <boxGeometry args={[2.4, 0.08, 1.2]} />
-      </mesh>
-      {/* Subtle Step LED Strip */}
-      <mesh position={[-1.2, 0.09, halfD + 1.18]}>
-        <boxGeometry args={[2.3, 0.02, 0.03]} />
-        <meshStandardMaterial color="#f97316" emissive="#f97316" emissiveIntensity={2.0} />
-      </mesh>
-
-      {/* ======================================================== */}
-      {/* 2. GROUND FLOOR: STUDIO SHOWROOM & ENTRYWAY              */}
-      {/* ======================================================== */}
-      {/* Main Ground Floor Body (Warm Terracotta Orange) */}
-      <mesh position={[0, 1.25, 0]} castShadow receiveShadow material={warmTerracottaMat}>
-        <boxGeometry args={[width, 2.5, depth]} />
-      </mesh>
-
-      {/* West Wing White Architectural Framing Pillar */}
-      <mesh position={[-halfW + 0.85, 1.25, 0.04]} castShadow material={whiteStuccoMat}>
-        <boxGeometry args={[1.7, 2.52, depth + 0.08]} />
-      </mesh>
-
-      {/* Vertical Cedar Louvers (Architectural Accent on Front Left) */}
-      {[-2.3, -2.0, -1.7, -1.4].map((lx, idx) => (
-        <mesh key={`cedar-louver-${idx}`} position={[lx, 1.25, halfD + 0.09]} material={cedarTimberMat}>
-          <boxGeometry args={[0.07, 2.4, 0.08]} />
+      {/* West Steps facing Avenue */}
+      <group position={[-halfW - 0.35, 0.05, 0]}>
+        <mesh position={[0, -0.02, 0]} receiveShadow material={materials.plazaPavers}>
+          <boxGeometry args={[0.7, 0.06, 3.0]} />
         </mesh>
-      ))}
-
-      {/* Double Glazed Studio Entrance Doors */}
-      <group position={[-0.4, 1.15, halfD + 0.04]}>
-        <mesh material={reflectiveGlassMat}>
-          <boxGeometry args={[1.5, 2.15, 0.06]} />
+        <mesh position={[0.15, 0.02, 0]} receiveShadow material={materials.plazaPavers}>
+          <boxGeometry args={[0.5, 0.06, 2.8]} />
         </mesh>
-        {/* Door Dividing Mullion */}
-        <mesh material={whiteStuccoMat}>
-          <boxGeometry args={[0.05, 2.15, 0.08]} />
-        </mesh>
-        {/* Stainless Steel Vertical Pull Handles */}
-        {[-0.12, 0.12].map((hx, idx) => (
-          <mesh key={`door-handle-${idx}`} position={[hx, 0, 0.07]} material={whiteStuccoMat}>
-            <boxGeometry args={[0.03, 0.6, 0.03]} />
-          </mesh>
-        ))}
-        {/* Architectural Entrance Canopy */}
-        <mesh position={[0, 1.15, 0.45]} castShadow material={darkSlateMat}>
-          <boxGeometry args={[1.8, 0.08, 0.9]} />
+        {/* Step warm LED accent */}
+        <mesh position={[-0.34, 0.01, 0]}>
+          <boxGeometry args={[0.03, 0.02, 2.9]} />
+          <meshBasicMaterial color="#f97316" />
         </mesh>
       </group>
 
-      {/* Large Studio Gallery Display Window (East Side) */}
-      <group position={[1.6, 1.25, halfD + 0.04]}>
-        {/* Outer White Reveal Frame */}
-        <mesh material={whiteStuccoMat}>
-          <boxGeometry args={[2.5, 2.1, 0.08]} />
-        </mesh>
-        {/* Reflective Glass Panel */}
-        <mesh position={[0, 0, 0.02]} material={reflectiveGlassMat}>
-          <boxGeometry args={[2.34, 1.94, 0.06]} />
-        </mesh>
-        {/* Vertical Mullion */}
-        <mesh position={[0, 0, 0.05]} material={whiteStuccoMat}>
-          <boxGeometry args={[0.06, 1.94, 0.04]} />
-        </mesh>
-      </group>
-
-      {/* Side Studio Window (East Facade) */}
-      <mesh position={[halfW + 0.04, 1.25, 0]} rotation={[0, Math.PI / 2, 0]} material={reflectiveGlassMat}>
-        <boxGeometry args={[2.8, 1.9, 0.06]} />
-      </mesh>
-
-      {/* ======================================================== */}
-      {/* 3. MIDDLE FLOOR CANTILEVERED SLAB & ACCENT STRIP         */}
-      {/* ======================================================== */}
-      <mesh position={[0, 2.55, 0.1]} castShadow material={whiteStuccoMat}>
-        <boxGeometry args={[width + 0.35, 0.22, depth + 0.35]} />
-      </mesh>
-      {/* Glowing Warm Orange LED Edge Trim */}
-      <mesh position={[0, 2.55, halfD + 0.28]}>
-        <boxGeometry args={[width + 0.37, 0.04, 0.03]} />
-        <meshStandardMaterial color="#f97316" emissive="#f97316" emissiveIntensity={1.8} />
-      </mesh>
-
-      {/* ======================================================== */}
-      {/* 4. SECOND FLOOR: CANTILEVERED BALCONY & LOFT STUDIOS     */}
-      {/* ======================================================== */}
-      {/* Second Floor Main Body */}
-      <mesh position={[0, 3.8, 0]} castShadow receiveShadow material={warmTerracottaMat}>
-        <boxGeometry args={[width, 2.4, depth]} />
-      </mesh>
-
-      {/* White Architectural Box Framing on Second Floor */}
-      <mesh position={[-halfW + 0.85, 3.8, 0.04]} castShadow material={whiteStuccoMat}>
-        <boxGeometry args={[1.7, 2.42, depth + 0.08]} />
-      </mesh>
-
-      {/* Cantilevered Outdoor Creative Balcony (East Wing) */}
-      <group position={[1.1, 2.58, halfD + 0.65]}>
-        {/* Balcony Cantilever Slab (White) */}
-        <mesh position={[0, 0, 0]} castShadow material={whiteStuccoMat}>
-          <boxGeometry args={[3.2, 0.18, 1.3]} />
-        </mesh>
-        {/* Balcony Teak / Cedar Planks */}
-        <mesh position={[0, 0.1, 0]} receiveShadow material={deckWoodMat}>
-          <boxGeometry args={[3.12, 0.02, 1.22]} />
-        </mesh>
-
-        {/* Glass Balustrade with White Powder-Coated Top Handrail */}
-        {/* Front Railing */}
-        <mesh position={[0, 0.42, 0.62]} material={reflectiveGlassMat}>
-          <boxGeometry args={[3.16, 0.65, 0.03]} />
-        </mesh>
-        <mesh position={[0, 0.75, 0.62]} material={whiteStuccoMat}>
-          <boxGeometry args={[3.2, 0.04, 0.05]} />
-        </mesh>
-        {/* Right Side Railing */}
-        <mesh position={[1.58, 0.42, 0]} rotation={[0, Math.PI / 2, 0]} material={reflectiveGlassMat}>
-          <boxGeometry args={[1.24, 0.65, 0.03]} />
-        </mesh>
-        <mesh position={[1.58, 0.75, 0]} rotation={[0, Math.PI / 2, 0]} material={whiteStuccoMat}>
-          <boxGeometry args={[1.26, 0.04, 0.05]} />
-        </mesh>
-
-        {/* Flourishing Balcony Planter Trough with Layered Greenery */}
-        <group position={[0, 0.28, 0.52]}>
-          <mesh material={darkSlateMat}>
-            <boxGeometry args={[2.9, 0.3, 0.22]} />
-          </mesh>
-          {/* Sculpted Green Shrubbery & Flowering Blooms */}
-          {[-1.1, -0.55, 0, 0.55, 1.1].map((px, idx) => (
-            <group key={`balcony-plant-${idx}`} position={[px, 0.22, 0]}>
-              <mesh castShadow material={foliageMat}>
-                <sphereGeometry args={[0.18, 12, 12]} />
-              </mesh>
-              {idx % 2 === 0 && (
-                <mesh position={[0, 0.14, 0.04]} material={flowersMat}>
-                  <sphereGeometry args={[0.07, 8, 8]} />
-                </mesh>
-              )}
-            </group>
-          ))}
-        </group>
-      </group>
-
-      {/* Second Floor Tall Loft Windows (Behind Balcony) */}
-      <group position={[1.1, 3.8, halfD + 0.04]}>
-        <mesh material={reflectiveGlassMat}>
-          <boxGeometry args={[3.0, 1.9, 0.06]} />
-        </mesh>
-        {/* Architectural Window Mullions */}
-        {[-0.95, 0, 0.95].map((mx, idx) => (
-          <mesh key={`f2-mullion-${idx}`} position={[mx, 0, 0.04]} material={whiteStuccoMat}>
-            <boxGeometry args={[0.06, 1.9, 0.03]} />
-          </mesh>
-        ))}
-      </group>
-
-      {/* ======================================================== */}
-      {/* 5. ILLUMINATED MARQUEE SIGN: "ABOUT ME"                  */}
-      {/* ======================================================== */}
-      <group position={[-1.75, 3.8, halfD + 0.1]}>
-        {/* Dark Obsidian Chassis */}
-        <mesh castShadow material={darkSlateMat}>
-          <boxGeometry args={[2.0, 0.85, 0.1]} />
-        </mesh>
-        {/* Glowing Neon Orange Frame */}
-        <mesh position={[0, 0, 0.055]}>
-          <boxGeometry args={[2.05, 0.9, 0.02]} />
-          <meshStandardMaterial
-            ref={orangeAccentMatRef}
-            color="#f97316"
-            emissive="#f97316"
-            emissiveIntensity={isHovered || isSelected ? 2.6 : 1.2}
-          />
-        </mesh>
-        {/* Sign Face */}
-        <mesh position={[0, 0, 0.07]}>
-          <planeGeometry args={[1.95, 0.8]} />
-          <meshStandardMaterial
-            map={signTex}
-            emissive="#ffffff"
-            emissiveIntensity={isHovered || isSelected ? 1.6 : 1.05}
-            roughness={0.2}
-          />
-        </mesh>
-      </group>
-
-      {/* ======================================================== */}
-      {/* 6. ROOFTOP GARDEN TERRACE, PERGOLA & VENTILATION FAN     */}
-      {/* ======================================================== */}
-      {/* Rooftop Base Timber Deck Floor */}
-      <mesh position={[0, 5.05, 0]} castShadow material={deckWoodMat}>
-        <boxGeometry args={[width + 0.25, 0.18, depth + 0.25]} />
-      </mesh>
-      {/* Rooftop Perimeter Parapet Wall with White Coping Stone */}
-      <mesh position={[0, 5.35, halfD + 0.08]} material={whiteStuccoMat}>
-        <boxGeometry args={[width + 0.2, 0.45, 0.08]} />
-      </mesh>
-      <mesh position={[0, 5.35, -halfD - 0.08]} material={whiteStuccoMat}>
-        <boxGeometry args={[width + 0.2, 0.45, 0.08]} />
-      </mesh>
-      <mesh position={[-halfW - 0.08, 5.35, 0]} rotation={[0, Math.PI / 2, 0]} material={whiteStuccoMat}>
-        <boxGeometry args={[depth + 0.2, 0.45, 0.08]} />
-      </mesh>
-      <mesh position={[halfW + 0.08, 5.35, 0]} rotation={[0, Math.PI / 2, 0]} material={whiteStuccoMat}>
-        <boxGeometry args={[depth + 0.2, 0.45, 0.08]} />
-      </mesh>
-
-      {/* Modern Rooftop Cedar Pergola (West Side) */}
-      <group position={[-1.2, 5.15, 0]}>
-        {/* 4 Sturdy Cedar Upright Posts */}
-        {[
-          [-1.2, -1.5],
-          [1.2, -1.5],
-          [-1.2, 1.5],
-          [1.2, 1.5],
-        ].map(([px, pz], idx) => (
-          <mesh key={`pergola-post-${idx}`} position={[px, 1.0, pz]} material={cedarTimberMat}>
-            <boxGeometry args={[0.12, 2.0, 0.12]} />
-          </mesh>
-        ))}
-        {/* Overhead Horizontal Pergola Rafters */}
-        {[-1.2, -0.6, 0, 0.6, 1.2].map((sz, idx) => (
-          <mesh key={`pergola-rafter-${idx}`} position={[0, 2.05, sz]} material={cedarTimberMat}>
-            <boxGeometry args={[2.7, 0.08, 0.1]} />
-          </mesh>
-        ))}
-      </group>
-
-      {/* Potted Ornamental Trees in Terracotta Planters */}
+      {/* Modern Terracotta Planters */}
       {[
-        [2.1, 1.4],
-        [2.1, -1.4],
-      ].map(([tx, tz], idx) => (
-        <group key={`roof-tree-${idx}`} position={[tx, 5.15, tz]}>
-          <mesh position={[0, 0.22, 0]} material={whiteStuccoMat}>
-            <cylinderGeometry args={[0.32, 0.24, 0.45, 16]} />
+        [-halfW - 0.2, 0.2, 2.0],
+        [-halfW - 0.2, 0.2, -2.0],
+      ].map(([px, py, pz], idx) => (
+        <group key={`about-planter-${idx}`} position={[px, py, pz]}>
+          <mesh castShadow receiveShadow material={materials.woodSlats}>
+            <boxGeometry args={[0.6, 0.35, 1.0]} />
           </mesh>
-          <mesh position={[0, 0.7, 0]} castShadow material={foliageMat}>
-            <sphereGeometry args={[0.4, 16, 16]} />
+          <mesh position={[0, 0.25, 0]} castShadow material={materials.foliage}>
+            <boxGeometry args={[0.48, 0.35, 0.88]} />
           </mesh>
         </group>
       ))}
 
-      {/* Rooftop Staircase Access Hatch (Penthouse companionway) */}
-      <group position={[0.4, 5.25, 0]}>
-        <mesh material={darkSlateMat}>
-          <boxGeometry args={[0.9, 0.6, 1.2]} />
+      {/* ======================================================== */}
+      {/* 2. GROUND FLOOR: GALLERY SHOWROOM (Height 3.6m)          */}
+      {/* ======================================================== */}
+      <group position={[0, 1.9, 0]}>
+        {/* Corner Concrete Columns */}
+        {[
+          [-halfW + 0.25, 0, -halfD + 0.25],
+          [halfW - 0.25, 0, -halfD + 0.25],
+          [-halfW + 0.25, 0, halfD - 0.25],
+          [halfW - 0.25, 0, halfD - 0.25],
+        ].map(([cx, cy, cz], idx) => (
+          <mesh key={`a-col-${idx}`} position={[cx, cy, cz]} castShadow receiveShadow material={materials.concreteSlab}>
+            <boxGeometry args={[0.5, 3.6, 0.5]} />
+          </mesh>
+        ))}
+
+        {/* Floor to Ceiling Showroom Glass */}
+        {/* West Entrance Side */}
+        <mesh position={[-halfW + 0.05, 0, 0]} rotation={[0, -Math.PI / 2, 0]} material={materials.showroomGlass}>
+          <planeGeometry args={[bD - 0.6, 3.4]} />
         </mesh>
-        <mesh position={[0, 0.32, 0]} material={whiteStuccoMat}>
-          <boxGeometry args={[0.94, 0.05, 1.24]} />
+        {/* South Side */}
+        <mesh position={[0, 0, halfD - 0.05]} material={materials.showroomGlass}>
+          <planeGeometry args={[bW - 0.6, 3.4]} />
         </mesh>
+        {/* North Side */}
+        <mesh position={[0, 0, -halfD + 0.05]} rotation={[0, Math.PI, 0]} material={materials.showroomGlass}>
+          <planeGeometry args={[bW - 0.6, 3.4]} />
+        </mesh>
+        {/* East Side: Warm Architectural Wood Slat Accent Wall */}
+        <mesh position={[halfW - 0.05, 0, 0]} rotation={[0, Math.PI / 2, 0]} material={materials.woodSlats}>
+          <planeGeometry args={[bD - 0.6, 3.4]} />
+        </mesh>
+
+        {/* Interior Design Exhibition Display Desk & Lighting */}
+        <mesh position={[0.5, -0.6, 0]} castShadow>
+          <boxGeometry args={[2.4, 0.8, 1.0]} />
+          <meshStandardMaterial color="#fed7aa" emissive="#f97316" emissiveIntensity={0.65} />
+        </mesh>
+
+        {/* West Entrance Glass Double Doors */}
+        <group position={[-halfW - 0.02, -0.65, 0]}>
+          <mesh castShadow material={materials.darkMullion}>
+            <boxGeometry args={[0.08, 2.2, 1.9]} />
+          </mesh>
+          <mesh position={[0, 0, -0.45]} material={materials.showroomGlass}>
+            <boxGeometry args={[0.04, 2.05, 0.82]} />
+          </mesh>
+          <mesh position={[0, 0, 0.45]} material={materials.showroomGlass}>
+            <boxGeometry args={[0.04, 2.05, 0.82]} />
+          </mesh>
+          {/* Wood/Aluminum Pull Handles */}
+          <mesh position={[-0.04, 0, -0.05]} material={materials.woodSlats}>
+            <cylinderGeometry args={[0.02, 0.02, 0.75, 8]} />
+          </mesh>
+          <mesh position={[-0.04, 0, 0.05]} material={materials.woodSlats}>
+            <cylinderGeometry args={[0.02, 0.02, 0.75, 8]} />
+          </mesh>
+        </group>
+
+        {/* Cantilevered Glass & Timber Entrance Canopy */}
+        <group position={[-halfW - 0.8, 0.7, 0]}>
+          <mesh castShadow receiveShadow material={materials.canopyGlass}>
+            <boxGeometry args={[1.5, 0.08, 2.6]} />
+          </mesh>
+          <mesh castShadow material={materials.darkMullion}>
+            <boxGeometry args={[1.54, 0.1, 2.64]} />
+          </mesh>
+          {/* Tension Rods */}
+          {[-1.1, 1.1].map((rz, idx) => (
+            <mesh
+              key={`about-tension-${idx}`}
+              position={[0.55, 0.7, rz]}
+              rotation={[0, 0, -Math.PI / 6]}
+              material={materials.steelRod}
+            >
+              <cylinderGeometry args={[0.016, 0.016, 1.5, 8]} />
+            </mesh>
+          ))}
+          {/* Marquee Sign */}
+          <mesh position={[-0.76, 0.25, 0]} rotation={[0, -Math.PI / 2, 0]}>
+            <planeGeometry args={[2.5, 0.55]} />
+            <meshBasicMaterial map={signTex} transparent />
+          </mesh>
+        </group>
       </group>
 
-      {/* Animated Rooftop Ventilation Fan Unit */}
-      <group position={[1.5, 5.15, -0.2]}>
-        <mesh position={[0, 0.25, 0]} material={darkSlateMat}>
-          <cylinderGeometry args={[0.42, 0.46, 0.5, 16]} />
+      {/* ======================================================== */}
+      {/* 3. STOREY 2: ATELIER STUDIO & CANTILEVERED TERRACE       */}
+      {/* ======================================================== */}
+      <group position={[0, 3.8, 0]}>
+        {/* Cantilevered Floor Slab (Extends further west for terrace) */}
+        <mesh position={[-0.3, 0.1, 0]} castShadow receiveShadow material={materials.concreteSlab}>
+          <boxGeometry args={[bW + 0.9, 0.22, bD + 0.3]} />
         </mesh>
-        <mesh position={[0, 0.52, 0]} material={darkSlateMat}>
-          <cylinderGeometry args={[0.44, 0.44, 0.08, 16]} />
+
+        {/* Outdoor Terrace Decking (West projection) */}
+        <mesh position={[-halfW - 0.35, 0.22, 0]} material={materials.woodSlats}>
+          <boxGeometry args={[0.8, 0.02, bD]} />
         </mesh>
-        {/* Rotating 4-Blade Impeller */}
-        <group ref={fanBladesRef} position={[0, 0.5, 0]}>
-          <mesh material={whiteStuccoMat}>
-            <cylinderGeometry args={[0.09, 0.09, 0.12, 12]} />
+
+        {/* Glass Balustrade on Cantilevered Terrace */}
+        <group position={[-halfW - 0.75, 0.65, 0]}>
+          <mesh material={materials.clearBalustrade}>
+            <boxGeometry args={[0.04, 0.9, bD + 0.1]} />
           </mesh>
-          {[0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2].map((angle, idx) => (
-            <mesh key={`fan-blade-${idx}`} rotation={[0.2, angle, 0]} position={[Math.cos(angle) * 0.2, 0, Math.sin(angle) * 0.2]}>
-              <boxGeometry args={[0.28, 0.02, 0.08]} />
-              <meshStandardMaterial color="#f97316" metalness={0.5} roughness={0.3} />
+          <mesh position={[0, 0.46, 0]} material={materials.steelRod}>
+            <boxGeometry args={[0.06, 0.04, bD + 0.12]} />
+          </mesh>
+        </group>
+
+        {/* Level 2 Studio Walls & Windows (Y: 0.2 to 2.4) */}
+        <group position={[0, 1.25, 0]}>
+          {/* Window Facades */}
+          <mesh position={[-halfW + 0.02, 0, 0]} rotation={[0, -Math.PI / 2, 0]} material={materials.curtainGlass}>
+            <planeGeometry args={[bD - 0.2, 2.1]} />
+          </mesh>
+          <mesh position={[halfW - 0.02, 0, 0]} rotation={[0, Math.PI / 2, 0]} material={materials.curtainGlass}>
+            <planeGeometry args={[bD - 0.2, 2.1]} />
+          </mesh>
+          <mesh position={[0, 0, halfD - 0.02]} material={materials.curtainGlass}>
+            <planeGeometry args={[bW - 0.2, 2.1]} />
+          </mesh>
+          <mesh position={[0, 0, -halfD + 0.02]} rotation={[0, Math.PI, 0]} material={materials.curtainGlass}>
+            <planeGeometry args={[bW - 0.2, 2.1]} />
+          </mesh>
+
+          {/* Vertical Architectural Cedar Sun-Shade Louvers */}
+          {[-1.6, -0.5, 0.5, 1.6].map((lx, idx) => (
+            <mesh key={`about-slat-${idx}`} position={[lx, 0, halfD + 0.05]} castShadow material={materials.woodSlats}>
+              <boxGeometry args={[0.12, 2.1, 0.08]} />
             </mesh>
           ))}
         </group>
       </group>
 
-      {/* Subtle Warm Amber Ground Splash on Hover/Select (High Tier only) */}
-      {(isHovered || isSelected) && allowPointLight && (
-        <pointLight position={[0, 2.4, halfD + 1.2]} color="#f97316" intensity={2.0} distance={7} />
+      {/* ======================================================== */}
+      {/* 4. STOREY 3: ROOFTOP TIMBER PERGOLA DECK & GARDEN        */}
+      {/* ======================================================== */}
+      <group position={[0, 6.2, 0]}>
+        {/* Roof Slab */}
+        <mesh position={[0, 0.1, 0]} castShadow receiveShadow material={materials.concreteSlab}>
+          <boxGeometry args={[bW + 0.3, 0.2, bD + 0.3]} />
+        </mesh>
+
+        {/* Roof Decking */}
+        <mesh position={[0, 0.21, 0]} material={materials.woodSlats}>
+          <boxGeometry args={[bW - 0.4, 0.02, bD - 0.4]} />
+        </mesh>
+
+        {/* Architectural Timber Pergola Structure */}
+        <group position={[0, 1.4, 0]}>
+          {/* Pergola Columns */}
+          {[
+            [-1.8, 0, -1.8],
+            [1.8, 0, -1.8],
+            [-1.8, 0, 1.8],
+            [1.8, 0, 1.8],
+          ].map(([cx, cy, cz], idx) => (
+            <mesh key={`perg-col-${idx}`} position={[cx, 0, cz]} castShadow material={materials.woodSlats}>
+              <boxGeometry args={[0.15, 2.4, 0.15]} />
+            </mesh>
+          ))}
+          {/* Pergola Roof Slats (Rhythmic horizontal beams) */}
+          {[-1.6, -1.0, -0.4, 0.2, 0.8, 1.4].map((pz, idx) => (
+            <mesh key={`perg-beam-${idx}`} position={[0, 1.25, pz]} castShadow material={materials.woodSlats}>
+              <boxGeometry args={[4.2, 0.1, 0.08]} />
+            </mesh>
+          ))}
+        </group>
+
+        {/* Rooftop Ventilation Unit with Rotating Cowl */}
+        <group position={[-1.8, 0.5, 1.5]}>
+          <mesh castShadow material={materials.darkMullion}>
+            <cylinderGeometry args={[0.3, 0.35, 0.6, 12]} />
+          </mesh>
+          <group ref={ventFanRef} position={[0, 0.35, 0]}>
+            <mesh material={materials.steelRod}>
+              <coneGeometry args={[0.32, 0.25, 12]} />
+            </mesh>
+          </group>
+        </group>
+
+        {/* Rooftop Parapet Railings */}
+        {[-halfW - 0.1, halfW + 0.1].map((rx, idx) => (
+          <mesh key={`about-rail-${idx}`} position={[rx, 0.5, 0]} material={materials.steelRod}>
+            <boxGeometry args={[0.04, 0.8, bD]} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* ======================================================== */}
+      {/* 5. HOVER / SELECTION ACCENT GLOW                         */}
+      {/* ======================================================== */}
+      {allowPointLights && (isHovered || isSelected) && (
+        <pointLight
+          position={[-3.5, 2.8, 0]}
+          color="#f97316"
+          intensity={isSelected ? 3.0 : 1.8}
+          distance={8.0}
+          decay={2}
+        />
       )}
     </group>
   );

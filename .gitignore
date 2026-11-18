@@ -50,3 +50,7 @@ next-env.d.ts
 
 # Personal notes / deployment guides
 vercel_deployment_guide.md
+
+# Scratch / dev testing scripts
+/scratch/
+
