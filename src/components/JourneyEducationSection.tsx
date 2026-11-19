@@ -16,16 +16,16 @@ import {
   BookOpen
 } from 'lucide-react';
 import { JOURNEY_TIMELINE, EDUCATION_DATA, CERTIFICATIONS_DATA } from '../data/portfolioData';
+import { SectionBackdrop } from './background/SectionBackdrop';
 
 export const JourneyEducationSection: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'journey' | 'education' | 'certifications'>('journey');
 
   return (
-    <section id="journey" className="py-32 bg-[#030508] relative border-t border-white/5 overflow-hidden">
+    <section id="journey" className="py-24 sm:py-32 bg-[#030508] relative border-t border-white/5 overflow-hidden">
       
-      {/* Background Radiance */}
-      <div className="absolute top-1/2 right-10 w-[550px] h-[550px] bg-cyan-600/10 rounded-full blur-[160px] pointer-events-none" />
-      <div className="absolute inset-0 bg-cinematic-grid opacity-20 pointer-events-none" />
+      {/* Section-Specific Background System */}
+      <SectionBackdrop variant="journey" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         

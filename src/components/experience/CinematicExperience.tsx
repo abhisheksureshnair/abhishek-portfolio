@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Compass } from 'lucide-react';
 import { SmoothScroll } from '@/components/SmoothScroll';
 import { ExperienceModeProvider } from './ExperienceModeContext';
 import { ExperienceSoundProvider } from './ExperienceSound';
@@ -14,44 +16,79 @@ import { ExperienceCapabilities } from './ExperienceCapabilities';
 import { ExperienceTimeline } from './ExperienceTimeline';
 import { ExperienceContact } from './ExperienceContact';
 import { ExperienceFooter } from './ExperienceFooter';
+import { WorldScene } from '@/world/WorldScene';
 
 export const CinematicExperience: React.FC = () => {
+  const searchParams = useSearchParams();
+  const initialViewParam = searchParams?.get('view') || searchParams?.get('mode');
+  const [currentView, setCurrentView] = useState<'story' | 'world'>(
+    initialViewParam === 'world' ? 'world' : 'story'
+  );
+
+  useEffect(() => {
+    if (initialViewParam === 'world') {
+      setCurrentView('world');
+    }
+  }, [initialViewParam]);
+
   return (
-    <SmoothScroll>
-      <ExperienceModeProvider>
-        <ExperienceSoundProvider>
-          <div className="relative min-h-screen bg-[#050505] text-[#f5f5f5] selection:bg-amber-500 selection:text-black">
-            {/* Navigation Header */}
-            <ExperienceNavbar />
-
-            {/* 3D Scrollytelling Canvas Universe */}
-            <ExperienceScrollyCanvas>
-              <ExperienceOverlay />
-            </ExperienceScrollyCanvas>
-
-            {/* Verified Productions: Professional vs Personal */}
-            <ExperienceProjects />
-
-            {/* Signature Telemetry Comparison Slider */}
-            <ExperienceTelemetrySlider />
-
-            {/* Signature Interactive Developer Terminal */}
-            <ExperienceTerminal />
-
-            {/* Engineering Capabilities Matrix */}
-            <ExperienceCapabilities />
-
-            {/* Verified Experience Timeline & Education */}
-            <ExperienceTimeline />
-
-            {/* Contact Abhishek */}
-            <ExperienceContact />
-
-            {/* 3D Universe Footer */}
-            <ExperienceFooter />
+    <ExperienceModeProvider>
+      <ExperienceSoundProvider>
+        {currentView === 'world' ? (
+          // 3D OPEN WORLD DEVELOPER UNIVERSE
+          <div className="relative w-full h-screen bg-[#030509]">
+            {/* Floating Top Switcher Button to seamlessly return to Story View */}
+            <div className="fixed top-3 sm:top-5 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
+              <button
+                onClick={() => setCurrentView('story')}
+                className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-neutral-950/90 hover:bg-neutral-900 border border-amber-500/50 text-amber-300 hover:text-white text-xs font-mono font-bold shadow-[0_0_20px_rgba(245,158,11,0.25)] backdrop-blur-xl transition-all hover:scale-105 active:scale-95"
+                title="Switch back to Cinematic Story Mode"
+              >
+                <Compass className="w-3.5 h-3.5 text-amber-400" />
+                <span>SWITCH TO STORY VIEW</span>
+              </button>
+            </div>
+            <WorldScene />
           </div>
-        </ExperienceSoundProvider>
-      </ExperienceModeProvider>
-    </SmoothScroll>
+        ) : (
+          // CINEMATIC SCROLLYTELLING STORY EXPERIENCE
+          <SmoothScroll>
+            <div className="relative min-h-screen bg-[#050505] text-[#f5f5f5] selection:bg-amber-500 selection:text-black">
+              {/* Navigation Header with View Switcher */}
+              <ExperienceNavbar
+                currentView={currentView}
+                onToggleView={setCurrentView}
+              />
+
+              {/* 3D Scrollytelling Canvas Universe */}
+              <ExperienceScrollyCanvas>
+                <ExperienceOverlay />
+              </ExperienceScrollyCanvas>
+
+              {/* Verified Productions: Professional vs Personal */}
+              <ExperienceProjects />
+
+              {/* Signature Telemetry Comparison Slider */}
+              <ExperienceTelemetrySlider />
+
+              {/* Signature Interactive Developer Terminal */}
+              <ExperienceTerminal />
+
+              {/* Engineering Capabilities Matrix */}
+              <ExperienceCapabilities />
+
+              {/* Verified Experience Timeline & Education */}
+              <ExperienceTimeline />
+
+              {/* Contact Abhishek */}
+              <ExperienceContact />
+
+              {/* 3D Universe Footer */}
+              <ExperienceFooter />
+            </div>
+          </SmoothScroll>
+        )}
+      </ExperienceSoundProvider>
+    </ExperienceModeProvider>
   );
 };

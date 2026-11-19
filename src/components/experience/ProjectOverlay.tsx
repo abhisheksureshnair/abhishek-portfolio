@@ -20,10 +20,10 @@ export const ProjectOverlay: React.FC<ProjectOverlayProps> = ({
   if (!locationId) return null;
 
   // Resolve location content
-  let projectData = SELECTED_PROJECTS.find((p) => p.id === locationId);
-  let isInnspark = locationId === 'innspark-hq';
-  let isAbout = locationId === 'about-hub';
-  let isContact = locationId === 'contact-hub';
+  const projectData = SELECTED_PROJECTS.find((p) => p.id === locationId);
+  const isInnspark = locationId === 'innspark-hq';
+  const isAbout = locationId === 'about-hub';
+  const isContact = locationId === 'contact-hub';
 
   return (
     <AnimatePresence>

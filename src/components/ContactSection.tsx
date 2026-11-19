@@ -17,6 +17,7 @@ import {
 import confetti from 'canvas-confetti';
 import { PERSONAL_INFO } from '../data/portfolioData';
 import { LinkedinIcon, GithubIcon } from './Icons';
+import { SectionBackdrop } from './background/SectionBackdrop';
 
 interface ContactSectionProps {
   onOpenResume?: () => void;
@@ -73,11 +74,10 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ onOpenResume }) 
   };
 
   return (
-    <section id="contact" className="py-36 bg-[#030508] relative border-t border-white/5 overflow-hidden">
+    <section id="contact" className="py-28 sm:py-36 bg-[#030508] relative border-t border-white/5 overflow-hidden">
       
-      {/* Background Cinematic Glow Elements */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[850px] h-[450px] bg-gradient-to-t from-indigo-600/15 via-purple-600/10 to-transparent rounded-full blur-[170px] pointer-events-none" />
-      <div className="absolute inset-0 bg-cinematic-grid opacity-20 pointer-events-none" />
+      {/* Section-Specific Background System */}
+      <SectionBackdrop variant="contact" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         

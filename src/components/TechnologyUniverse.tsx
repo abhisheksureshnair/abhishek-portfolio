@@ -2,21 +2,22 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Code, 
-  Smartphone, 
-  Server, 
-  Database, 
-  Cpu, 
-  Radio, 
-  Monitor, 
-  Terminal, 
+import {
+  Code,
+  Smartphone,
+  Server,
+  Database,
+  Cpu,
+  Radio,
+  Monitor,
+  Terminal,
   Sparkles,
   Layers,
   Shield,
   FileCode
 } from 'lucide-react';
 import { SKILL_CATEGORIES } from '../data/portfolioData';
+import { SectionBackdrop } from './background/SectionBackdrop';
 
 export const TechnologyUniverse: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -50,14 +51,13 @@ export const TechnologyUniverse: React.FC = () => {
     : SKILL_CATEGORIES.filter((cat) => cat.category === selectedCategory);
 
   return (
-    <section id="stack" className="py-32 bg-[#030508] relative border-t border-white/5 overflow-hidden">
-      
-      {/* Background Radiance & Circuit Lines */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-indigo-500/10 rounded-full blur-[170px] pointer-events-none" />
-      <div className="absolute inset-0 bg-cinematic-grid opacity-20 pointer-events-none" />
+    <section id="stack" className="py-24 sm:py-32 bg-[#030508] relative border-t border-white/5 overflow-hidden">
+
+      {/* Section-Specific Background System */}
+      <SectionBackdrop variant="tech" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
+
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
           <div>
@@ -78,11 +78,10 @@ export const TechnologyUniverse: React.FC = () => {
         <div className="flex flex-wrap gap-2 mb-12">
           <button
             onClick={() => setSelectedCategory('ALL')}
-            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all ${
-              selectedCategory === 'ALL'
-                ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-white shadow-lg shadow-indigo-600/30'
-                : 'bg-zinc-950/80 border border-white/10 text-zinc-400 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all ${selectedCategory === 'ALL'
+              ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-white shadow-lg shadow-indigo-600/30'
+              : 'bg-zinc-950/80 border border-white/10 text-zinc-400 hover:text-white'
+              }`}
             data-cursor="pointer"
           >
             All Categories ({SKILL_CATEGORIES.length})
@@ -94,11 +93,10 @@ export const TechnologyUniverse: React.FC = () => {
               <button
                 key={item.category}
                 onClick={() => setSelectedCategory(item.category)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-semibold transition-all ${
-                  isSelected
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                    : 'bg-zinc-950/80 border border-white/10 text-zinc-400 hover:text-white hover:border-zinc-700'
-                }`}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-semibold transition-all ${isSelected
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                  : 'bg-zinc-950/80 border border-white/10 text-zinc-400 hover:text-white hover:border-zinc-700'
+                  }`}
                 data-cursor="pointer"
               >
                 <Icon className="w-3.5 h-3.5" />

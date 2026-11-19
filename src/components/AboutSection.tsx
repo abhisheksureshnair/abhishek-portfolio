@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { Sparkles, Smartphone, Code2, Cpu, MapPin, Briefcase } from 'lucide-react';
 import { PERSONAL_INFO } from '../data/portfolioData';
+import { InteractivePortrait } from './portrait-3d/InteractivePortrait';
+import { SectionBackdrop } from './background/SectionBackdrop';
 
 // Word-by-word progressive opacity reveal component
 const ScrollWordReveal: React.FC<{ text: string }> = ({ text }) => {
@@ -46,9 +48,8 @@ export const AboutSection: React.FC = () => {
   return (
     <section id="about" className="py-32 bg-[#060911] relative border-t border-white/5 overflow-hidden">
       
-      {/* Background Radiance */}
-      <div className="absolute top-1/2 left-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute inset-0 bg-cinematic-grid opacity-20 pointer-events-none" />
+      {/* Section-Specific Background System */}
+      <SectionBackdrop variant="about" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
@@ -113,7 +114,12 @@ export const AboutSection: React.FC = () => {
           </div>
 
           {/* Right Column: Persona Card (Accurate Role & Company) */}
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            {/* Interactive 3D Developer Portrait with Physics Tilt */}
+            <div className="flex justify-center">
+              <InteractivePortrait variant="about" />
+            </div>
+
             <div className="h-full p-8 rounded-3xl bg-gradient-to-b from-zinc-900/90 via-zinc-950 to-black border border-white/10 shadow-2xl flex flex-col justify-between space-y-6 relative overflow-hidden">
               
               <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />

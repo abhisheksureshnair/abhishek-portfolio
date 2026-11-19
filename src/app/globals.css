@@ -168,3 +168,52 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Comprehensive PDF Export & Print Styles (Eliminates Blank Areas & Layout Breakages) */
+@media print {
+  html, body {
+    background-color: #030508 !important;
+    color: #f8fafc !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide navigation bars, cursor, fixed HUD overlays, and canvas loops */
+  header,
+  .custom-cursor,
+  [data-cursor],
+  button,
+  .fixed,
+  canvas {
+    display: none !important;
+  }
+
+  /* Normalize section heights to prevent 100vh blank pages */
+  section {
+    min-height: auto !important;
+    height: auto !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Avoid breaking cards in the middle of a page */
+  article, .rounded-3xl, .glass-panel-cinematic {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    margin-bottom: 2rem !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure all content is 100% visible during print rasterization */
+  * {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}

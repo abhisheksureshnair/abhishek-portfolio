@@ -62,7 +62,9 @@ function ExperienceLoadingScreen() {
 export default function ExperiencePage() {
   return (
     <main className="min-h-screen bg-black text-white relative">
-      <CinematicExperience />
+      <React.Suspense fallback={<ExperienceLoadingScreen />}>
+        <CinematicExperience />
+      </React.Suspense>
     </main>
   );
 }
