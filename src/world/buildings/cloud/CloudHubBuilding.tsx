@@ -5,7 +5,6 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { getSharedCloudMaterials } from './CloudMaterials';
 import { CloudLobbyInterior } from './CloudLobbyInterior';
-import { BuildingSignage } from '../signage/BuildingSignage';
 import { StreetDirectoryBoard } from '../signage/StreetDirectoryBoard';
 import { useWorldStore, worldStore } from '../../stores/worldStore';
 import { useLandmarkInteriorLOD } from '../landmarkLod';
@@ -17,21 +16,24 @@ interface CloudHubBuildingProps {
 }
 
 /**
- * PHASE 2.8 — Cloud & Systems Engineering Hub Architectural Citadel
+ * PHASE 2.8 — Cloud Ecosystem Hub
  * 
- * Distinctive 5-storey modern technology headquarters at [40, 40] (block-2-2):
- * - Faithful to user reference photo (media_1795088664563_b9d9109e.jpg):
- *   1. Asymmetrical layered architecture with aerodynamic curved Northwest corner facade
- *   2. Dark titanium / graphite exterior panels with high-res cyan digital cloud HUD & circuit telemetry
- *   3. Large lower-corner cybernetic display screen with circular energy vortex telemetry
- *   4. Double-height transparent glass curtain wall ground floor & mezzanine with silver mullions
- *   5. Explorable interior featuring suspended architectural bridge, server rack banks, and 5 exhibition kiosks
- *   6. Recessed glass entrance with cantilevered canopy and warm welcome illumination
- *   7. Realistic rooftop with low-profile HVAC chiller units, cooling fans, elevator mechanical penthouse, and antenna array
- *   8. Prominent integrated physical signage:
- *      "CLOUD & SYSTEMS ENGINEERING HUB"
- *      "BACKEND • CLOUD • APIs • INFRASTRUCTURE"
- *   9. Full LOD efficiency maintaining 60+ FPS
+ * Distinctive 6-storey futuristic technology headquarters at [40, 40] (block-2-2):
+ * - Faithful to user reference photo (media_1795097568600_5322bbdc.jpg):
+ *   1. Sweeping Parabolic Curved Glass Facade:
+ *      Iconic rising curved glass curtain wall with vertical silver structural mullions/fins and sloping roofline.
+ *   2. Signature Feature: Illuminated Cyan Cloud Constellation & Network Ribbon:
+ *      Glowing undulating light streams and digital constellation nodes suspended along the upper glass facade.
+ *   3. Curved Cantilevered Pedestrian Viaduct / Skybridge:
+ *      Sweeping elevated walkway with landscaped green terrace deck, balustrade, and structural pilotis columns.
+ *   4. Recessed Double-Height Glass Entrance Lobby:
+ *      Transparent ground floor glazing with warm interior hospitality illumination.
+ *   5. Interactive 5-Node Holographic Architecture Display inside lobby:
+ *      Frontend Apps → API Layer → Backend Services → Database / Firebase → Deployment Infra.
+ *   6. Dimensional Entrance Signage & Street Directory:
+ *      "CLOUD ECOSYSTEM HUB" // "CONNECT • BUILD • DEPLOY"
+ *   7. Realistic rooftop mechanical penthouse, HVAC chillers, and satellite communication dish.
+ *   8. Full LOD efficiency maintaining 60+ FPS.
  */
 export const CloudHubBuilding: React.FC<CloudHubBuildingProps> = ({
   position = [40.0, 0, 40.0],
@@ -41,19 +43,20 @@ export const CloudHubBuilding: React.FC<CloudHubBuildingProps> = ({
   const materials = getSharedCloudMaterials();
   const selectedLandmark = useWorldStore((s) => s.selectedLandmark);
   const hoveredLandmark = useWorldStore((s) => s.hoveredLandmark);
-  const cameraPreset = useWorldStore((s) => s.cameraPreset);
 
   const isSelected = selectedLandmark === 'cloud';
   const isHovered = hoveredLandmark === 'cloud';
   const showInterior = useLandmarkInteriorLOD([position[0], position[2]], 'cloud');
 
-  // Animation ref for cyber pulse screen and subtle rooftop radar rotation
-  const cyberScreenRef = useRef<THREE.Mesh>(null);
+  // Animation refs for glowing cloud stream ribbon and rooftop radar
+  const cloudRibbonRef = useRef<THREE.Group>(null);
   const radarRef = useRef<THREE.Group>(null);
   const hvacFan1Ref = useRef<THREE.Mesh>(null);
   const hvacFan2Ref = useRef<THREE.Mesh>(null);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
+    const t = state.clock.getElapsedTime();
+
     if (radarRef.current) {
       radarRef.current.rotation.y += delta * 0.75;
     }
@@ -62,6 +65,11 @@ export const CloudHubBuilding: React.FC<CloudHubBuildingProps> = ({
     }
     if (hvacFan2Ref.current) {
       hvacFan2Ref.current.rotation.z += delta * 5.2;
+    }
+
+    // Subtle undulation on glowing cyan network ribbon
+    if (cloudRibbonRef.current) {
+      cloudRibbonRef.current.position.y = 14.5 + Math.sin(t * 1.2) * 0.15;
     }
   });
 
@@ -83,7 +91,7 @@ export const CloudHubBuilding: React.FC<CloudHubBuildingProps> = ({
 
   return (
     <group
-      name="portfolio_cloud_systems_hub"
+      name="portfolio_cloud_ecosystem_hub"
       position={position}
       onClick={handleBuildingClick}
       onPointerOver={handlePointerOver}
@@ -115,7 +123,7 @@ export const CloudHubBuilding: React.FC<CloudHubBuildingProps> = ({
         <primitive object={materials.granitePodium} attach="material" />
       </mesh>
 
-      {/* Recessed Ground LED Accent Strip along West & North Plinth Edges */}
+      {/* Recessed Ground LED Accent Strip along Plinth Edges */}
       <mesh position={[-11.85, 0.25, 0]}>
         <boxGeometry args={[0.08, 0.02, 23.6]} />
         <primitive object={materials.cyanNeonGlow} attach="material" />
@@ -135,353 +143,373 @@ export const CloudHubBuilding: React.FC<CloudHubBuildingProps> = ({
           <boxGeometry args={[12.4, 0.12, 1.0]} />
           <primitive object={materials.granitePodium} attach="material" />
         </mesh>
-        {/* Step Inset LED Strip */}
         <mesh position={[0, 0.13, -0.01]}>
           <boxGeometry args={[12.4, 0.02, 0.04]} />
           <primitive object={materials.cyanNeonGlow} attach="material" />
         </mesh>
       </group>
 
-      {/* =========================================================================
-          VOLUME 1: GROUND & MEZZANINE DOUBLE-HEIGHT GLASS ATRIUM (Y = 0.24m to 7.0m)
-          Floor-to-ceiling structural glazing with polished silver mullions
-          ========================================================================= */}
-      <group position={[0, 3.62, 0]}>
-        {/* North Glass Facade (Entrance side) */}
-        <mesh position={[0, 0, -10.0]}>
-          <boxGeometry args={[20.2, 6.76, 0.1]} />
-          <primitive object={materials.atriumGlass} attach="material" />
+      {/* Landscaped Forecourt Greenery & Glowing LED Curb Strips (Image 1 Feature) */}
+      <group position={[-8.5, 0.24, -8.2]}>
+        <mesh position={[0, 0.06, 0]} receiveShadow>
+          <cylinderGeometry args={[2.8, 3.2, 0.12, 24]} />
+          <meshStandardMaterial color="#14532d" roughness={0.85} />
         </mesh>
-        {/* West Glass Facade (Avenue side) */}
-        <mesh position={[-10.0, 0, 0]}>
-          <boxGeometry args={[0.1, 6.76, 20.2]} />
-          <primitive object={materials.atriumGlass} attach="material" />
-        </mesh>
-        {/* South & East Solid Structural Shearing Walls */}
-        <mesh position={[0, 0, 10.0]} castShadow receiveShadow>
-          <boxGeometry args={[20.2, 6.76, 0.3]} />
-          <primitive object={materials.titaniumGraphite} attach="material" />
-        </mesh>
-        <mesh position={[10.0, 0, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.3, 6.76, 20.2]} />
-          <primitive object={materials.titaniumGraphite} attach="material" />
-        </mesh>
-
-        {/* Vertical Silver Structural Mullions (North Glazing) */}
-        {[-8.0, -5.0, -2.0, 2.0, 5.0, 8.0].map((mx, idx) => (
-          <mesh key={`north-mullion-${idx}`} position={[mx, 0, -10.0]} castShadow>
-            <boxGeometry args={[0.14, 6.76, 0.22]} />
-            <primitive object={materials.structuralSilver} attach="material" />
-          </mesh>
-        ))}
-
-        {/* Vertical Silver Structural Mullions (West Glazing) */}
-        {[-7.0, -4.0, -1.0, 2.0, 5.0, 8.0].map((mz, idx) => (
-          <mesh key={`west-mullion-${idx}`} position={[-10.0, 0, mz]} castShadow>
-            <boxGeometry args={[0.22, 6.76, 0.14]} />
-            <primitive object={materials.structuralSilver} attach="material" />
-          </mesh>
-        ))}
-
-        {/* Horizontal Intermediate Transom Bar at Y = 3.6m (separating ground & mezzanine) */}
-        <mesh position={[0, 0.2, -10.0]} castShadow>
-          <boxGeometry args={[20.2, 0.16, 0.25]} />
-          <primitive object={materials.structuralSilver} attach="material" />
-        </mesh>
-        <mesh position={[-10.0, 0.2, 0]} castShadow>
-          <boxGeometry args={[0.25, 0.16, 20.2]} />
-          <primitive object={materials.structuralSilver} attach="material" />
-        </mesh>
-      </group>
-
-      {/* Recessed Main Glass Entrance (North side center: X=0, Z=-10.0) */}
-      <group position={[0, 0.24, -10.0]}>
-        {/* Recessed Vestibule Frame */}
-        <mesh position={[0, 1.8, 0.3]} castShadow>
-          <boxGeometry args={[4.2, 3.6, 0.8]} />
-          <primitive object={materials.titaniumGraphite} attach="material" />
-        </mesh>
-
-        {/* Automatic Sliding Glass Doors */}
-        <mesh position={[-0.95, 1.4, -0.05]}>
-          <boxGeometry args={[1.8, 2.8, 0.06]} />
-          <primitive object={materials.curtainGlassDarkBlue} attach="material" />
-        </mesh>
-        <mesh position={[0.95, 1.4, -0.05]}>
-          <boxGeometry args={[1.8, 2.8, 0.06]} />
-          <primitive object={materials.curtainGlassDarkBlue} attach="material" />
-        </mesh>
-
-        {/* Entrance Portal Brushed Steel Door Frames */}
-        <mesh position={[-0.95, 1.4, 0]}>
-          <boxGeometry args={[1.85, 2.85, 0.04]} />
-          <primitive object={materials.polishedSilver} attach="material" />
-        </mesh>
-        <mesh position={[0.95, 1.4, 0]}>
-          <boxGeometry args={[1.85, 2.85, 0.04]} />
-          <primitive object={materials.polishedSilver} attach="material" />
-        </mesh>
-
-        {/* Suspended Sleek Entrance Canopy */}
-        <mesh position={[0, 3.2, -1.2]} castShadow>
-          <boxGeometry args={[4.8, 0.2, 2.4]} />
-          <primitive object={materials.titaniumGraphite} attach="material" />
-        </mesh>
-        <mesh position={[0, 3.12, -1.2]}>
-          <boxGeometry args={[4.4, 0.04, 2.0]} />
+        {/* Illuminated Neon Curb Ring */}
+        <mesh position={[0, 0.13, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[2.75, 2.9, 24]} />
           <primitive object={materials.cyanNeonGlow} attach="material" />
         </mesh>
-
-        {/* Entrance Spotlight welcoming visitors */}
-        <pointLight color="#00f0ff" intensity={1.8} distance={8.0} position={[0, 3.0, -1.2]} />
-      </group>
-
-      {/* =========================================================================
-          VOLUME 2: AERODYNAMIC CURVED UPPER MASSING (Y = 7.0m to 19.5m)
-          Aerodynamic rounded Northwest corner with glowing cyan cloud HUD panels
-          ========================================================================= */}
-      <group position={[0, 13.25, 0]}>
-        {/* Main Upper Cantilevered Body */}
-        <mesh position={[0, 0, 0]} castShadow receiveShadow>
-          <boxGeometry args={[21.2, 12.5, 21.2]} />
-          <primitive object={materials.titaniumGraphite} attach="material" />
-        </mesh>
-
-        {/* North Upper Facade with Cyan Cloud Emblem & Circuit Board Telemetry */}
-        <mesh position={[0, 0, -10.66]}>
-          <planeGeometry args={[21.0, 12.3]} />
-          <primitive object={materials.curvedFacadeTextureMat} attach="material" />
-        </mesh>
-
-        {/* West Upper Facade with Matching Cloud & Telemetry Mesh */}
-        <mesh position={[-10.66, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-          <planeGeometry args={[21.0, 12.3]} />
-          <primitive object={materials.curvedFacadeTextureMat} attach="material" />
-        </mesh>
-
-        {/* Aerodynamic Rounded Northwest Corner Cladding Shell (Radius 3.2m curve) */}
-        <group position={[-9.0, 0, -9.0]}>
-          <mesh rotation={[0, 0, 0]} castShadow>
-            <cylinderGeometry args={[2.8, 2.8, 12.4, 24, 1, false, Math.PI, Math.PI * 0.5]} />
-            <primitive object={materials.curvedFacadeTextureMat} attach="material" />
+        {/* Modern Campus Tree */}
+        <group position={[0, 0.12, 0]}>
+          <mesh position={[0, 1.2, 0]}>
+            <cylinderGeometry args={[0.08, 0.14, 2.4, 8]} />
+            <meshStandardMaterial color="#475569" roughness={0.8} />
           </mesh>
-          {/* Top & Bottom Accent Trim Rings */}
-          <mesh position={[0, 6.2, 0]}>
-            <cylinderGeometry args={[2.85, 2.85, 0.15, 24, 1, false, Math.PI, Math.PI * 0.5]} />
-            <primitive object={materials.cyanNeonGlow} attach="material" />
-          </mesh>
-          <mesh position={[0, -6.2, 0]}>
-            <cylinderGeometry args={[2.85, 2.85, 0.15, 24, 1, false, Math.PI, Math.PI * 0.5]} />
-            <primitive object={materials.cyanNeonGlow} attach="material" />
+          <mesh position={[0, 2.8, 0]}>
+            <sphereGeometry args={[1.2, 12, 12]} />
+            <meshStandardMaterial color="#15803d" roughness={0.7} />
           </mesh>
         </group>
+      </group>
 
-        {/* Continuous Cyan Neon Contour Lines running horizontally along facade seam */}
-        <mesh position={[0, -6.15, -10.7]}>
-          <boxGeometry args={[21.4, 0.1, 0.1]} />
+      <group position={[9.0, 0.24, -4.5]}>
+        <mesh position={[0, 0.06, 0]} receiveShadow>
+          <cylinderGeometry args={[2.2, 2.6, 0.12, 24]} />
+          <meshStandardMaterial color="#14532d" roughness={0.85} />
+        </mesh>
+        <mesh position={[0, 0.13, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[2.15, 2.3, 24]} />
           <primitive object={materials.cyanNeonGlow} attach="material" />
         </mesh>
-        <mesh position={[-10.7, -6.15, 0]}>
-          <boxGeometry args={[0.1, 0.1, 21.4]} />
-          <primitive object={materials.cyanNeonGlow} attach="material" />
-        </mesh>
-
-        {/* Roof Parapet Crown Glowing Cyan Neon Ribbon */}
-        <mesh position={[0, 6.2, -10.7]}>
-          <boxGeometry args={[21.4, 0.12, 0.1]} />
-          <primitive object={materials.cyanNeonGlow} attach="material" />
-        </mesh>
-        <mesh position={[-10.7, 6.2, 0]}>
-          <boxGeometry args={[0.1, 0.12, 21.4]} />
-          <primitive object={materials.cyanNeonGlow} attach="material" />
-        </mesh>
-        <mesh position={[0, 6.2, 10.7]}>
-          <boxGeometry args={[21.4, 0.12, 0.1]} />
-          <primitive object={materials.cyanNeonGlow} attach="material" />
-        </mesh>
-        <mesh position={[10.7, 6.2, 0]}>
-          <boxGeometry args={[0.1, 0.12, 21.4]} />
-          <primitive object={materials.cyanNeonGlow} attach="material" />
-        </mesh>
+        {/* Modern Campus Tree */}
+        <group position={[0, 0.12, 0]}>
+          <mesh position={[0, 1.1, 0]}>
+            <cylinderGeometry args={[0.08, 0.13, 2.2, 8]} />
+            <meshStandardMaterial color="#475569" roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 2.5, 0]}>
+            <sphereGeometry args={[1.05, 12, 12]} />
+            <meshStandardMaterial color="#15803d" roughness={0.7} />
+          </mesh>
+        </group>
       </group>
 
       {/* =========================================================================
-          VOLUME 3: LOWER-CORNER HIGH-TECH CYBERNETIC DISPLAY SCREEN
-          Replicating the iconic circular vortex / telemetry screen from reference photo
+          VOLUME 1: SWEEPING PARABOLIC CURVED GLASS FACADE (REFERENCE PHOTO FEATURE)
+          Rising majestically with vertical structural fins and blue-gray glazing
           ========================================================================= */}
-      <group position={[-10.15, 3.8, -6.5]}>
-        {/* Screen Bezel & Mounting Housing */}
-        <mesh castShadow>
-          <boxGeometry args={[0.3, 4.4, 5.2]} />
+      <group position={[0, 11.5, 0]}>
+        {/* Main Curved Glass Curtain Wall Body */}
+        <mesh position={[0, 0, 0]} castShadow receiveShadow>
+          <cylinderGeometry
+            args={[10.6, 11.2, 22.0, 36, 1, false, -Math.PI * 0.48, Math.PI * 0.96]}
+          />
+          <primitive object={materials.curtainGlassDarkBlue} attach="material" />
+        </mesh>
+
+        {/* East/South Structural Backing Wall Enclosing Private Cores */}
+        <mesh position={[0, 0, 0]} castShadow receiveShadow>
+          <cylinderGeometry
+            args={[10.5, 11.1, 22.0, 24, 1, false, Math.PI * 0.48, Math.PI * 1.04]}
+          />
           <primitive object={materials.titaniumGraphite} attach="material" />
         </mesh>
-        {/* West-facing Cyber Display Screen */}
-        <mesh ref={cyberScreenRef} position={[-0.16, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-          <planeGeometry args={[5.0, 4.2]} />
-          <primitive object={materials.cyberPulseScreenMat} attach="material" />
-        </mesh>
-        {/* Screen Glowing Cyan Edge Frame */}
-        <mesh position={[-0.16, 2.12, 0]}>
-          <boxGeometry args={[0.04, 0.06, 5.0]} />
+
+        {/* Vertical Silver Architectural Fins / Mullions (Reference Photo) */}
+        {[-8, -6.5, -5, -3.5, -2, -0.5, 1, 2.5, 4, 5.5, 7, 8.5].map((angleStep, idx) => {
+          const rad = (angleStep / 10) * Math.PI * 0.46;
+          const fx = Math.sin(rad) * 11.25;
+          const fz = -Math.cos(rad) * 11.25;
+          return (
+            <mesh key={`fin-${idx}`} position={[fx, 0, fz]} rotation={[0, -rad, 0]}>
+              <boxGeometry args={[0.08, 22.2, 0.35]} />
+              <primitive object={materials.structuralSilver} attach="material" />
+            </mesh>
+          );
+        })}
+
+        {/* Sloping Parabolic Crown Rim along Roofline (Reflecting sweeping photo curve) */}
+        <mesh position={[0, 11.1, 0]} rotation={[0.08, 0, 0.12]}>
+          <cylinderGeometry
+            args={[10.75, 10.75, 0.3, 36, 1, true, -Math.PI * 0.5, Math.PI * 1.0]}
+          />
           <primitive object={materials.cyanNeonGlow} attach="material" />
         </mesh>
-        <mesh position={[-0.16, -2.12, 0]}>
-          <boxGeometry args={[0.04, 0.06, 5.0]} />
-          <primitive object={materials.cyanNeonGlow} attach="material" />
-        </mesh>
-      </group>
 
-      {/* Second Display Screen on North Entrance Approach (X = 6.5, Z = -10.15) */}
-      <group position={[6.5, 3.8, -10.15]}>
-        <mesh castShadow>
-          <boxGeometry args={[5.2, 4.4, 0.3]} />
-          <primitive object={materials.titaniumGraphite} attach="material" />
-        </mesh>
-        <mesh position={[0, 0, -0.16]}>
-          <planeGeometry args={[5.0, 4.2]} />
-          <primitive object={materials.curvedFacadeTextureMat} attach="material" />
-        </mesh>
-      </group>
-
-      {/* =========================================================================
-          VOLUME 4: PROMINENT ARCHITECTURAL SIGNAGE
-          Primary: CLOUD & SYSTEMS ENGINEERING HUB
-          Secondary: BACKEND • CLOUD • APIs • INFRASTRUCTURE
-          ========================================================================= */}
-      <group position={[0, 7.35, -10.72]}>
-        {/* Sign Backing Plate */}
-        <mesh castShadow>
-          <boxGeometry args={[18.4, 1.4, 0.16]} />
-          <primitive object={materials.titaniumGraphite} attach="material" />
-        </mesh>
-        {/* Sign Face with High-Contrast Typography */}
-        <mesh position={[0, 0, -0.09]}>
-          <planeGeometry args={[18.2, 1.3]} />
-          <primitive object={materials.signageMat} attach="material" />
-        </mesh>
-      </group>
-
-      {/* West Facade Secondary Signage */}
-      <group position={[-10.72, 7.35, 0]} rotation={[0, -Math.PI / 2, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[16.0, 1.4, 0.16]} />
-          <primitive object={materials.titaniumGraphite} attach="material" />
-        </mesh>
-        <mesh position={[0, 0, -0.09]}>
-          <planeGeometry args={[15.8, 1.3]} />
-          <primitive object={materials.signageMat} attach="material" />
-        </mesh>
-      </group>
-
-      {/* =========================================================================
-          VOLUME 5: REALISTIC ROOF ARCHITECTURE (Y = 19.5m to 23.5m)
-          HVAC Chillers, Cooling Ducts, Mechanical Penthouse, Satellite Dish & Spire
-          ========================================================================= */}
-      <group position={[0, 19.5, 0]}>
-        {/* Recessed Gravel / Bitumen Roof Deck */}
-        <mesh position={[0, 0.1, 0]} receiveShadow>
-          <boxGeometry args={[19.8, 0.2, 19.8]} />
-          <primitive object={materials.concretePaver} attach="material" />
-        </mesh>
-
-        {/* Roof Perimeter Safety Parapet Coping */}
-        <mesh position={[0, 0.6, -10.0]} castShadow>
-          <boxGeometry args={[20.4, 0.8, 0.4]} />
-          <primitive object={materials.structuralSilver} attach="material" />
-        </mesh>
-        <mesh position={[0, 0.6, 10.0]} castShadow>
-          <boxGeometry args={[20.4, 0.8, 0.4]} />
-          <primitive object={materials.structuralSilver} attach="material" />
-        </mesh>
-        <mesh position={[-10.0, 0.6, 0]} castShadow>
-          <boxGeometry args={[0.4, 0.8, 20.4]} />
-          <primitive object={materials.structuralSilver} attach="material" />
-        </mesh>
-        <mesh position={[10.0, 0.6, 0]} castShadow>
-          <boxGeometry args={[0.4, 0.8, 20.4]} />
-          <primitive object={materials.structuralSilver} attach="material" />
-        </mesh>
-
-        {/* Central Elevator & Stair Mechanical Penthouse */}
-        <group position={[2.5, 1.6, 2.5]}>
-          <mesh castShadow receiveShadow>
-            <boxGeometry args={[6.0, 3.2, 6.0]} />
+        {/* Prominent Glowing Cyan Cloud Facade Screen (North Facade - Image 1 Feature) */}
+        <group position={[0, 3.2, -10.9]}>
+          <mesh castShadow>
+            <boxGeometry args={[14.8, 8.8, 0.25]} />
             <primitive object={materials.titaniumGraphite} attach="material" />
           </mesh>
-          <mesh position={[0, 1.65, 0]}>
-            <boxGeometry args={[6.2, 0.15, 6.2]} />
-            <primitive object={materials.structuralSilver} attach="material" />
+          <mesh position={[0, 0, -0.14]} rotation={[0, Math.PI, 0]}>
+            <planeGeometry args={[14.5, 8.5]} />
+            <primitive object={materials.curvedFacadeTextureMat} attach="material" />
           </mesh>
-          {/* Penthouse Louver Vents */}
-          <mesh position={[0, 0.5, -3.02]}>
-            <planeGeometry args={[4.2, 1.8]} />
-            <primitive object={materials.roofMechanicalMat} attach="material" />
-          </mesh>
+          {/* Glowing Cybernetic Border Trim */}
+          <lineSegments position={[0, 0, -0.15]}>
+            <edgesGeometry args={[new THREE.BoxGeometry(14.56, 8.56, 0.02)]} />
+            <lineBasicMaterial color="#00f0ff" linewidth={2} />
+          </lineSegments>
         </group>
 
-        {/* Low-profile HVAC Chiller Units (Northwest quadrant of roof) */}
-        {[-4.5, -1.5].map((hx, idx) => (
-          <group key={`hvac-${idx}`} position={[hx, 0.9, -4.5]}>
-            <mesh castShadow receiveShadow>
-              <boxGeometry args={[2.2, 1.6, 3.2]} />
-              <primitive object={materials.roofMechanicalMat} attach="material" />
-            </mesh>
-            {/* Chiller Fan Hoods */}
-            <mesh position={[0, 0.85, -0.7]}>
-              <cylinderGeometry args={[0.65, 0.7, 0.15, 16]} />
-              <primitive object={materials.structuralSilver} attach="material" />
-            </mesh>
-            <mesh
-              ref={idx === 0 ? hvacFan1Ref : hvacFan2Ref}
-              position={[0, 0.94, -0.7]}
-              rotation={[-Math.PI / 2, 0, 0]}
-            >
-              <circleGeometry args={[0.6, 6]} />
-              <primitive object={materials.titaniumGraphite} attach="material" />
-            </mesh>
+        {/* Prominent Glowing Cyan Cloud Facade Screen (East Facade - Image 1 Feature) */}
+        <group position={[10.9, 3.2, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <mesh castShadow>
+            <boxGeometry args={[14.8, 8.8, 0.25]} />
+            <primitive object={materials.titaniumGraphite} attach="material" />
+          </mesh>
+          <mesh position={[0, 0, -0.14]} rotation={[0, Math.PI, 0]}>
+            <planeGeometry args={[14.5, 8.5]} />
+            <primitive object={materials.curvedFacadeTextureMat} attach="material" />
+          </mesh>
+          <lineSegments position={[0, 0, -0.15]}>
+            <edgesGeometry args={[new THREE.BoxGeometry(14.56, 8.56, 0.02)]} />
+            <lineBasicMaterial color="#00f0ff" linewidth={2} />
+          </lineSegments>
+        </group>
+      </group>
 
-            <mesh position={[0, 0.85, 0.7]}>
-              <cylinderGeometry args={[0.65, 0.7, 0.15, 16]} />
-              <primitive object={materials.structuralSilver} attach="material" />
+      {/* =========================================================================
+          SIGNATURE FEATURE: ILLUMINATED CYAN CLOUD CONSTELLATION & NETWORK RIBBON
+          Undulating glowing data streams running along the upper curved glass
+          ========================================================================= */}
+      <group ref={cloudRibbonRef} position={[0, 14.5, -8.2]}>
+        {/* Continuous Undulating Glowing Stream Loops (Reference Photo) */}
+        <mesh rotation={[0.18, 0, -0.15]}>
+          <torusGeometry args={[5.8, 0.08, 8, 48]} />
+          <primitive object={materials.cyanNeonGlow} attach="material" />
+        </mesh>
+        <mesh position={[0, 1.2, 0.3]} rotation={[-0.12, 0.2, 0.1]}>
+          <torusGeometry args={[4.6, 0.065, 8, 48]} />
+          <primitive object={materials.cyanNeonGlow} attach="material" />
+        </mesh>
+        <mesh position={[0, -1.0, 0.2]} rotation={[0.25, -0.1, -0.08]}>
+          <torusGeometry args={[3.8, 0.06, 8, 48]} />
+          <primitive object={materials.cyanNeonGlow} attach="material" />
+        </mesh>
+
+        {/* Floating Constellation Data Nodes */}
+        {[-3.8, -1.8, 0, 1.8, 3.8].map((nx, idx) => (
+          <group key={`c-node-${idx}`} position={[nx, Math.sin(idx * 1.4) * 0.8, (idx % 2) * 0.3]}>
+            <mesh>
+              <sphereGeometry args={[0.16, 12, 12]} />
+              <primitive object={materials.whiteNeonGlow} attach="material" />
+            </mesh>
+            <mesh>
+              <ringGeometry args={[0.22, 0.28, 16]} />
+              <meshBasicMaterial color="#00f0ff" side={THREE.DoubleSide} />
             </mesh>
           </group>
         ))}
 
-        {/* Rooftop Microwave / Satellite Communications Array */}
-        <group ref={radarRef} position={[-5.5, 1.8, 5.0]}>
-          {/* Pedestal Stand */}
-          <mesh position={[0, 0.6, 0]} castShadow>
-            <cylinderGeometry args={[0.15, 0.25, 1.2, 8]} />
+        {/* Ambient Cyan Aura from the Cloud Network Ribbon */}
+        <pointLight color="#00f0ff" intensity={2.4} distance={16.0} position={[0, 0, 1.0]} />
+      </group>
+
+      {/* =========================================================================
+          VOLUME 2: CURVED CANTILEVERED PEDESTRIAN VIADUCT / SKYBRIDGE
+          Sweeping elevated viaduct with landscaped green terrace & pilotis columns
+          ========================================================================= */}
+      <group position={[-8.5, 4.4, -2.5]}>
+        {/* Viaduct Curving Walkway Deck */}
+        <mesh position={[0, 0, 0]} rotation={[0, 0.25, 0]} receiveShadow>
+          <boxGeometry args={[4.5, 0.45, 14.5]} />
+          <primitive object={materials.concretePaver} attach="material" />
+        </mesh>
+
+        {/* Landscaped Greenery Terrace Surface on Top */}
+        <mesh position={[0, 0.24, 0]} rotation={[0, 0.25, 0]}>
+          <boxGeometry args={[3.8, 0.08, 13.8]} />
+          <meshStandardMaterial color="#166534" roughness={0.8} />
+        </mesh>
+
+        {/* Modern Brushed Steel Edge Balustrade */}
+        <mesh position={[-2.1, 0.7, 0]} rotation={[0, 0.25, 0]}>
+          <boxGeometry args={[0.08, 0.9, 14.4]} />
+          <primitive object={materials.atriumGlass} attach="material" />
+        </mesh>
+        <mesh position={[-2.1, 1.16, 0]} rotation={[0, 0.25, 0]}>
+          <boxGeometry args={[0.12, 0.06, 14.5]} />
+          <primitive object={materials.structuralSilver} attach="material" />
+        </mesh>
+
+        {/* Underside Structural Pilotis Columns (Stainless Steel) */}
+        {[-5.0, 0, 5.0].map((pz, idx) => (
+          <mesh key={`viaduct-col-${idx}`} position={[0, -2.2, pz]}>
+            <cylinderGeometry args={[0.28, 0.28, 4.2, 16]} />
             <primitive object={materials.structuralSilver} attach="material" />
           </mesh>
-          {/* Parabolic Dish Antenna */}
-          <mesh position={[0, 1.4, 0]} rotation={[0.4, 0, 0]}>
-            <sphereGeometry args={[1.1, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.45]} />
+        ))}
+
+        {/* Warm Underside Hospitality Lighting under Viaduct Walkway */}
+        <pointLight color="#fef3c7" intensity={1.8} distance={10.0} position={[0, -1.8, 0]} />
+      </group>
+
+      {/* =========================================================================
+          VOLUME 3: RECESSED GROUND-FLOOR DOUBLE-HEIGHT LOBBY & ENTRANCE PORTAL
+          Facing North towards Street Z=20 at [40, 30.5]
+          ========================================================================= */}
+      <group position={[0, 0.24, -9.6]}>
+        {/* Clear Glass Atrium Facade */}
+        <mesh position={[0, 3.4, 0]}>
+          <boxGeometry args={[16.2, 6.8, 0.1]} />
+          <primitive object={materials.atriumGlass} attach="material" />
+        </mesh>
+
+        {/* Recessed Vestibule Portal Frame */}
+        <mesh position={[0, 1.8, 0.4]}>
+          <boxGeometry args={[5.2, 3.6, 0.9]} />
+          <primitive object={materials.titaniumGraphite} attach="material" />
+        </mesh>
+
+        {/* Automatic Sliding Glass Doors */}
+        <mesh position={[-1.2, 1.4, 0.02]}>
+          <boxGeometry args={[2.0, 2.8, 0.06]} />
+          <primitive object={materials.atriumGlass} attach="material" />
+        </mesh>
+        <mesh position={[1.2, 1.4, 0.02]}>
+          <boxGeometry args={[2.0, 2.8, 0.06]} />
+          <primitive object={materials.atriumGlass} attach="material" />
+        </mesh>
+
+        {/* Glowing Circular Cyber-Energy Pulse / Portal Screen (Image 1 Feature) */}
+        <group position={[6.2, 2.4, 0.1]}>
+          <mesh castShadow>
+            <boxGeometry args={[3.2, 3.2, 0.2]} />
+            <primitive object={materials.titaniumGraphite} attach="material" />
+          </mesh>
+          <mesh position={[0, 0, -0.11]} rotation={[0, Math.PI, 0]}>
+            <planeGeometry args={[3.0, 3.0]} />
+            <primitive object={materials.cyberPulseScreenMat} attach="material" />
+          </mesh>
+          <lineSegments position={[0, 0, -0.12]}>
+            <edgesGeometry args={[new THREE.BoxGeometry(3.04, 3.04, 0.02)]} />
+            <lineBasicMaterial color="#00f0ff" linewidth={2} />
+          </lineSegments>
+          <pointLight color="#00f0ff" intensity={2.2} distance={8.0} position={[0, 0, -1.0]} />
+        </group>
+
+        {/* Door Trim Frames */}
+        <mesh position={[-1.2, 1.4, 0.06]}>
+          <boxGeometry args={[2.05, 2.85, 0.03]} />
+          <primitive object={materials.polishedSilver} attach="material" />
+        </mesh>
+        <mesh position={[1.2, 1.4, 0.06]}>
+          <boxGeometry args={[2.05, 2.85, 0.03]} />
+          <primitive object={materials.polishedSilver} attach="material" />
+        </mesh>
+
+        {/* Cantilevered Titanium Entrance Canopy */}
+        <mesh position={[0, 3.4, -1.4]} castShadow>
+          <boxGeometry args={[6.4, 0.24, 2.8]} />
+          <primitive object={materials.titaniumGraphite} attach="material" />
+        </mesh>
+        <mesh position={[0, 3.29, -1.4]}>
+          <boxGeometry args={[6.0, 0.03, 2.4]} />
+          <primitive object={materials.cyanNeonGlow} attach="material" />
+        </mesh>
+
+        {/* Warm Hospitality Downlights */}
+        <pointLight color="#f8fafc" intensity={2.2} distance={9.0} position={[0, 3.2, -1.2]} />
+      </group>
+
+      {/* =========================================================================
+          VOLUME 4: PROMINENT DIMENSIONAL ENTRANCE SIGNAGE
+          Primary: CLOUD ECOSYSTEM HUB
+          Secondary: CONNECT • BUILD • DEPLOY
+          ========================================================================= */}
+      <group position={[0, 4.4, -10.9]}>
+        {/* Sign Backing Housing */}
+        <mesh castShadow>
+          <boxGeometry args={[14.2, 1.35, 0.2]} />
+          <primitive object={materials.titaniumGraphite} attach="material" />
+        </mesh>
+        {/* High-Contrast Sign Face */}
+        <mesh position={[0, 0, -0.11]} rotation={[0, Math.PI, 0]}>
+          <planeGeometry args={[14.0, 1.25]} />
+          <primitive object={materials.signageMat} attach="material" />
+        </mesh>
+      </group>
+
+      {/* =========================================================================
+          VOLUME 5: REALISTIC ROOF ARCHITECTURE (Concealed behind sweeping parapet)
+          Mechanical Penthouse, HVAC chillers, and satellite communications dish
+          ========================================================================= */}
+      <group position={[0, 22.2, 0]}>
+        {/* Recessed Bitumen Roof Deck */}
+        <mesh position={[0, 0.1, 0]} receiveShadow>
+          <boxGeometry args={[18.5, 0.2, 18.5]} />
+          <primitive object={materials.concretePaver} attach="material" />
+        </mesh>
+
+        {/* Central Elevator & HVAC Mechanical Penthouse */}
+        <group position={[2.5, 1.6, 2.5]}>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[5.5, 3.0, 5.5]} />
+            <primitive object={materials.titaniumGraphite} attach="material" />
+          </mesh>
+          <mesh position={[0, 1.55, 0]}>
+            <boxGeometry args={[5.7, 0.12, 5.7]} />
+            <primitive object={materials.structuralSilver} attach="material" />
+          </mesh>
+        </group>
+
+        {/* Low-Profile HVAC Chillers */}
+        {[-3.5, -0.5].map((hx, idx) => (
+          <group key={`hvac-${idx}`} position={[hx, 0.8, -3.5]}>
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[2.0, 1.4, 2.8]} />
+              <primitive object={materials.roofMechanicalMat} attach="material" />
+            </mesh>
+            <mesh position={[0, 0.75, -0.6]}>
+              <cylinderGeometry args={[0.55, 0.6, 0.12, 16]} />
+              <primitive object={materials.structuralSilver} attach="material" />
+            </mesh>
+            <mesh
+              ref={idx === 0 ? hvacFan1Ref : hvacFan2Ref}
+              position={[0, 0.82, -0.6]}
+              rotation={[-Math.PI / 2, 0, 0]}
+            >
+              <circleGeometry args={[0.5, 6]} />
+              <primitive object={materials.titaniumGraphite} attach="material" />
+            </mesh>
+          </group>
+        ))}
+
+        {/* Rooftop Satellite Dish Antenna Array */}
+        <group ref={radarRef} position={[-4.5, 1.6, 4.0]}>
+          <mesh position={[0, 0.5, 0]}>
+            <cylinderGeometry args={[0.12, 0.2, 1.0, 8]} />
+            <primitive object={materials.structuralSilver} attach="material" />
+          </mesh>
+          <mesh position={[0, 1.2, 0]} rotation={[0.4, 0, 0]}>
+            <sphereGeometry args={[0.95, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.45]} />
             <primitive object={materials.polishedSilver} attach="material" />
           </mesh>
-          {/* Antenna Transceiver Horn */}
-          <mesh position={[0, 1.6, 0.4]} rotation={[0.4, 0, 0]}>
-            <cylinderGeometry args={[0.04, 0.08, 0.6, 8]} />
+          <mesh position={[0, 1.35, 0.35]} rotation={[0.4, 0, 0]}>
+            <cylinderGeometry args={[0.03, 0.06, 0.5, 8]} />
             <primitive object={materials.cyanNeonGlow} attach="material" />
           </mesh>
         </group>
 
-        {/* Sleek Corner Architectural Telemetry Spire with Red FAA Aircraft Beacon */}
-        <group position={[8.5, 0, 8.5]}>
-          <mesh position={[0, 3.2, 0]} castShadow>
-            <cylinderGeometry args={[0.06, 0.22, 6.4, 8]} />
+        {/* Corner Aviation Beacon Spire */}
+        <group position={[7.5, 0, 7.5]}>
+          <mesh position={[0, 2.5, 0]}>
+            <cylinderGeometry args={[0.05, 0.18, 5.0, 8]} />
             <primitive object={materials.structuralSilver} attach="material" />
           </mesh>
-          <mesh position={[0, 6.5, 0]}>
-            <sphereGeometry args={[0.12, 8, 8]} />
+          <mesh position={[0, 5.1, 0]}>
+            <sphereGeometry args={[0.1, 8, 8]} />
             <meshBasicMaterial color="#ef4444" />
           </mesh>
-          <pointLight color="#ef4444" intensity={1.5} distance={10.0} position={[0, 6.5, 0]} />
         </group>
       </group>
 
       {/* =========================================================================
           VOLUME 6: EXPLORABLE INTERIOR LOBBY (Mounted inside double-height volume)
+          Features the 5-Stage Holographic Architecture Pipeline
           ========================================================================= */}
       {showInterior && <CloudLobbyInterior onSelectZone={onSelectZone} />}
 
@@ -490,17 +518,17 @@ export const CloudHubBuilding: React.FC<CloudHubBuildingProps> = ({
           North Sidewalk Directory Board at X = 7.5, Z = -11.6 (Facing North)
           ========================================================================= */}
       <StreetDirectoryBoard
-        title="CLOUD & SYSTEMS ENGINEERING HUB"
-        subtitle="BACKEND • CLOUD • APIs • INFRASTRUCTURE"
-        department="DISTRICT 08 // PLOT B"
+        title="CLOUD ECOSYSTEM HUB"
+        subtitle="CONNECT • BUILD • DEPLOY"
+        department="DISTRICT 08 // CLOUD & SYSTEMS"
         position={[7.5, 0.24, -11.6]}
         rotation={[0, 0, 0]}
         accentColor="#00f0ff"
       />
 
       {/* Architectural Facade Spotlights */}
-      <pointLight color="#00f0ff" intensity={1.6} distance={15.0} position={[0, 8.0, -12.5]} />
-      <pointLight color="#38bdf8" intensity={1.4} distance={15.0} position={[-12.5, 8.0, 0]} />
+      <pointLight color="#00f0ff" intensity={1.8} distance={18.0} position={[0, 8.0, -12.5]} />
+      <pointLight color="#38bdf8" intensity={1.4} distance={16.0} position={[-12.5, 8.0, 0]} />
     </group>
   );
 };

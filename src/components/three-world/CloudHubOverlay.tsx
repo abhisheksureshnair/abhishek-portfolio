@@ -38,7 +38,7 @@ export const CloudHubOverlay: React.FC<CloudHubOverlayProps> = ({
   isOpen,
   onClose,
   initialTab = 'overview',
-  initialZoneId = 'backend-architecture',
+  initialZoneId = 'frontend-apps',
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'zones' | 'projects' | 'simulator'>(initialTab);
   const [selectedZoneId, setSelectedZoneId] = useState<string>(initialZoneId);
@@ -279,11 +279,11 @@ export const CloudHubOverlay: React.FC<CloudHubOverlayProps> = ({
                       }`}
                     >
                       <div className="p-2 rounded-lg bg-slate-800 text-cyan-400 mt-0.5">
-                        {zone.id === 'backend-architecture' && <Server className="w-4 h-4" />}
-                        {zone.id === 'api-communication' && <Network className="w-4 h-4" />}
-                        {zone.id === 'cloud-infrastructure' && <Cloud className="w-4 h-4" />}
-                        {zone.id === 'database-storage' && <Database className="w-4 h-4" />}
-                        {zone.id === 'devops-ci-cd' && <GitBranch className="w-4 h-4" />}
+                        {zone.id === 'frontend-apps' && <Globe className="w-4 h-4" />}
+                        {zone.id === 'api-layer' && <Network className="w-4 h-4" />}
+                        {zone.id === 'backend-services' && <Server className="w-4 h-4" />}
+                        {zone.id === 'database-firebase' && <Database className="w-4 h-4" />}
+                        {zone.id === 'deployment-infra' && <GitBranch className="w-4 h-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-bold truncate text-white">{zone.title}</div>
@@ -298,6 +298,11 @@ export const CloudHubOverlay: React.FC<CloudHubOverlayProps> = ({
                 {/* Right: Selected Zone Exhibition Display */}
                 <div className="lg:col-span-8 p-6 rounded-2xl bg-gradient-to-br from-slate-900/90 to-[#0e1a38]/80 border border-cyan-500/30 space-y-5">
                   <div>
+                    {currentZone.pipelineStage && (
+                      <span className="inline-block px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mb-2">
+                        {currentZone.pipelineStage}
+                      </span>
+                    )}
                     <h3 className="text-xl font-bold text-white mb-1">{currentZone.title}</h3>
                     <p className="text-xs font-mono text-cyan-400 mb-3">{currentZone.subtitle}</p>
                     <p className="text-sm leading-relaxed text-slate-300">{currentZone.summary}</p>

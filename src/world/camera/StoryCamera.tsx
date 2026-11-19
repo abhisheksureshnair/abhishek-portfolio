@@ -133,6 +133,18 @@ export const StoryCamera: React.FC = () => {
       posRef.current.set(1.5, 1.75, 30.0);
       yawRef.current = Math.PI; // Inside atrium looking South towards suspended neural sculpture
       pitchRef.current = 0.08;
+    } else if (preset === 'cloud_front_entrance') {
+      posRef.current.set(40.0, 1.75, 20.0);
+      yawRef.current = Math.PI; // Looking South towards Cloud Ecosystem Hub entrance at [40, 30.5]
+      pitchRef.current = 0.06;
+    } else if (preset === 'cloud_street_approach') {
+      posRef.current.set(32.0, 1.75, 20.0);
+      yawRef.current = Math.PI * 0.75; // Looking Southeast towards Cloud Hub directory & entrance
+      pitchRef.current = 0.08;
+    } else if (preset === 'cloud_lobby_view' || preset === 'cloud_lobby_interior') {
+      posRef.current.set(40.0, 1.75, 32.0);
+      yawRef.current = Math.PI; // Inside lobby looking South towards 5-node architecture display
+      pitchRef.current = 0.06;
     } else if (preset === 'facades') {
       posRef.current.set(-56, 1.72, -56);
       yawRef.current = Math.PI * 0.75; // Looking outward Northwest towards near commercial storefronts

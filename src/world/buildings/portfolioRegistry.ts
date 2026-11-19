@@ -323,9 +323,9 @@ export const PORTFOLIO_BUILDING_REGISTRY: Record<string, PortfolioDistrictConfig
 
   'cloud-nexus': {
     id: 'cloud-nexus',
-    name: 'Cloud & Systems Engineering Hub',
-    title: 'CLOUD & SYSTEMS ENGINEERING HUB',
-    subtitle: 'High-Availability Infrastructure, Microservices & Distributed Computing',
+    name: 'Cloud Ecosystem Hub',
+    title: 'CLOUD ECOSYSTEM HUB',
+    subtitle: 'Connect • Build • Deploy',
     category: 'District 08 // Cloud Hub',
     center: [40, 40],
     dimensions: [25.2, 25.2],
@@ -342,8 +342,8 @@ export const PORTFOLIO_BUILDING_REGISTRY: Record<string, PortfolioDistrictConfig
       glassTint: '#1e293b',
     },
     signage: {
-      primaryText: 'CLOUD & SYSTEMS ENGINEERING HUB',
-      subText: 'BACKEND • CLOUD • APIs • INFRASTRUCTURE',
+      primaryText: 'CLOUD ECOSYSTEM HUB',
+      subText: 'CONNECT • BUILD • DEPLOY',
       emissiveColor: '#00f0ff',
     },
     lighting: {
@@ -353,7 +353,7 @@ export const PORTFOLIO_BUILDING_REGISTRY: Record<string, PortfolioDistrictConfig
     },
     interiorReady: true,
     interactiveOverlayId: 'cloud-hub',
-    description: 'Production-grade technology headquarters for high-concurrency cloud computing, container orchestration, low-latency microservices, relational and vector databases, and automated DevOps.',
+    description: 'Production-grade technology headquarters showcasing scalable backend architectures, Node.js REST APIs, Firebase integrations, and automated deployment pipelines.',
   },
 };
 

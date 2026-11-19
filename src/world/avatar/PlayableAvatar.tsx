@@ -86,6 +86,8 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
       return { x: -40.0, y: 0.22, z: 26.2, heading: 0 };
     } else if (avatarPosParam === 'ai') {
       return { x: 0.0, y: 0.22, z: 26.2, heading: 0 };
+    } else if (avatarPosParam === 'cloud') {
+      return { x: 40.0, y: 0.22, z: 24.5, heading: 0 };
     }
     return navigator.getHQSpawn();
   }, [avatarPosParam, navigator]);

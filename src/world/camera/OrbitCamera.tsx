@@ -384,14 +384,18 @@ export const OrbitCamera: React.FC = () => {
       // Phase 2.8: Cloud Hub Three-Quarter View showing curved aerodynamic corner and cyan cloud HUD
       spawn = [18.0, 16.0, 16.0];
       target = [40.0, 10.0, 40.0];
-    } else if (preset === 'cloud_elevated_exterior') {
-      // Phase 2.8: Cloud Hub Elevated overview showing roof details, HVAC chillers, and mechanical penthouses
+    } else if (preset === 'cloud_street_approach') {
+      // Phase 2.8: Cloud Hub Street Approach looking up at the illuminated curved architecture
+      spawn = [30.0, 2.8, 16.0];
+      target = [40.0, 5.5, 32.0];
+    } else if (preset === 'cloud_elevated_exterior' || preset === 'cloud_skyline') {
+      // Phase 2.8: Cloud Hub Rooftop & Skyline view showing curved crown, HVAC, and mechanical penthouse
       spawn = [28.0, 32.0, 22.0];
       target = [42.0, 16.0, 42.0];
-    } else if (preset === 'cloud_lobby_interior') {
-      // Phase 2.8: Double-height lobby view focused on suspended bridge, 3D holographic cloud & server banks
-      spawn = [40.0, 3.4, 26.5];
-      target = [40.0, 4.8, 38.5];
+    } else if (preset === 'cloud_lobby_interior' || preset === 'cloud_lobby_view') {
+      // Phase 2.8: Double-height lobby view focused on 5-node holographic system architecture pipeline
+      spawn = [40.0, 2.8, 33.5];
+      target = [40.0, 2.4, 40.5];
     } else if (preset === 'cloud_infrastructure_close') {
       // Phase 2.8: Close-up of cloud infrastructure exhibition consoles & telemetry displays
       spawn = [37.5, 3.2, 32.0];

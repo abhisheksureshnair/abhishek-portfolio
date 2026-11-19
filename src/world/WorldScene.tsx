@@ -243,6 +243,18 @@ export const WorldScene: React.FC = () => {
       setCameraView('orbit', 'ai_rooftop_refined');
     } else if (v === 'contact_rooftop_refined' || v === 'contact_roof_refined') {
       setCameraView('orbit', 'contact_rooftop_refined');
+    } else if (v === 'cloud_front_entrance' || v === 'cloud_entrance' || v === 'cloud1') {
+      setCameraView('orbit', 'cloud_front_entrance');
+    } else if (v === 'cloud_three_quarter' || v === 'cloud_34' || v === 'cloud2') {
+      setCameraView('orbit', 'cloud_three_quarter');
+    } else if (v === 'cloud_street_approach' || v === 'cloud_street' || v === 'cloud3') {
+      setCameraView('orbit', 'cloud_street_approach');
+    } else if (v === 'cloud_lobby_view' || v === 'cloud_lobby_interior' || v === 'cloud4') {
+      setCameraView('orbit', 'cloud_lobby_view');
+    } else if (v === 'cloud_skyline' || v === 'cloud_elevated_exterior' || v === 'cloud5') {
+      setCameraView('orbit', 'cloud_skyline');
+    } else if (v === 'all_nine_landmarks_aerial' || v === 'all_nine' || v === 'nine_landmarks') {
+      setCameraView('orbit', 'all_nine_landmarks_aerial');
     } else if (v === 'full_island_aerial' || v === 'island' || v === 'island_aerial' || v === '1') {
       setCameraView('orbit', 'full_island_aerial');
     } else if (v === 'city_to_coast_transition' || v === 'transition' || v === '2') {
@@ -700,7 +712,7 @@ export const WorldScene: React.FC = () => {
                     : selectedLandmark === 'ai'
                     ? 'AI RESEARCH CENTER'
                     : selectedLandmark === 'cloud'
-                    ? 'CLOUD & SYSTEMS ENGINEERING HUB'
+                    ? 'CLOUD ECOSYSTEM HUB'
                     : 'INNOVATION & PROJECTS CENTER'}
                 </span>
               </span>
@@ -718,7 +730,7 @@ export const WorldScene: React.FC = () => {
                   : selectedLandmark === 'ai'
                   ? 'North Central Parcel [0, 40] • Artificial Intelligence • Python • Research'
                   : selectedLandmark === 'cloud'
-                  ? 'Southeast Parcel [40, 40] • Cloud Architecture • Distributed Systems • DevOps'
+                  ? 'Southeast Parcel [40, 40] • Connect • Build • Deploy • Cloud Architecture'
                   : 'Southeast Parcel [40, -40] • Projects • Research • Development'}
               </span>
             </div>
@@ -809,6 +821,14 @@ export const WorldScene: React.FC = () => {
                   AI Dashboard
                 </button>
               )}
+              {selectedLandmark === 'cloud' && (
+                <button
+                  onClick={() => setSelectedOverlay('cloud')}
+                  className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-[10px] font-mono text-cyan-200 transition-all font-bold"
+                >
+                  Cloud Dashboard
+                </button>
+              )}
               <button
                 onClick={() => setSelectedLandmark(null)}
                 className="px-2 py-1 rounded-lg bg-red-950/60 hover:bg-red-900 border border-red-500/30 text-[10px] font-mono text-red-300 transition-all"
@@ -839,6 +859,8 @@ export const WorldScene: React.FC = () => {
                 ? 'CONTACT & COLLABORATION HUB'
                 : hoveredLandmark === 'ai'
                 ? 'AI RESEARCH CENTER'
+                : hoveredLandmark === 'cloud'
+                ? 'CLOUD ECOSYSTEM HUB'
                 : 'INNOVATION & PROJECTS CENTER'}
             </span>
             <span className="text-zinc-400">— Click to Select & Focus Camera</span>

@@ -87,8 +87,8 @@ export const LANDMARK_PORTALS: LandmarkPortal[] = [
   },
   {
     id: 'cloud',
-    name: 'CLOUD & SYSTEMS ENGINEERING HUB',
-    subtitle: 'Backend • Cloud • APIs • Infrastructure',
+    name: 'CLOUD ECOSYSTEM HUB',
+    subtitle: 'Connect • Build • Deploy',
     portalX: 40,
     portalZ: 30.5,
     interactionRadius: 2.8,

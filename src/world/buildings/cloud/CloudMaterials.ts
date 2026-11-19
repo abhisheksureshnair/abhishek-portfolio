@@ -11,9 +11,9 @@ let sharedMaterials: {
   cyanNeonGlow: THREE.MeshStandardMaterial;
   cyanAccentMuted: THREE.MeshStandardMaterial;
   whiteNeonGlow: THREE.MeshStandardMaterial;
-  curvedFacadeTextureMat: THREE.MeshStandardMaterial;
-  cyberPulseScreenMat: THREE.MeshStandardMaterial;
-  signageMat: THREE.MeshStandardMaterial;
+  curvedFacadeTextureMat: THREE.Material;
+  cyberPulseScreenMat: THREE.Material;
+  signageMat: THREE.Material;
   serverRackMat: THREE.MeshStandardMaterial;
   interiorMezzanineMat: THREE.MeshStandardMaterial;
   roofMechanicalMat: THREE.MeshStandardMaterial;
@@ -168,7 +168,7 @@ function createCloudCurvedFacadeTexture(): THREE.CanvasTexture {
   ctx.font = 'bold 16px monospace';
   ctx.fillStyle = '#67e8f9';
   ctx.fillText('SYS.STATUS: HEALTHY // 99.99%', 540, 250);
-  ctx.fillText('AWS US-EAST-1 • K8s CLUSTER', 540, 275);
+  ctx.fillText('NODE CLUSTER • US-EAST-01', 540, 275);
   ctx.fillText('THROUGHPUT: 14.2K REQ/SEC', 540, 300);
   ctx.fillText('LATENCY: 18.4ms (P99)', 540, 325);
 
@@ -215,7 +215,7 @@ function createCloudCurvedFacadeTexture(): THREE.CanvasTexture {
   ctx.font = 'bold 18px monospace';
   ctx.textAlign = 'left';
   ctx.fillText(
-    'DOCKER • KUBERNETES • MICROSERVICES • FASTAPI • REDIS • POSTGRESQL • WEBSOCKETS',
+    'NODE.JS • REST APIS • FIREBASE • POSTGRESQL • DOCKER • CI/CD • REACT CONNECTIVITY',
     30,
     998
   );
@@ -357,20 +357,20 @@ function createCloudSignageTexture(): THREE.CanvasTexture {
   ctx.fillStyle = '#38bdf8';
   ctx.font = 'bold 20px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('DEPARTMENT OF DISTRIBUTED SYSTEMS & CLOUD ARCHITECTURE', 512, 54);
+  ctx.fillText('DISTRICT 08 // CLOUD ARCHITECTURE & SYSTEMS', 512, 54);
 
-  // Primary Signage: CLOUD & SYSTEMS ENGINEERING HUB
+  // Primary Signage: CLOUD ECOSYSTEM HUB
   ctx.fillStyle = '#ffffff';
-  ctx.font = '900 48px sans-serif';
+  ctx.font = '900 54px sans-serif';
   ctx.shadowColor = '#00f0ff';
-  ctx.shadowBlur = 15;
-  ctx.fillText('CLOUD & SYSTEMS ENGINEERING HUB', 512, 130);
+  ctx.shadowBlur = 18;
+  ctx.fillText('CLOUD ECOSYSTEM HUB', 512, 130);
   ctx.shadowBlur = 0;
 
-  // Secondary Signage: BACKEND • CLOUD • APIs • INFRASTRUCTURE
+  // Secondary Signage: CONNECT • BUILD • DEPLOY
   ctx.fillStyle = '#67e8f9';
-  ctx.font = 'bold 24px monospace';
-  ctx.fillText('BACKEND • CLOUD • APIs • INFRASTRUCTURE', 512, 190);
+  ctx.font = 'bold 28px monospace';
+  ctx.fillText('CONNECT • BUILD • DEPLOY', 512, 190);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.ClampToEdgeWrapping;
@@ -456,11 +456,36 @@ function createServerRackTexture(): THREE.CanvasTexture {
  * Access cached shared PBR materials singleton for Cloud Hub
  */
 export function getSharedCloudMaterials() {
+  if (typeof window === 'undefined') {
+    return {
+      curtainGlassDarkBlue: new THREE.MeshPhysicalMaterial(),
+      atriumGlass: new THREE.MeshPhysicalMaterial(),
+      titaniumGraphite: new THREE.MeshStandardMaterial(),
+      structuralSilver: new THREE.MeshStandardMaterial(),
+      polishedSilver: new THREE.MeshStandardMaterial(),
+      granitePodium: new THREE.MeshStandardMaterial(),
+      concretePaver: new THREE.MeshStandardMaterial(),
+      cyanNeonGlow: new THREE.MeshStandardMaterial(),
+      cyanAccentMuted: new THREE.MeshStandardMaterial(),
+      whiteNeonGlow: new THREE.MeshStandardMaterial(),
+      curvedFacadeTextureMat: new THREE.MeshBasicMaterial(),
+      cyberPulseScreenMat: new THREE.MeshBasicMaterial(),
+      signageMat: new THREE.MeshBasicMaterial(),
+      serverRackMat: new THREE.MeshStandardMaterial(),
+      interiorMezzanineMat: new THREE.MeshStandardMaterial(),
+      roofMechanicalMat: new THREE.MeshStandardMaterial(),
+    };
+  }
+
   if (!sharedMaterials) {
     const facadeTex = createCloudCurvedFacadeTexture();
+    facadeTex.needsUpdate = true;
     const cyberPulseTex = createCyberPulseScreenTexture();
+    cyberPulseTex.needsUpdate = true;
     const signageTex = createCloudSignageTexture();
+    signageTex.needsUpdate = true;
     const serverTex = createServerRackTexture();
+    serverTex.needsUpdate = true;
 
     sharedMaterials = {
       curtainGlassDarkBlue: new THREE.MeshPhysicalMaterial({
@@ -537,31 +562,19 @@ export function getSharedCloudMaterials() {
         roughness: 0.2,
       }),
 
-      curvedFacadeTextureMat: new THREE.MeshStandardMaterial({
+      curvedFacadeTextureMat: new THREE.MeshBasicMaterial({
         map: facadeTex,
-        emissive: '#00f0ff',
-        emissiveMap: facadeTex,
-        emissiveIntensity: 0.75,
-        roughness: 0.28,
-        metalness: 0.75,
+        side: THREE.DoubleSide,
       }),
 
-      cyberPulseScreenMat: new THREE.MeshStandardMaterial({
+      cyberPulseScreenMat: new THREE.MeshBasicMaterial({
         map: cyberPulseTex,
-        emissive: '#00f0ff',
-        emissiveMap: cyberPulseTex,
-        emissiveIntensity: 1.25,
-        roughness: 0.2,
-        metalness: 0.5,
+        side: THREE.DoubleSide,
       }),
 
-      signageMat: new THREE.MeshStandardMaterial({
+      signageMat: new THREE.MeshBasicMaterial({
         map: signageTex,
-        emissive: '#00f0ff',
-        emissiveMap: signageTex,
-        emissiveIntensity: 0.9,
-        roughness: 0.3,
-        metalness: 0.6,
+        side: THREE.DoubleSide,
       }),
 
       serverRackMat: new THREE.MeshStandardMaterial({
@@ -571,6 +584,7 @@ export function getSharedCloudMaterials() {
         emissiveIntensity: 0.6,
         roughness: 0.35,
         metalness: 0.8,
+        side: THREE.DoubleSide,
       }),
 
       interiorMezzanineMat: new THREE.MeshStandardMaterial({
