@@ -15,7 +15,9 @@ import {
   GitFork,
   CheckCircle,
   Building2,
+  RotateCcw,
 } from 'lucide-react';
+import { avatarGameplayState } from './avatar/avatarGameplayState';
 import { WorldCanvas } from './WorldCanvas';
 import { PerformanceMonitorHUD } from './performance/PerformanceMonitor';
 import { useWorldStore, worldStore } from './stores/worldStore';
@@ -33,6 +35,7 @@ import { ExperienceBuildingOverlay } from '@/components/three-world/ExperienceBu
 import { CareerBuildingOverlay } from '@/components/three-world/CareerBuildingOverlay';
 import { ContactBuildingOverlay } from '@/components/three-world/ContactBuildingOverlay';
 import { AIResearchOverlay } from '@/components/three-world/AIResearchOverlay';
+import { CloudHubOverlay } from '@/components/three-world/CloudHubOverlay';
 
 export const WorldScene: React.FC = () => {
   const router = useRouter();
@@ -57,6 +60,8 @@ export const WorldScene: React.FC = () => {
   const selectedLandmark = useWorldStore((s) => s.selectedLandmark);
   const hoveredLandmark = useWorldStore((s) => s.hoveredLandmark);
   const setSelectedLandmark = useWorldStore((s) => s.setSelectedLandmark);
+  const qualityProfile = useWorldStore((s) => s.qualityProfile);
+  const setQualityProfile = useWorldStore((s) => s.setQualityProfile);
 
   // Synchronize view and mode query params
   useEffect(() => {
@@ -81,6 +86,8 @@ export const WorldScene: React.FC = () => {
       setSelectedOverlay('contact');
     } else if (overlayParam === 'ai' || overlayParam === 'ai-lab' || overlayParam === 'research') {
       setSelectedOverlay('ai');
+    } else if (overlayParam === 'cloud' || overlayParam === 'cloud-hub' || overlayParam === 'cloud-nexus') {
+      setSelectedOverlay('cloud');
     }
 
     if (tabParam === 'timeline' || tabParam === 'education' || tabParam === 'resume' || tabParam === 'experience') {
@@ -119,6 +126,8 @@ export const WorldScene: React.FC = () => {
       setSelectedLandmark('contact');
     } else if (lmark === 'ai' || lmark === 'ai_center' || lmark === 'ai_lab' || lmark === 'research') {
       setSelectedLandmark('ai');
+    } else if (lmark === 'cloud' || lmark === 'cloud_hub' || lmark === 'cloud_nexus') {
+      setSelectedLandmark('cloud');
     }
 
     if (full === 'true' || mode === 'full') {
@@ -294,7 +303,7 @@ export const WorldScene: React.FC = () => {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedSkillFloor, setSelectedSkillFloor] = useState<number | null>(null);
   const [selectedOverlay, setSelectedOverlay] = useState<
-    'hero' | 'about' | 'projects' | 'skills' | 'experience' | 'career' | 'contact' | 'ai' | null
+    'hero' | 'about' | 'projects' | 'skills' | 'experience' | 'career' | 'contact' | 'ai' | 'cloud' | null
   >(null);
   const [careerInitialTab, setCareerInitialTab] = useState<'experience' | 'education' | 'timeline' | 'resume'>('experience');
   const [aboutInitialTab, setAboutInitialTab] = useState<'intro' | 'journey' | 'education' | 'media'>('intro');
@@ -318,6 +327,7 @@ export const WorldScene: React.FC = () => {
     else if (pId === 'career') setSelectedOverlay('experience');
     else if (pId === 'contact') setSelectedOverlay('contact');
     else if (pId === 'ai-lab' || pId === 'ai') setSelectedOverlay('ai');
+    else if (pId === 'cloud-nexus' || pId === 'cloud') setSelectedOverlay('cloud');
   }, []);
 
   // Sync active modal overlay state with WorldStore avatar interaction flag
@@ -380,6 +390,9 @@ export const WorldScene: React.FC = () => {
         }}
         onAIInteract={() => {
           setSelectedOverlay('ai');
+        }}
+        onCloudInteract={() => {
+          setSelectedOverlay('cloud');
         }}
       />
 
@@ -538,6 +551,21 @@ export const WorldScene: React.FC = () => {
             <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
             <span>AI RESEARCH</span>
           </button>
+          <button
+            onClick={() => {
+              setSelectedLandmark('cloud');
+              setCameraView('orbit', 'cloud_three_quarter');
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
+              selectedLandmark === 'cloud'
+                ? 'bg-cyan-500/30 border border-cyan-400 text-cyan-200 shadow-lg shadow-cyan-500/20'
+                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
+            }`}
+            title="Select & Focus Cloud & Systems Engineering Hub ([40, 40])"
+          >
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span>CLOUD HUB</span>
+          </button>
         </div>
 
         {/* Right: Camera Mode Switcher, Nav Debug & World Environment Controls */}
@@ -578,6 +606,24 @@ export const WorldScene: React.FC = () => {
             </span>
           </button>
 
+          {/* Failsafe Camera Recovery Button */}
+          <button
+            onClick={() => {
+              if (cameraMode === 'avatar') {
+                avatarGameplayState.initializeSpawn(0);
+                window.dispatchEvent(new CustomEvent('reset-avatar-camera'));
+              } else {
+                setCameraPreset(null);
+                window.dispatchEvent(new CustomEvent('reset-camera'));
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-950/80 hover:bg-zinc-900 border border-amber-500/30 hover:border-amber-400 text-amber-300 hover:text-white text-xs font-mono font-bold backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95"
+            title="Reset Camera to default center perspective (Shortcut: R)"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">RESET CAM</span>
+          </button>
+
           {/* Time of Day Toggle */}
           <button
             onClick={handleToggleTimeOfDay}
@@ -605,6 +651,30 @@ export const WorldScene: React.FC = () => {
           >
             <Activity className="w-4 h-4" />
           </button>
+
+          {/* Graphics Quality Profile Toggle */}
+          <button
+            onClick={() => {
+              const current = qualityProfile;
+              const next = current === 'high' ? 'medium' : current === 'medium' ? 'low' : 'high';
+              setQualityProfile(next);
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-950/80 hover:bg-zinc-900 border border-white/10 hover:border-cyan-400/40 text-xs font-mono backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95"
+            title="Toggle Graphics Quality Profile (High / Medium / Low)"
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                qualityProfile === 'high'
+                  ? 'bg-emerald-400'
+                  : qualityProfile === 'medium'
+                  ? 'bg-amber-400'
+                  : 'bg-rose-400'
+              }`}
+            />
+            <span className="font-bold text-zinc-300">
+              {qualityProfile.toUpperCase()}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -629,6 +699,8 @@ export const WorldScene: React.FC = () => {
                     ? 'CONTACT & COLLABORATION HUB'
                     : selectedLandmark === 'ai'
                     ? 'AI RESEARCH CENTER'
+                    : selectedLandmark === 'cloud'
+                    ? 'CLOUD & SYSTEMS ENGINEERING HUB'
                     : 'INNOVATION & PROJECTS CENTER'}
                 </span>
               </span>
@@ -645,6 +717,8 @@ export const WorldScene: React.FC = () => {
                   ? 'Northwest Parcel [-40, 40] • Let\'s Connect • Build • Innovate'
                   : selectedLandmark === 'ai'
                   ? 'North Central Parcel [0, 40] • Artificial Intelligence • Python • Research'
+                  : selectedLandmark === 'cloud'
+                  ? 'Southeast Parcel [40, 40] • Cloud Architecture • Distributed Systems • DevOps'
                   : 'Southeast Parcel [40, -40] • Projects • Research • Development'}
               </span>
             </div>
@@ -663,6 +737,8 @@ export const WorldScene: React.FC = () => {
                     setCameraView('orbit', 'contact_front_entrance');
                   } else if (selectedLandmark === 'ai') {
                     setCameraView('orbit', 'ai_front_entrance');
+                  } else if (selectedLandmark === 'cloud') {
+                    setCameraView('orbit', 'cloud_front_entrance');
                   } else {
                     setCameraView('orbit', 'innovation_front_entrance');
                   }
@@ -896,6 +972,8 @@ export const WorldScene: React.FC = () => {
               <span className="text-purple-400">[Scroll] Zoom</span>
               <span>•</span>
               <span className="text-pink-400 font-bold">[E] Explore</span>
+              <span>•</span>
+              <span className="text-amber-300 font-bold">[R] Reset Cam</span>
             </div>
           ) : cameraMode === 'orbit' ? (
             <div className="flex items-center gap-3 text-zinc-300">
@@ -904,6 +982,8 @@ export const WorldScene: React.FC = () => {
               <span>[Scroll] Zoom</span>
               <span>•</span>
               <span>[Right Drag] Pan</span>
+              <span>•</span>
+              <span className="text-amber-300 font-bold">[R] Reset Cam</span>
             </div>
           ) : (
             <div className="flex items-center gap-3 text-zinc-300">
@@ -976,6 +1056,10 @@ export const WorldScene: React.FC = () => {
         initialTab={aiInitialTab}
         onClose={() => setSelectedOverlay(null)}
       />
+      <CloudHubOverlay
+        isOpen={selectedOverlay === 'cloud'}
+        onClose={() => setSelectedOverlay(null)}
+      />
 
       {/* 6. Phase 3.0 Avatar Interaction Prompt & Mobile Touch Controls */}
       <PointerLockOverlay />
@@ -988,6 +1072,7 @@ export const WorldScene: React.FC = () => {
           else if (id === 'about') setSelectedOverlay('about');
           else if (id === 'contact') setSelectedOverlay('contact');
           else if (id === 'ai') setSelectedOverlay('ai');
+          else if (id === 'cloud') setSelectedOverlay('cloud');
         }}
       />
       <AvatarMobileControls
@@ -999,6 +1084,7 @@ export const WorldScene: React.FC = () => {
           else if (id === 'about') setSelectedOverlay('about');
           else if (id === 'contact') setSelectedOverlay('contact');
           else if (id === 'ai') setSelectedOverlay('ai');
+          else if (id === 'cloud') setSelectedOverlay('cloud');
         }}
       />
     </div>

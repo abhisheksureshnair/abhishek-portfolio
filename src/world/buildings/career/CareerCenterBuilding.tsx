@@ -8,6 +8,7 @@ import { CAREER_CENTER_METADATA } from './careerMetadata';
 import { BuildingSignage } from '../signage/BuildingSignage';
 import { StreetDirectoryBoard } from '../signage/StreetDirectoryBoard';
 import { useWorldStore, worldStore } from '../../stores/worldStore';
+import { useLandmarkInteriorLOD } from '../landmarkLod';
 
 interface CareerCenterBuildingProps {
   position?: [number, number, number];
@@ -40,11 +41,8 @@ export const CareerCenterBuilding: React.FC<CareerCenterBuildingProps> = ({
 
   const isSelected = selectedLandmark === 'career';
   const isHovered = hoveredLandmark === 'career';
-  const isFarView =
-    cameraPreset === 'landmarks_skyline' ||
-    cameraPreset === 'full_island_aerial' ||
-    cameraPreset === 'downtown_skyline';
-  const showInterior = isSelected || !isFarView;
+  const showInterior = useLandmarkInteriorLOD([position[0], position[2]], 'career');
+  const isFarView = !showInterior;
 
   const handleBuildingClick = (e: any) => {
     e.stopPropagation();

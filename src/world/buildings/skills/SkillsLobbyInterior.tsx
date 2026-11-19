@@ -147,7 +147,6 @@ export const SkillsLobbyInterior: React.FC<SkillsLobbyInteriorProps> = ({
           <mesh
             key={`column-${cx}-${cz}`}
             position={[cx, 4.2, cz]}
-            castShadow
             receiveShadow
           >
             <cylinderGeometry args={[0.30, 0.30, 8.4, 20]} />
@@ -158,7 +157,7 @@ export const SkillsLobbyInterior: React.FC<SkillsLobbyInteriorProps> = ({
 
       {/* 6. Minimalist Architectural Reception Counter */}
       <group position={[3.0, 0.255, -4.5]} rotation={[0, -Math.PI / 2, 0]}>
-        <mesh position={[0, 0.55, 0]} castShadow receiveShadow>
+        <mesh position={[0, 0.55, 0]} receiveShadow>
           <boxGeometry args={[3.4, 1.1, 0.8]} />
           <primitive object={materials.whiteLimestone} attach="material" />
         </mesh>

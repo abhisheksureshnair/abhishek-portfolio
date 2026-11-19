@@ -9,6 +9,7 @@ import { AI_RESEARCH_METADATA } from './aiMetadata';
 import { BuildingSignage } from '../signage/BuildingSignage';
 import { StreetDirectoryBoard } from '../signage/StreetDirectoryBoard';
 import { useWorldStore, worldStore } from '../../stores/worldStore';
+import { useLandmarkInteriorLOD } from '../landmarkLod';
 
 interface AIResearchBuildingProps {
   position?: [number, number, number];
@@ -45,12 +46,7 @@ export const AIResearchBuilding: React.FC<AIResearchBuildingProps> = ({
 
   const isSelected = selectedLandmark === 'ai';
   const isHovered = hoveredLandmark === 'ai';
-  const isFarView =
-    cameraPreset === 'landmarks_skyline' ||
-    cameraPreset === 'full_island_aerial' ||
-    cameraPreset === 'downtown_skyline' ||
-    cameraPreset === 'all_seven_landmarks_aerial';
-  const showInterior = isSelected || !isFarView;
+  const showInterior = useLandmarkInteriorLOD([position[0], position[2]], 'ai');
 
   // Refs for gentle holographic sphere and orbital ring rotation
   const holoSphereRef = useRef<THREE.Mesh>(null);

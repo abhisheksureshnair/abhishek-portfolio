@@ -14,7 +14,13 @@ import { applyDaylightEnvironment } from './DaylightEnvironment';
 export const WorldLighting: React.FC = () => {
   const { gl, scene } = useThree();
   const timeOfDay = useWorldStore((s) => s.timeOfDay);
+  const qualityProfile = useWorldStore((s) => s.qualityProfile);
   const sunLightRef = useRef<THREE.DirectionalLight>(null);
+
+  // Sync shadow map enabled state with quality profile
+  useEffect(() => {
+    gl.shadowMap.enabled = qualityProfile !== 'low';
+  }, [gl, qualityProfile]);
 
   // Apply procedural daylight environment map to the scene
   useEffect(() => {
@@ -65,9 +71,9 @@ export const WorldLighting: React.FC = () => {
         color={sunColor}
         intensity={sunIntensity}
         position={sunPosition}
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        castShadow={qualityProfile !== 'low'}
+        shadow-mapSize-width={qualityProfile === 'high' ? 1024 : 512}
+        shadow-mapSize-height={qualityProfile === 'high' ? 1024 : 512}
         shadow-camera-near={0.5}
         shadow-camera-far={260}
         shadow-camera-left={-95}

@@ -37,7 +37,7 @@ export const HQLobbyInterior: React.FC<HQLobbyInteriorProps> = ({
       {/* 3. Reception Desk (Minimalist Architectural Monolith with Illuminated Base) */}
       <group position={[0, 0.21, 2.8]}>
         {/* Main Reception Counter */}
-        <mesh position={[0, 0.55, 0]} castShadow receiveShadow>
+        <mesh position={[0, 0.55, 0]} receiveShadow>
           <boxGeometry args={[3.8, 1.10, 0.90]} />
           <primitive object={materials.whiteLimestone} attach="material" />
         </mesh>
@@ -93,11 +93,11 @@ export const HQLobbyInterior: React.FC<HQLobbyInteriorProps> = ({
       </mesh>
 
       {/* 6. Structural Interior Pilotis Columns (Stainless Steel Cylinders) */}
-      <mesh position={[-4.5, 4.2, 4.5]} castShadow receiveShadow>
+      <mesh position={[-4.5, 4.2, 4.5]} receiveShadow>
         <cylinderGeometry args={[0.32, 0.32, 8.0, 16]} />
         <primitive object={materials.stainlessSteel} attach="material" />
       </mesh>
-      <mesh position={[4.5, 4.2, 4.5]} castShadow receiveShadow>
+      <mesh position={[4.5, 4.2, 4.5]} receiveShadow>
         <cylinderGeometry args={[0.32, 0.32, 8.0, 16]} />
         <primitive object={materials.stainlessSteel} attach="material" />
       </mesh>

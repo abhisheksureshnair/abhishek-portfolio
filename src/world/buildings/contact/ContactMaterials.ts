@@ -222,14 +222,14 @@ export function getSharedContactMaterials() {
     // 3. Panoramic floor-to-ceiling curved glass curtain wall
     curtainGlass: new THREE.MeshPhysicalMaterial({
       color: '#cffafe',
-      transmission: 0.88,
-      opacity: 0.92,
+      opacity: 0.65,
       transparent: true,
-      roughness: 0.06,
-      metalness: 0.12,
+      roughness: 0.08,
+      metalness: 0.15,
       ior: 1.52,
-      thickness: 0.8,
-      reflectivity: 0.75,
+      reflectivity: 0.85,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.08,
     }),
 
     // 4. Round brushed metallic architectural columns
@@ -265,13 +265,12 @@ export function getSharedContactMaterials() {
     // 8. Reflecting Pool Water
     reflectingWater: new THREE.MeshPhysicalMaterial({
       color: '#030712',
-      transmission: 0.7,
-      opacity: 0.88,
+      opacity: 0.85,
       transparent: true,
       roughness: 0.04,
       metalness: 0.25,
-      ior: 1.333,
-      reflectivity: 0.9,
+      reflectivity: 0.95,
+      clearcoat: 1.0,
     }),
 
     // 9. Vaulted Archway Under-ribs (Glowing Warm-White / Violet illumination)
@@ -350,12 +349,12 @@ export function getSharedContactMaterials() {
     // 17. Glass terrace balustrades
     terraceBalustrade: new THREE.MeshPhysicalMaterial({
       color: '#e0f2fe',
-      transmission: 0.85,
-      opacity: 0.6,
+      opacity: 0.55,
       transparent: true,
       roughness: 0.1,
       metalness: 0.1,
       ior: 1.5,
+      clearcoat: 1.0,
     }),
 
     // 18. Signage obsidian backing panel

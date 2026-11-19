@@ -154,6 +154,17 @@ export class DistrictFreeRoamNavigator {
         minZ: -42.2,
         maxZ: -37.8,
       },
+
+      // 9. Cloud & Systems Engineering Hub (block-2-2, center [40, 40])
+      // North entrance approach is at X=40, Z=30.5
+      {
+        id: 'cloud-main',
+        name: 'Cloud Hub',
+        minX: 31.5,
+        maxX: 48.5,
+        minZ: 31.5,
+        maxZ: 48.5,
+      },
     ];
   }
 
@@ -215,6 +226,14 @@ export class DistrictFreeRoamNavigator {
         name: 'AI RESEARCH & INNOVATION CENTER',
         subtitle: 'Neural Intelligence & Multimodal Systems',
         portalX: 0.0,
+        portalZ: 30.5,
+        interactionRadius: 2.5,
+      },
+      {
+        id: 'cloud',
+        name: 'CLOUD & SYSTEMS ENGINEERING HUB',
+        subtitle: 'Backend • Cloud • APIs • Infrastructure',
+        portalX: 40.0,
         portalZ: 30.5,
         interactionRadius: 2.5,
       },

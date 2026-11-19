@@ -16,6 +16,54 @@ export const OrbitCamera: React.FC = () => {
   const isTransitioning = useRef<boolean>(false);
   const isFirstMount = useRef<boolean>(true);
 
+  // 1. Ensure Camera FOV is reset to standard 48° for Orbit Mode on mount
+  useEffect(() => {
+    const persCam = camera as THREE.PerspectiveCamera;
+    if (persCam.isPerspectiveCamera && persCam.fov !== WORLD_CONFIG.camera.fov) {
+      persCam.fov = WORLD_CONFIG.camera.fov;
+      persCam.updateProjectionMatrix();
+    }
+  }, [camera]);
+
+  // 2. Global Camera Recovery Trigger & Key Shortcut (R)
+  useEffect(() => {
+    const handleReset = () => {
+      console.log('[OrbitCamera] Resetting camera to default downtown view [0, 165, 215] -> [0, 12, 0]');
+      const spawn = WORLD_CONFIG.camera.orbitSpawn;
+      const target = WORLD_CONFIG.camera.orbitTarget;
+      camera.position.set(spawn[0], spawn[1], spawn[2]);
+      camera.up.set(0, 1, 0);
+      camera.lookAt(target[0], target[1], target[2]);
+      const persCam = camera as THREE.PerspectiveCamera;
+      if (persCam.isPerspectiveCamera) {
+        persCam.fov = WORLD_CONFIG.camera.fov;
+        persCam.updateProjectionMatrix();
+      }
+      if (controlsRef.current) {
+        controlsRef.current.target.set(target[0], target[1], target[2]);
+        controlsRef.current.update();
+      }
+      targetPos.current.set(spawn[0], spawn[1], spawn[2]);
+      targetLook.current.set(target[0], target[1], target[2]);
+      isTransitioning.current = false;
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // If typing in input, ignore
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+      if (e.key === 'r' || e.key === 'R') {
+        handleReset();
+      }
+    };
+
+    window.addEventListener('reset-camera', handleReset);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('reset-camera', handleReset);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [camera]);
+
   useEffect(() => {
     let spawn = WORLD_CONFIG.camera.orbitSpawn;
     let target = WORLD_CONFIG.camera.orbitTarget;
@@ -328,6 +376,38 @@ export const OrbitCamera: React.FC = () => {
       // Phase 2.7.1: Elevated top-down view of Contact Hub aerodynamic roof canopy and crown rim
       spawn = [-40.0, 28.0, 20.0];
       target = [-40.0, 15.0, 40.0];
+    } else if (preset === 'cloud_front_entrance') {
+      // Phase 2.8: Cloud Hub North Entrance at [40, 40] (Facing North towards Street Z=20)
+      spawn = [40.0, 5.0, 15.0];
+      target = [40.0, 5.2, 34.0];
+    } else if (preset === 'cloud_three_quarter') {
+      // Phase 2.8: Cloud Hub Three-Quarter View showing curved aerodynamic corner and cyan cloud HUD
+      spawn = [18.0, 16.0, 16.0];
+      target = [40.0, 10.0, 40.0];
+    } else if (preset === 'cloud_elevated_exterior') {
+      // Phase 2.8: Cloud Hub Elevated overview showing roof details, HVAC chillers, and mechanical penthouses
+      spawn = [28.0, 32.0, 22.0];
+      target = [42.0, 16.0, 42.0];
+    } else if (preset === 'cloud_lobby_interior') {
+      // Phase 2.8: Double-height lobby view focused on suspended bridge, 3D holographic cloud & server banks
+      spawn = [40.0, 3.4, 26.5];
+      target = [40.0, 4.8, 38.5];
+    } else if (preset === 'cloud_infrastructure_close') {
+      // Phase 2.8: Close-up of cloud infrastructure exhibition consoles & telemetry displays
+      spawn = [37.5, 3.2, 32.0];
+      target = [41.5, 3.8, 38.0];
+    } else if (preset === 'civic_plaza_overview') {
+      // Phase 2.8: Central Civic Plaza overview at [-40, -40] showing paving, sculpture, and seating
+      spawn = [-26.0, 14.0, -26.0];
+      target = [-40.0, 1.5, -40.0];
+    } else if (preset === 'all_nine_landmarks_aerial') {
+      // Phase 2.8: High-angle aerial framing all 9 central portfolio plots
+      spawn = [38.0, 140.0, 130.0];
+      target = [0.0, 12.0, 0.0];
+    } else if (preset === 'complete_coastal_city_aerial') {
+      // Phase 2.8: Complete coastal city aerial view with the ocean and skyline
+      spawn = [90.0, 175.0, 185.0];
+      target = [0.0, 10.0, 0.0];
     }
 
     targetPos.current.set(spawn[0], spawn[1], spawn[2]);
@@ -348,6 +428,37 @@ export const OrbitCamera: React.FC = () => {
   }, [camera, preset]);
 
   useFrame((_, delta) => {
+    // Continuous Failsafe: check for NaN/Infinity in camera state and recover immediately
+    if (
+      !Number.isFinite(camera.position.x) ||
+      !Number.isFinite(camera.position.y) ||
+      !Number.isFinite(camera.position.z) ||
+      !Number.isFinite(camera.quaternion.x) ||
+      !Number.isFinite(camera.quaternion.y) ||
+      !Number.isFinite(camera.quaternion.z) ||
+      !Number.isFinite(camera.quaternion.w) ||
+      (controlsRef.current && (
+        !Number.isFinite(controlsRef.current.target.x) ||
+        !Number.isFinite(controlsRef.current.target.y) ||
+        !Number.isFinite(controlsRef.current.target.z)
+      ))
+    ) {
+      console.warn('[OrbitCamera] Invalid camera coordinates or target detected (NaN/Infinity). Executing automatic recovery.');
+      const spawn = WORLD_CONFIG.camera.orbitSpawn;
+      const target = WORLD_CONFIG.camera.orbitTarget;
+      camera.position.set(spawn[0], spawn[1], spawn[2]);
+      camera.up.set(0, 1, 0);
+      camera.lookAt(target[0], target[1], target[2]);
+      if (controlsRef.current) {
+        controlsRef.current.target.set(target[0], target[1], target[2]);
+        controlsRef.current.update();
+      }
+      targetPos.current.set(spawn[0], spawn[1], spawn[2]);
+      targetLook.current.set(target[0], target[1], target[2]);
+      isTransitioning.current = false;
+      return;
+    }
+
     if (!isTransitioning.current) return;
 
     // Frame-rate independent exponential damping for smooth cinematics

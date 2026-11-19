@@ -178,24 +178,22 @@ export function getSharedAboutStudioMaterials() {
       // 5. Panoramic Floor-to-Ceiling Curtain Wall Glass
       curtainGlass: new THREE.MeshPhysicalMaterial({
         roughness: 0.08,
-        transmission: 0.88,
-        thickness: 0.45,
         ior: 1.52,
         transparent: true,
-        opacity: 0.82,
+        opacity: 0.65,
         color: '#dbeafe',
         reflectivity: 0.9,
+        clearcoat: 1.0,
       }),
 
       // 6. Ultra-Clear Atrium Double-Height Glass
       atriumGlass: new THREE.MeshPhysicalMaterial({
         roughness: 0.05,
-        transmission: 0.92,
-        thickness: 0.35,
         ior: 1.5,
         transparent: true,
-        opacity: 0.75,
+        opacity: 0.58,
         color: '#ffffff',
+        clearcoat: 1.0,
       }),
 
       // 7. Linear Recessed Downlight Slats in Timber Soffit

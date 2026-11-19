@@ -6,6 +6,7 @@ import { INNOVATION_CENTER_METADATA } from './innovationMetadata';
 import { BuildingSignage } from '../signage/BuildingSignage';
 import { StreetDirectoryBoard } from '../signage/StreetDirectoryBoard';
 import { useWorldStore, worldStore } from '../../stores/worldStore';
+import { useLandmarkInteriorLOD } from '../landmarkLod';
 
 interface InnovationCenterBuildingProps {
   position?: [number, number, number];
@@ -26,9 +27,8 @@ export const InnovationCenterBuilding: React.FC<InnovationCenterBuildingProps> =
   const hoveredLandmark = useWorldStore((s) => s.hoveredLandmark);
   const isSelected = selectedLandmark === 'innovation';
   const isHovered = hoveredLandmark === 'innovation';
-  const cameraPreset = useWorldStore((s) => s.cameraPreset);
-  const isFarView = cameraPreset === 'landmarks_skyline' || cameraPreset === 'full_island_aerial' || cameraPreset === 'downtown_skyline';
-  const showInterior = isSelected || !isFarView;
+  const showInterior = useLandmarkInteriorLOD([position[0], position[2]], 'innovation');
+  const isFarView = !showInterior;
 
   const handleBuildingClick = (e: any) => {
     e.stopPropagation();

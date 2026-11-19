@@ -202,10 +202,10 @@ export const StreetDirectoryBoard: React.FC<StreetDirectoryBoardProps> = ({
       acrylicCover: new THREE.MeshPhysicalMaterial({
         color: '#ffffff',
         roughness: 0.1,
-        transmission: 0.9,
         transparent: true,
-        opacity: 0.35,
+        opacity: 0.25,
         ior: 1.49,
+        clearcoat: 1.0,
       }),
       topLuminaire: new THREE.MeshStandardMaterial({
         color: '#ffffff',

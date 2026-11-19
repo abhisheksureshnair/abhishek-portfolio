@@ -72,7 +72,7 @@ export const InnovationKiosks: React.FC<InnovationKiosksProps> = ({ onSelectProj
             </mesh>
 
             {/* 2. Sleek Architectural Pedestal Stem */}
-            <mesh position={[0, 0.55, 0]} castShadow receiveShadow>
+            <mesh position={[0, 0.55, 0]} receiveShadow>
               <boxGeometry args={[0.7, 0.95, 0.35]} />
               <primitive object={materials.stainlessSteel} attach="material" />
             </mesh>
@@ -80,7 +80,7 @@ export const InnovationKiosks: React.FC<InnovationKiosksProps> = ({ onSelectProj
             {/* 3. Angled Interactive Touch Screen Console */}
             <group position={[0, 1.05, 0]} rotation={[-Math.PI / 6, 0, 0]}>
               {/* Screen Bezel Housing */}
-              <mesh castShadow receiveShadow>
+              <mesh receiveShadow>
                 <boxGeometry args={[1.5, 1.1, 0.08]} />
                 <primitive object={materials.structuralFraming} attach="material" />
               </mesh>

@@ -293,14 +293,14 @@ export function getSharedAIMaterials() {
 
   const curtainGlass = new THREE.MeshPhysicalMaterial({
     color: '#93c5fd',
-    transmission: 0.86,
-    opacity: 0.9,
+    opacity: 0.68,
     transparent: true,
-    roughness: 0.06,
-    metalness: 0.12,
+    roughness: 0.08,
+    metalness: 0.15,
     ior: 1.52,
-    thickness: 0.8,
-    reflectivity: 0.75,
+    reflectivity: 0.85,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.08,
   });
 
   const titaniumDarkMat = new THREE.MeshStandardMaterial({
@@ -349,13 +349,12 @@ export function getSharedAIMaterials() {
     }),
     reflectingPoolWater: new THREE.MeshPhysicalMaterial({
       color: '#020617',
-      transmission: 0.65,
-      opacity: 0.88,
+      opacity: 0.85,
       transparent: true,
-      roughness: 0.03,
-      metalness: 0.3,
-      ior: 1.333,
-      reflectivity: 0.92,
+      roughness: 0.04,
+      metalness: 0.25,
+      reflectivity: 0.95,
+      clearcoat: 1.0,
     }),
     neonRibbonCyan: cyanGlowMat,
     neonRibbonBlue: new THREE.MeshStandardMaterial({

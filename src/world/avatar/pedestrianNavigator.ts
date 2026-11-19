@@ -85,6 +85,14 @@ export const LANDMARK_PORTALS: LandmarkPortal[] = [
     portalZ: 30.5,
     interactionRadius: 2.8,
   },
+  {
+    id: 'cloud',
+    name: 'CLOUD & SYSTEMS ENGINEERING HUB',
+    subtitle: 'Backend • Cloud • APIs • Infrastructure',
+    portalX: 40,
+    portalZ: 30.5,
+    interactionRadius: 2.8,
+  },
 ];
 
 export class PedestrianNavigator {

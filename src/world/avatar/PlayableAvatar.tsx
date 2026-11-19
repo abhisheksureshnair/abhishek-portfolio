@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
@@ -27,6 +27,8 @@ interface PlayableAvatarProps {
 const _upAxis = new THREE.Vector3(0, 1, 0);
 const _targetQuat = new THREE.Quaternion();
 const _moveVec = new THREE.Vector3();
+const _camFwd = new THREE.Vector3();
+const _camRgt = new THREE.Vector3();
 
 // Physics & Controller Constants per Phase 3.0.5 GTA-Style Specification
 const WALK_SPEED = 2.2; // 2.2 m/s walk speed
@@ -41,6 +43,7 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
   avatarPosRef: externalPosRef,
   avatarQuatRef: externalQuatRef,
 }) => {
+  const { camera } = useThree();
   const rootGroupRef = useRef<THREE.Group>(null);
 
   // Central 3x3 District Free-Roaming Navigation System
@@ -120,6 +123,9 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
   // Clone skinned character hierarchy and apply modern casual developer materials
   const avatarScene = useMemo(() => {
     const cloned = clone(scene);
+    // Phase 3.0.6 Section 2: 180° visual model rotation correction.
+    // Soldier.glb model natively faces -Z in rest pose; rotating by PI aligns visual front with controller +Z.
+    cloned.rotation.y = Math.PI;
 
     cloned.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
@@ -273,14 +279,21 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
     const isRunning = keys['shift'] || keys['shiftleft'] || keys['shiftright'];
     const targetMaxSpeed = isRunning ? SPRINT_SPEED : WALK_SPEED;
 
-    // 1. Authoritative Camera-Relative Direction:
-    // Derives analytical ground-plane forward and right vectors directly from cameraYaw
-    // Zero scene-graph matrix lag, zero pitch tilt distortion
-    const { forward: camFwd, right: camRgt } = avatarGameplayState.getCameraVectors();
+    // 1. Authoritative Camera-Relative Direction (Phase 3.0.6 Section 3):
+    // Uses camera.getWorldDirection(cameraForward), horizontal projection (y=0, normalized).
+    // For W input, moves along cameraForward (positive dot product).
+    camera.getWorldDirection(_camFwd);
+    _camFwd.y = 0;
+    if (_camFwd.lengthSq() > 0.0001) {
+      _camFwd.normalize();
+    } else {
+      _camFwd.set(0, 0, -1);
+    }
+    _camRgt.crossVectors(_camFwd, _upAxis).normalize();
 
     _moveVec.set(0, 0, 0);
-    _moveVec.addScaledVector(camFwd, inputForward);
-    _moveVec.addScaledVector(camRgt, inputStrafe);
+    _moveVec.addScaledVector(_camFwd, inputForward);
+    _moveVec.addScaledVector(_camRgt, inputStrafe);
 
     // Normalize diagonal movement vector so diagonal travel is never faster than orthogonal
     if (_moveVec.lengthSq() > 0.001) {
@@ -313,6 +326,7 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
 
     // Publish locomotion telemetry to shared authoritative state
     avatarGameplayState.isMoving = isMoving;
+    avatarGameplayState.isMovingForward = hasInput && inputForward > 0;
     avatarGameplayState.currentSpeed = curSpeed;
 
     // 3. Smooth Shortest-Angle Character Rotation (10 rad/s via rotateTowards)
@@ -408,7 +422,7 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
 
     // Update Skeletal Animation Mixer
     mixerRef.current?.update(dt);
-  }, 1); // Explicit priority 1: updates avatar position before camera follow
+  }); // Default priority: runs with frame loop, preserving R3F automatic scene render
 
   return (
     <group ref={rootGroupRef} position={[spawnPoint.x, spawnPoint.y, spawnPoint.z]}>

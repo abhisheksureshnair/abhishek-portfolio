@@ -8,6 +8,7 @@ import { ABOUT_STUDIO_METADATA } from './aboutMetadata';
 import { BuildingSignage } from '../signage/BuildingSignage';
 import { StreetDirectoryBoard } from '../signage/StreetDirectoryBoard';
 import { useWorldStore, worldStore } from '../../stores/worldStore';
+import { useLandmarkInteriorLOD } from '../landmarkLod';
 
 interface AboutStudioBuildingProps {
   position?: [number, number, number];
@@ -43,12 +44,8 @@ export const AboutStudioBuilding: React.FC<AboutStudioBuildingProps> = ({
 
   const isSelected = selectedLandmark === 'about';
   const isHovered = hoveredLandmark === 'about';
-  const isFarView =
-    cameraPreset === 'landmarks_skyline' ||
-    cameraPreset === 'full_island_aerial' ||
-    cameraPreset === 'downtown_skyline' ||
-    cameraPreset === 'five_landmarks_aerial';
-  const showInterior = isSelected || !isFarView;
+  const showInterior = useLandmarkInteriorLOD([position[0], position[2]], 'about');
+  const isFarView = !showInterior;
 
   const handleBuildingClick = (e: any) => {
     e.stopPropagation();

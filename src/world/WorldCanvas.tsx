@@ -19,6 +19,7 @@ import { CareerCenterBuilding } from './buildings/career/CareerCenterBuilding';
 import { AboutStudioBuilding } from './buildings/about/AboutStudioBuilding';
 import { ContactHubBuilding } from './buildings/contact/ContactHubBuilding';
 import { AIResearchBuilding } from './buildings/ai/AIResearchBuilding';
+import { CloudHubBuilding } from './buildings/cloud/CloudHubBuilding';
 import { OceanWater } from './water/OceanWater';
 import { WaterfrontPerimeter } from './island/WaterfrontPerimeter';
 import { OrbitCamera } from './camera/OrbitCamera';
@@ -43,6 +44,7 @@ interface WorldCanvasProps {
   onAboutInteract?: () => void;
   onContactInteract?: () => void;
   onAIInteract?: () => void;
+  onCloudInteract?: () => void;
 }
 
 export const WorldCanvas: React.FC<WorldCanvasProps> = ({
@@ -58,8 +60,10 @@ export const WorldCanvas: React.FC<WorldCanvasProps> = ({
   onAboutInteract,
   onContactInteract,
   onAIInteract,
+  onCloudInteract,
 }) => {
   const cameraMode = useWorldStore((s) => s.cameraMode);
+  const qualityProfile = useWorldStore((s) => s.qualityProfile);
   const downtownMode = useWorldStore((s) => s.downtownMode);
   const isRefOnly = referenceBlockOnly !== undefined ? referenceBlockOnly : downtownMode === 'reference';
 
@@ -76,6 +80,7 @@ export const WorldCanvas: React.FC<WorldCanvasProps> = ({
       else if (landmarkId === 'about' && onAboutInteract) onAboutInteract();
       else if (landmarkId === 'contact' && onContactInteract) onContactInteract();
       else if (landmarkId === 'ai' && onAIInteract) onAIInteract();
+      else if (landmarkId === 'cloud' && onCloudInteract) onCloudInteract();
     },
     [
       onHQInteract,
@@ -85,6 +90,7 @@ export const WorldCanvas: React.FC<WorldCanvasProps> = ({
       onAboutInteract,
       onContactInteract,
       onAIInteract,
+      onCloudInteract,
     ]
   );
 
@@ -97,7 +103,7 @@ export const WorldCanvas: React.FC<WorldCanvasProps> = ({
         near: WORLD_CONFIG.camera.near,
         far: WORLD_CONFIG.camera.far,
       }}
-      dpr={[1, 1.35]}
+      dpr={qualityProfile === 'high' ? [1, 1.25] : 1.0}
       gl={{
         antialias: true,
         alpha: false,
@@ -105,10 +111,13 @@ export const WorldCanvas: React.FC<WorldCanvasProps> = ({
         stencil: false,
         depth: true,
       }}
-      onCreated={({ gl, scene }) => {
+      onCreated={(state) => {
+        const { gl, scene, camera } = state;
         if (typeof window !== 'undefined') {
           (window as any).__scene = scene;
           (window as any).__gl = gl;
+          (window as any).__camera = camera;
+          (window as any).__r3fState = state;
         }
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         gl.toneMappingExposure = 1.05;
@@ -193,6 +202,12 @@ export const WorldCanvas: React.FC<WorldCanvasProps> = ({
         <AIResearchBuilding
           position={[0.0, 0, 40.0]}
           onInteract={onAIInteract}
+        />
+
+        {/* 5j2. Phase 2.8 Cloud & Systems Engineering Hub at [40, 40] */}
+        <CloudHubBuilding
+          position={[40.0, 0, 40.0]}
+          onInteract={onCloudInteract}
         />
 
         {/* 5k. Phase 3.0.1 Interactive Building Entrance Identification & Ground Decals */}

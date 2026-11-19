@@ -8,6 +8,7 @@ import { SKILLS_TOWER_METADATA } from './skillsMetadata';
 import { BuildingSignage } from '../signage/BuildingSignage';
 import { StreetDirectoryBoard } from '../signage/StreetDirectoryBoard';
 import { useWorldStore, worldStore } from '../../stores/worldStore';
+import { useLandmarkInteriorLOD } from '../landmarkLod';
 
 interface SkillsTowerBuildingProps {
   position?: [number, number, number];
@@ -42,9 +43,8 @@ export const SkillsTowerBuilding: React.FC<SkillsTowerBuildingProps> = ({
   const hoveredLandmark = useWorldStore((s) => s.hoveredLandmark);
   const isSelected = selectedLandmark === 'skills';
   const isHovered = hoveredLandmark === 'skills';
-  const cameraPreset = useWorldStore((s) => s.cameraPreset);
-  const isFarView = cameraPreset === 'landmarks_skyline' || cameraPreset === 'full_island_aerial' || cameraPreset === 'downtown_skyline';
-  const showInterior = isSelected || !isFarView;
+  const showInterior = useLandmarkInteriorLOD([position[0], position[2]], 'skills');
+  const isFarView = !showInterior;
 
   const handleBuildingClick = (e: any) => {
     e.stopPropagation();

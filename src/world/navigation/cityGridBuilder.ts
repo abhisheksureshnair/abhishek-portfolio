@@ -149,10 +149,10 @@ const DISTRICT_ASSIGNMENTS: Record<string, { id: string; title: string; subtitle
   },
   'block-2-2': {
     id: 'cloud-nexus',
-    title: 'CLOUD ECOSYSTEM HUB',
-    subtitle: 'Distributed Systems & Microservices',
-    category: 'Future Expansion // Plot B',
-    color: '#14b8a6',
+    title: 'CLOUD & SYSTEMS ENGINEERING HUB',
+    subtitle: 'High-Availability Infrastructure & Microservices',
+    category: 'District 08 // Cloud Hub',
+    color: '#00f0ff',
   },
 };
 

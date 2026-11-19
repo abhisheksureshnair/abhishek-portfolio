@@ -66,6 +66,21 @@ export const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
       avatarGameplayState.initializeSpawn(_avatarEuler.y);
       distanceRef.current = avatarGameplayState.cameraDistance;
     }
+
+    const handleResetAvatar = () => {
+      console.log('[ThirdPersonCamera] Resetting camera directly behind avatar');
+      if (avatarQuatRef?.current) {
+        _avatarEuler.setFromQuaternion(avatarQuatRef.current, 'YXZ');
+        avatarGameplayState.initializeSpawn(_avatarEuler.y);
+      } else {
+        avatarGameplayState.initializeSpawn(0);
+      }
+      distanceRef.current = 3.5;
+      isFirstMountRef.current = true;
+    };
+
+    window.addEventListener('reset-avatar-camera', handleResetAvatar);
+    return () => window.removeEventListener('reset-avatar-camera', handleResetAvatar);
   }, [cameraMode, avatarQuatRef]);
 
   // 3. Pointer Lock and Mouse Control Lifecycle
@@ -235,7 +250,24 @@ export const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
       camera.position.z += (desiredCamZ - camera.position.z) * followFactor;
       camera.lookAt(_camLookTarget);
     }
-  }, 2); // Explicit priority 2: updates camera immediately after avatar update in the same frame
+
+    // Failsafe recovery: check for NaN/Infinity in camera state
+    if (
+      !Number.isFinite(camera.position.x) ||
+      !Number.isFinite(camera.position.y) ||
+      !Number.isFinite(camera.position.z) ||
+      !Number.isFinite(camera.quaternion.x) ||
+      !Number.isFinite(camera.quaternion.y) ||
+      !Number.isFinite(camera.quaternion.z) ||
+      !Number.isFinite(camera.quaternion.w)
+    ) {
+      console.warn('[ThirdPersonCamera] Invalid camera values detected (NaN/Infinity). Executing automatic recovery.');
+      camera.position.set(_camLookTarget.x, _camLookTarget.y + 1.2, _camLookTarget.z + 3.5);
+      camera.up.set(0, 1, 0);
+      camera.lookAt(_camLookTarget);
+      return;
+    }
+  }); // Default priority: runs with frame loop, preserving R3F automatic scene render
 
   return null;
 };

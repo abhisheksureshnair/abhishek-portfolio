@@ -8,6 +8,7 @@ import { StreetDirectoryBoard } from '../signage/StreetDirectoryBoard';
 import { HQLobbyInterior } from './HQLobbyInterior';
 import { PORTFOLIO_HQ_METADATA } from './hqMetadata';
 import { useWorldStore, worldStore } from '../../stores/worldStore';
+import { useLandmarkInteriorLOD } from '../landmarkLod';
 
 interface HQBuildingProps {
   onInteract?: (metadata: typeof PORTFOLIO_HQ_METADATA) => void;
@@ -36,9 +37,8 @@ export const HQBuilding: React.FC<HQBuildingProps> = ({ onInteract }) => {
   const isSelected = selectedLandmark === 'hq';
   const isHovered = hoveredLandmark === 'hq';
 
-  const cameraPreset = useWorldStore((s) => s.cameraPreset);
-  const isFarView = cameraPreset === 'landmarks_skyline' || cameraPreset === 'full_island_aerial' || cameraPreset === 'downtown_skyline';
-  const showInterior = isSelected || !isFarView;
+  const showInterior = useLandmarkInteriorLOD([0, 0], 'hq');
+  const isFarView = !showInterior;
 
   // Subtle continuous revolving door rotation
   useFrame((_, delta) => {

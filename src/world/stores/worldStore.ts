@@ -93,9 +93,17 @@ export type CameraPreset =
   | 'both_refined_elevated'
   | 'ai_rooftop_refined'
   | 'contact_rooftop_refined'
+  | 'cloud_front_entrance'
+  | 'cloud_three_quarter'
+  | 'cloud_elevated_exterior'
+  | 'cloud_lobby_interior'
+  | 'cloud_infrastructure_close'
+  | 'civic_plaza_overview'
+  | 'all_nine_landmarks_aerial'
+  | 'complete_coastal_city_aerial'
   | null;
 
-export interface PerformanceStats {
+export type PerformanceStats = {
   fps: number;
   drawCalls: number;
   triangles: number;
@@ -103,15 +111,18 @@ export interface PerformanceStats {
   textures: number;
   memoryMB: number;
   frameTimeMs: number;
-}
+};
 
-export type LandmarkId = 'hq' | 'innovation' | 'skills' | 'career' | 'about' | 'contact' | 'ai' | null;
+export type QualityProfile = 'high' | 'medium' | 'low';
+
+export type LandmarkId = 'hq' | 'innovation' | 'skills' | 'career' | 'about' | 'contact' | 'ai' | 'cloud' | null;
 
 export interface WorldState {
   cameraMode: CameraMode;
   cameraPreset: CameraPreset;
   downtownMode: DowntownMode;
   timeOfDay: TimeOfDay;
+  qualityProfile: QualityProfile;
   selectedPlotId: string | null;
   selectedLandmark: LandmarkId;
   hoveredLandmark: LandmarkId;
@@ -130,6 +141,8 @@ export interface WorldState {
   toggleDowntownMode: () => void;
   toggleCameraMode: () => void;
   setTimeOfDay: (time: TimeOfDay) => void;
+  setQualityProfile: (profile: QualityProfile) => void;
+  toggleQualityProfile: () => void;
   setSelectedPlotId: (id: string | null) => void;
   setSelectedLandmark: (landmark: LandmarkId) => void;
   setHoveredLandmark: (landmark: LandmarkId) => void;
@@ -151,6 +164,7 @@ let state: WorldState = {
   cameraPreset: null,
   downtownMode: 'full', // Default to FULL DOWNTOWN for Phase 2.0.2!
   timeOfDay: 'day',
+  qualityProfile: 'high',
   selectedPlotId: null,
   selectedLandmark: null,
   hoveredLandmark: null,
@@ -186,6 +200,16 @@ let state: WorldState = {
           : 'orbit',
     }),
   setTimeOfDay: (timeOfDay) => update({ timeOfDay }),
+  setQualityProfile: (qualityProfile) => update({ qualityProfile }),
+  toggleQualityProfile: () => {
+    const next: QualityProfile =
+      state.qualityProfile === 'high'
+        ? 'medium'
+        : state.qualityProfile === 'medium'
+        ? 'low'
+        : 'high';
+    update({ qualityProfile: next });
+  },
   setSelectedPlotId: (selectedPlotId) => update({ selectedPlotId }),
   setSelectedLandmark: (selectedLandmark) => update({ selectedLandmark }),
   setHoveredLandmark: (hoveredLandmark) => update({ hoveredLandmark }),

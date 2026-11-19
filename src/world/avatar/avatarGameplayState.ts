@@ -20,6 +20,7 @@ export class AvatarGameplayState {
   // Telemetry & Alignment
   public lastMouseInputTime: number = 0;
   public isMoving: boolean = false;
+  public isMovingForward: boolean = false;
   public currentSpeed: number = 0;
   public hasInitialized: boolean = false;
 
@@ -75,11 +76,12 @@ export class AvatarGameplayState {
 
   /**
    * GTA-Style Automatic Camera Alignment:
-   * When avatar is moving continuously and no mouse input for 1.5s,
+   * When avatar is moving forward continuously and no mouse input for 1.5s,
    * gradually align camera directly behind the avatar's travel direction.
+   * Auto-alignment is strictly bypassed during backward (S) or neutral motion to prevent camera flip.
    */
   public updateAutoAlignment(avatarHeading: number, dt: number) {
-    if (!this.isMoving) return;
+    if (!this.isMoving || !this.isMovingForward) return;
 
     const timeSinceMouse = (performance.now() - this.lastMouseInputTime) / 1000;
     if (timeSinceMouse <= 1.5) return;
@@ -90,6 +92,10 @@ export class AvatarGameplayState {
     let diffYaw = (targetBehindYaw - this.cameraYaw) % (2 * Math.PI);
     if (diffYaw > Math.PI) diffYaw -= 2 * Math.PI;
     if (diffYaw < -Math.PI) diffYaw += 2 * Math.PI;
+
+    // Phase 3.0.6: Only auto-align for forward/steering motion (within 115°).
+    // Never flip camera 180° when backing up or holding S.
+    if (Math.abs(diffYaw) > Math.PI * 0.65) return;
 
     if (Math.abs(diffYaw) > 0.002) {
       const alignSpeed = 2.0; // 2.0 rad/s gentle follow

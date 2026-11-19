@@ -34,10 +34,10 @@ export function getSharedCareerMaterials(): CareerMaterialsContainer {
     color: '#1c1917',
     metalness: 0.25,
     roughness: 0.12,
-    transmission: 0.55,
     ior: 1.52,
     transparent: true,
-    opacity: 0.88,
+    opacity: 0.75,
+    clearcoat: 1.0,
   });
 
   // 3. Low-Iron Structural Atrium Glass (Central 4-storey connector)
@@ -45,10 +45,10 @@ export function getSharedCareerMaterials(): CareerMaterialsContainer {
     color: '#f8fafc',
     metalness: 0.05,
     roughness: 0.05,
-    transmission: 0.88,
     ior: 1.50,
     transparent: true,
-    opacity: 0.45,
+    opacity: 0.55,
+    clearcoat: 1.0,
   });
 
   // 4. White Architectural Limestone Pier Accents
@@ -114,10 +114,10 @@ export function getSharedCareerMaterials(): CareerMaterialsContainer {
     color: '#fdf2f8',
     metalness: 0.1,
     roughness: 0.08,
-    transmission: 0.82,
     ior: 1.52,
     transparent: true,
     opacity: 0.65,
+    clearcoat: 1.0,
   });
 
   // 13. Backlit Signage Backdrop

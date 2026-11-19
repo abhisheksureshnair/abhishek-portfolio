@@ -74,11 +74,11 @@ export const InnovationInterior: React.FC<InnovationInteriorProps> = ({ onSelect
       {/* 4. Structural Cylindrical Columns (Stainless Steel) */}
       {[-7.5, 7.5].map((cx) => (
         <React.Fragment key={`column-${cx}`}>
-          <mesh position={[cx, 4.2, 1.5]} castShadow receiveShadow>
+          <mesh position={[cx, 4.2, 1.5]} receiveShadow>
             <cylinderGeometry args={[0.32, 0.32, 8.2, 20]} />
             <primitive object={materials.stainlessSteel} attach="material" />
           </mesh>
-          <mesh position={[cx, 4.2, -5.5]} castShadow receiveShadow>
+          <mesh position={[cx, 4.2, -5.5]} receiveShadow>
             <cylinderGeometry args={[0.32, 0.32, 8.2, 20]} />
             <primitive object={materials.stainlessSteel} attach="material" />
           </mesh>
@@ -87,7 +87,7 @@ export const InnovationInterior: React.FC<InnovationInteriorProps> = ({ onSelect
 
       {/* 5. Minimalist Architectural Reception Counter */}
       <group position={[0, 0.25, 4.5]}>
-        <mesh position={[0, 0.55, 0]} castShadow receiveShadow>
+        <mesh position={[0, 0.55, 0]} receiveShadow>
           <boxGeometry args={[3.4, 1.1, 0.8]} />
           <primitive object={materials.whiteLimestone} attach="material" />
         </mesh>
