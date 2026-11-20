@@ -17,6 +17,10 @@ interface InnovationCenterBuildingProps {
 /**
  * Phase 2.2.1 — Signature Innovation & Projects Center (Refined & Optimized)
  */
+// Pre-allocated static geometries for zero-allocation hover / selection highlights
+const _innoHighlightPlaneGeo = new THREE.PlaneGeometry(24.2, 24.2);
+const _innoHighlightEdgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(24.0, 0.12, 24.0));
+
 export const InnovationCenterBuilding: React.FC<InnovationCenterBuildingProps> = ({
   position = [40.0, 0, -40.0],
   onInteract,
@@ -59,8 +63,7 @@ export const InnovationCenterBuilding: React.FC<InnovationCenterBuildingProps> =
       {/* Selection / Hover Outline Highlight Box */}
       {(isSelected || isHovered) && (
         <group position={[0, 0.26, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[24.2, 24.2]} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} geometry={_innoHighlightPlaneGeo}>
             <meshBasicMaterial
               color={isSelected ? '#00f0ff' : '#67e8f9'}
               wireframe
@@ -68,8 +71,7 @@ export const InnovationCenterBuilding: React.FC<InnovationCenterBuildingProps> =
               opacity={isSelected ? 0.9 : 0.45}
             />
           </mesh>
-          <lineSegments>
-            <edgesGeometry args={[new THREE.BoxGeometry(24.0, 0.12, 24.0)]} />
+          <lineSegments geometry={_innoHighlightEdgesGeo}>
             <lineBasicMaterial
               color={isSelected ? '#00f0ff' : '#67e8f9'}
               linewidth={2}

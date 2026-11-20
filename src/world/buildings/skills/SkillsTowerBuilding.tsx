@@ -32,6 +32,10 @@ interface SkillsTowerBuildingProps {
  * 
  * 100% Single-Pass PBR materials for high 60-90+ FPS performance.
  */
+// Pre-allocated static geometries for zero-allocation hover / selection highlights
+const _skillsHighlightPlaneGeo = new THREE.PlaneGeometry(24.2, 24.2);
+const _skillsHighlightEdgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(24.0, 0.12, 24.0));
+
 export const SkillsTowerBuilding: React.FC<SkillsTowerBuildingProps> = ({
   position = [-40.0, 0, 0.0],
   selectedFloor = null,
@@ -92,8 +96,7 @@ export const SkillsTowerBuilding: React.FC<SkillsTowerBuildingProps> = ({
       {/* Selection / Hover Outline Highlight Box */}
       {(isSelected || isHovered) && (
         <group position={[0, 0.26, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[24.2, 24.2]} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} geometry={_skillsHighlightPlaneGeo}>
             <meshBasicMaterial
               color={isSelected ? '#38bdf8' : '#67e8f9'}
               wireframe
@@ -101,8 +104,7 @@ export const SkillsTowerBuilding: React.FC<SkillsTowerBuildingProps> = ({
               opacity={isSelected ? 0.9 : 0.45}
             />
           </mesh>
-          <lineSegments>
-            <edgesGeometry args={[new THREE.BoxGeometry(24.0, 0.12, 24.0)]} />
+          <lineSegments geometry={_skillsHighlightEdgesGeo}>
             <lineBasicMaterial
               color={isSelected ? '#38bdf8' : '#67e8f9'}
               linewidth={2}

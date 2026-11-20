@@ -30,6 +30,10 @@ interface CareerCenterBuildingProps {
  *   7. Stepped rooftop terrace with clean parapets (zero spires or floating boxes)
  *   8. Built-in LOD optimization for solid 60+ FPS performance
  */
+// Pre-allocated static geometries for zero-allocation hover / selection highlights
+const _careerHighlightPlaneGeo = new THREE.PlaneGeometry(24.2, 24.2);
+const _careerHighlightEdgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(24.0, 0.12, 24.0));
+
 export const CareerCenterBuilding: React.FC<CareerCenterBuildingProps> = ({
   position = [40.0, 0, 0.0],
   onInteract,
@@ -85,8 +89,7 @@ export const CareerCenterBuilding: React.FC<CareerCenterBuildingProps> = ({
       {/* Selection / Hover Outline Highlight Box */}
       {(isSelected || isHovered) && (
         <group position={[0, 0.26, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[24.2, 24.2]} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} geometry={_careerHighlightPlaneGeo}>
             <meshBasicMaterial
               color={isSelected ? '#f59e0b' : '#fbbf24'}
               wireframe
@@ -94,8 +97,7 @@ export const CareerCenterBuilding: React.FC<CareerCenterBuildingProps> = ({
               opacity={isSelected ? 0.9 : 0.45}
             />
           </mesh>
-          <lineSegments>
-            <edgesGeometry args={[new THREE.BoxGeometry(24.0, 0.12, 24.0)]} />
+          <lineSegments geometry={_careerHighlightEdgesGeo}>
             <lineBasicMaterial
               color={isSelected ? '#f59e0b' : '#fbbf24'}
               linewidth={2}

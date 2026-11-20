@@ -35,6 +35,12 @@ interface CloudHubBuildingProps {
  *   7. Realistic rooftop mechanical penthouse, HVAC chillers, and satellite communication dish.
  *   8. Full LOD efficiency maintaining 60+ FPS.
  */
+// Pre-allocated static geometries for zero-allocation hover, highlights and trims
+const _cloudHighlightPlaneGeo = new THREE.PlaneGeometry(24.4, 24.4);
+const _cloudHighlightEdgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(24.4, 0.1, 24.4));
+const _cloudScreenEdgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(14.56, 8.56, 0.02));
+const _cloudPylonEdgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(3.04, 3.04, 0.02));
+
 export const CloudHubBuilding: React.FC<CloudHubBuildingProps> = ({
   position = [40.0, 0, 40.0],
   onInteract,
@@ -100,8 +106,7 @@ export const CloudHubBuilding: React.FC<CloudHubBuildingProps> = ({
       {/* 0. Selection / Hover Outline Highlight Box */}
       {(isSelected || isHovered) && (
         <group position={[0, 0.26, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[24.4, 24.4]} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} geometry={_cloudHighlightPlaneGeo}>
             <meshBasicMaterial
               color="#00f0ff"
               transparent
@@ -110,8 +115,7 @@ export const CloudHubBuilding: React.FC<CloudHubBuildingProps> = ({
               depthWrite={false}
             />
           </mesh>
-          <lineSegments>
-            <edgesGeometry args={[new THREE.BoxGeometry(24.4, 0.1, 24.4)]} />
+          <lineSegments geometry={_cloudHighlightEdgesGeo}>
             <lineBasicMaterial color="#00f0ff" linewidth={2} />
           </lineSegments>
         </group>
@@ -248,8 +252,7 @@ export const CloudHubBuilding: React.FC<CloudHubBuildingProps> = ({
             <primitive object={materials.curvedFacadeTextureMat} attach="material" />
           </mesh>
           {/* Glowing Cybernetic Border Trim */}
-          <lineSegments position={[0, 0, -0.15]}>
-            <edgesGeometry args={[new THREE.BoxGeometry(14.56, 8.56, 0.02)]} />
+          <lineSegments position={[0, 0, -0.15]} geometry={_cloudScreenEdgesGeo}>
             <lineBasicMaterial color="#00f0ff" linewidth={2} />
           </lineSegments>
         </group>
@@ -264,8 +267,7 @@ export const CloudHubBuilding: React.FC<CloudHubBuildingProps> = ({
             <planeGeometry args={[14.5, 8.5]} />
             <primitive object={materials.curvedFacadeTextureMat} attach="material" />
           </mesh>
-          <lineSegments position={[0, 0, -0.15]}>
-            <edgesGeometry args={[new THREE.BoxGeometry(14.56, 8.56, 0.02)]} />
+          <lineSegments position={[0, 0, -0.15]} geometry={_cloudScreenEdgesGeo}>
             <lineBasicMaterial color="#00f0ff" linewidth={2} />
           </lineSegments>
         </group>
@@ -384,8 +386,7 @@ export const CloudHubBuilding: React.FC<CloudHubBuildingProps> = ({
             <planeGeometry args={[3.0, 3.0]} />
             <primitive object={materials.cyberPulseScreenMat} attach="material" />
           </mesh>
-          <lineSegments position={[0, 0, -0.12]}>
-            <edgesGeometry args={[new THREE.BoxGeometry(3.04, 3.04, 0.02)]} />
+          <lineSegments position={[0, 0, -0.12]} geometry={_cloudPylonEdgesGeo}>
             <lineBasicMaterial color="#00f0ff" linewidth={2} />
           </lineSegments>
           <pointLight color="#00f0ff" intensity={2.2} distance={8.0} position={[0, 0, -1.0]} />

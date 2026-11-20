@@ -10,10 +10,7 @@ import {
   Moon,
   Camera,
   Activity,
-  Layers,
-  Sparkles,
   GitFork,
-  CheckCircle,
   Building2,
   RotateCcw,
 } from 'lucide-react';
@@ -37,7 +34,11 @@ import { ContactBuildingOverlay } from '@/components/three-world/ContactBuilding
 import { AIResearchOverlay } from '@/components/three-world/AIResearchOverlay';
 import { CloudHubOverlay } from '@/components/three-world/CloudHubOverlay';
 
-export const WorldScene: React.FC = () => {
+interface WorldSceneProps {
+  onSwitchToStory?: () => void;
+}
+
+export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const network = useMemo(() => getCityRoadNetwork(), []);
@@ -45,12 +46,15 @@ export const WorldScene: React.FC = () => {
   // Store state
   const cameraMode = useWorldStore((s) => s.cameraMode);
   const setCameraMode = useWorldStore((s) => s.setCameraMode);
+  const cameraPreset = useWorldStore((s) => s.cameraPreset);
   const setCameraPreset = useWorldStore((s) => s.setCameraPreset);
   const setCameraView = useWorldStore((s) => s.setCameraView);
   const downtownMode = useWorldStore((s) => s.downtownMode);
   const setDowntownMode = useWorldStore((s) => s.setDowntownMode);
   const toggleDowntownMode = useWorldStore((s) => s.toggleDowntownMode);
   const toggleCameraMode = useWorldStore((s) => s.toggleCameraMode);
+  const isCameraPresetMenuOpen = useWorldStore((s) => s.isCameraPresetMenuOpen);
+  const toggleCameraPresetMenu = useWorldStore((s) => s.toggleCameraPresetMenu);
   const timeOfDay = useWorldStore((s) => s.timeOfDay);
   const setTimeOfDay = useWorldStore((s) => s.setTimeOfDay);
   const showPerfMonitor = useWorldStore((s) => s.showPerfMonitor);
@@ -61,7 +65,8 @@ export const WorldScene: React.FC = () => {
   const hoveredLandmark = useWorldStore((s) => s.hoveredLandmark);
   const setSelectedLandmark = useWorldStore((s) => s.setSelectedLandmark);
   const qualityProfile = useWorldStore((s) => s.qualityProfile);
-  const setQualityProfile = useWorldStore((s) => s.setQualityProfile);
+  const effectiveQuality = useWorldStore((s) => s.effectiveQuality);
+  const toggleQualityProfile = useWorldStore((s) => s.toggleQualityProfile);
 
   // Synchronize view and mode query params
   useEffect(() => {
@@ -322,10 +327,6 @@ export const WorldScene: React.FC = () => {
   const [contactInitialTab, setContactInitialTab] = useState<'form' | 'socials' | 'collaboration' | 'resume'>('form');
   const [aiInitialTab, setAiInitialTab] = useState<'overview' | 'topics' | 'demos' | 'projects'>('overview');
 
-  const portfolioBlocks = useMemo(() => {
-    return network.blocks.filter((b) => b.isProtectedDistrict && b.reservedPlot);
-  }, [network]);
-
   const handleSelectPlot = useCallback((block: CityBlockData) => {
     setActivePlot(block);
     const pId = block.reservedPlot?.id;
@@ -347,10 +348,13 @@ export const WorldScene: React.FC = () => {
     worldStore.getState().setIsInteracting(selectedOverlay !== null);
   }, [selectedOverlay]);
 
-  // Global Escape key listener: closes any active portfolio modal and restores avatar mode
+  // Global Escape key listener: closes any active portfolio modal, preset menu and restores avatar mode
   useEffect(() => {
     const handleGlobalEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape' || e.code === 'Escape') {
+        if (isCameraPresetMenuOpen) {
+          worldStore.getState().setIsCameraPresetMenuOpen(false);
+        }
         if (selectedOverlay !== null) {
           setSelectedOverlay(null);
           worldStore.getState().setIsInteracting(false);
@@ -359,7 +363,7 @@ export const WorldScene: React.FC = () => {
     };
     window.addEventListener('keydown', handleGlobalEsc);
     return () => window.removeEventListener('keydown', handleGlobalEsc);
-  }, [selectedOverlay]);
+  }, [selectedOverlay, isCameraPresetMenuOpen]);
 
   const handleToggleTimeOfDay = () => {
     setTimeOfDay(timeOfDay === 'day' ? 'sunset' : timeOfDay === 'sunset' ? 'night' : 'day');
@@ -408,333 +412,438 @@ export const WorldScene: React.FC = () => {
         }}
       />
 
-      {/* 2. Top Navigation Bar (Portfolio Navigation & Mode Selectors) */}
-      <div className="absolute top-4 left-4 right-4 z-30 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
-        {/* Left: Classic Portfolio Return & Brand */}
-        <div className="flex items-center gap-2.5 pointer-events-auto">
-          <button
-            onClick={() => router.push('/')}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-950/80 hover:bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold backdrop-blur-md transition-all shadow-lg shadow-black/40 hover:scale-105 active:scale-95"
-            title="Return to Classic Portfolio"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Classic Portfolio</span>
-          </button>
+      {/* 2. Top Navigation Bar (Portfolio Navigation, Mode Selectors & Landmark Navigation) */}
+      <header className="fixed top-3 left-3 right-3 z-30 flex flex-col gap-2 pointer-events-none">
+        {/* Row 1: Left Portfolio Navigation & Right System Controls */}
+        <div className="flex items-center justify-between gap-2 w-full">
+          {/* Left: Classic Portfolio Return, Story Switcher & Development Status */}
+          <div className="flex items-center gap-2 pointer-events-auto flex-wrap">
+            <button
+              onClick={() => router.push('/')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-950/80 hover:bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold backdrop-blur-md transition-all shadow-lg shadow-black/40 hover:scale-105 active:scale-95"
+              title="Return to Classic Portfolio"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Classic Portfolio</span>
+            </button>
 
-          <div className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-950/70 border border-white/10 text-white text-xs font-mono backdrop-blur-md">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                downtownMode === 'full' ? 'bg-emerald-400' : 'bg-amber-400'
-              } animate-pulse`}
-            />
-            <span className="font-bold tracking-wider">
-              {downtownMode === 'full'
-                ? 'PHASE 2.2 // INNOVATION & PROJECTS CENTER'
-                : 'PHASE 2.2 // REFERENCE BLOCK (BLOCK_1_3)'}
-            </span>
+            {onSwitchToStory && (
+              <button
+                onClick={onSwitchToStory}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 hover:text-white text-xs font-mono font-bold backdrop-blur-md transition-all shadow-[0_0_15px_rgba(245,158,11,0.25)] hover:scale-105 active:scale-95"
+                title="Switch to Cinematic Story Scrollytelling Mode"
+              >
+                <Compass className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                <span>STORY VIEW</span>
+              </button>
+            )}
+
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-950/70 border border-white/10 text-white text-xs font-mono backdrop-blur-md">
+              <span
+                className={`w-2 h-2 rounded-full ${downtownMode === 'full' ? 'bg-emerald-400' : 'bg-amber-400'
+                  } animate-pulse`}
+              />
+              <span className="font-bold tracking-wider">
+                {downtownMode === 'full'
+                  ? 'PHASE 2.10 // 3D METROPOLIS'
+                  : 'PHASE 2.10 // REF BLOCK'}
+              </span>
+            </div>
+
+            {/* Development Toggle: Reference Block vs Full Downtown */}
+            <button
+              onClick={toggleDowntownMode}
+              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-mono font-bold backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95 ${downtownMode === 'full'
+                ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                : 'bg-amber-500/20 border-amber-400 text-amber-300'
+                }`}
+              title="Toggle between Full Downtown and Reference Block (block_1_3 only)"
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>
+                {downtownMode === 'full'
+                  ? 'FULL DOWNTOWN'
+                  : 'REF BLOCK'}
+              </span>
+            </button>
           </div>
 
-          {/* Working Development Toggle: Reference Block vs Full Downtown */}
-          <button
-            onClick={toggleDowntownMode}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-mono font-bold backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95 ${
-              downtownMode === 'full'
-                ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-emerald-500/20'
-                : 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-amber-500/20'
-            }`}
-            title="Toggle between Full Downtown (all 40 background blocks / 63 buildings) and Reference Block (block_1_3 only)"
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>
-              {downtownMode === 'full'
-                ? 'FULL DOWNTOWN (40 BLOCKS)'
-                : 'REF BLOCK (BLOCK_1_3)'}
-            </span>
-          </button>
-        </div>
-
-        {/* Center: Clickable Landmark Directory in HUD (TASK 4) */}
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-950/90 border border-white/15 backdrop-blur-md pointer-events-auto shadow-xl">
-          <span className="px-2 py-1 text-[10px] font-mono text-zinc-400 font-bold tracking-wider hidden sm:inline">
-            LANDMARKS:
-          </span>
-          <button
-            onClick={() => {
-              setSelectedLandmark('hq');
-              setCameraView('orbit', 'central_hq_overview');
-            }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-              selectedLandmark === 'hq'
-                ? 'bg-cyan-500/30 border border-cyan-400 text-cyan-200 shadow-lg shadow-cyan-500/20'
-                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
-            }`}
-            title="Select & Focus Developer HQ (City Center [0, 0])"
-          >
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            <span>DEVELOPER HQ</span>
-          </button>
-          <button
-            onClick={() => {
-              setSelectedLandmark('innovation');
-              setCameraView('orbit', 'innovation_three_quarter');
-            }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-              selectedLandmark === 'innovation'
-                ? 'bg-purple-500/30 border border-purple-400 text-purple-200 shadow-lg shadow-purple-500/20'
-                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
-            }`}
-            title="Select & Focus Innovation & Projects Center ([40, -40])"
-          >
-            <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-            <span>INNOVATION CENTER</span>
-          </button>
-          <button
-            onClick={() => {
-              setSelectedLandmark('skills');
-              setCameraView('orbit', 'skills_three_quarter');
-            }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-              selectedLandmark === 'skills'
-                ? 'bg-emerald-500/30 border border-emerald-400 text-emerald-200 shadow-lg shadow-emerald-500/20'
-                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
-            }`}
-            title="Select & Focus Skills & Technology Tower ([-40, 0])"
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>SKILLS TOWER</span>
-          </button>
-          <button
-            onClick={() => {
-              setSelectedLandmark('career');
-              setCameraView('orbit', 'career_three_quarter');
-            }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-              selectedLandmark === 'career'
-                ? 'bg-amber-500/30 border border-amber-400 text-amber-200 shadow-lg shadow-amber-500/20'
-                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
-            }`}
-            title="Select & Focus Career & Experience Center ([40, 0])"
-          >
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span>CAREER CENTER</span>
-          </button>
-          <button
-            onClick={() => {
-              setSelectedLandmark('about');
-              setCameraView('orbit', 'about_three_quarter');
-            }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-              selectedLandmark === 'about'
-                ? 'bg-orange-500/30 border border-orange-400 text-orange-200 shadow-lg shadow-orange-500/20'
-                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
-            }`}
-            title="Select & Focus About Me Studio ([0, -40])"
-          >
-            <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
-            <span>ABOUT STUDIO</span>
-          </button>
-          <button
-            onClick={() => {
-              setSelectedLandmark('contact');
-              setCameraView('orbit', 'contact_three_quarter');
-            }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-              selectedLandmark === 'contact'
-                ? 'bg-cyan-500/30 border border-cyan-400 text-cyan-200 shadow-lg shadow-cyan-500/20'
-                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
-            }`}
-            title="Select & Focus Contact & Collaboration Hub ([-40, 40])"
-          >
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            <span>CONTACT HUB</span>
-          </button>
-          <button
-            onClick={() => {
-              setSelectedLandmark('ai');
-              setCameraView('orbit', 'ai_three_quarter');
-            }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-              selectedLandmark === 'ai'
-                ? 'bg-purple-500/30 border border-purple-400 text-purple-200 shadow-lg shadow-purple-500/20'
-                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
-            }`}
-            title="Select & Focus AI Research & Innovation Center ([0, 40])"
-          >
-            <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-            <span>AI RESEARCH</span>
-          </button>
-          <button
-            onClick={() => {
-              setSelectedLandmark('cloud');
-              setCameraView('orbit', 'cloud_three_quarter');
-            }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-              selectedLandmark === 'cloud'
-                ? 'bg-cyan-500/30 border border-cyan-400 text-cyan-200 shadow-lg shadow-cyan-500/20'
-                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
-            }`}
-            title="Select & Focus Cloud & Systems Engineering Hub ([40, 40])"
-          >
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            <span>CLOUD HUB</span>
-          </button>
-        </div>
-
-        {/* Right: Camera Mode Switcher, Nav Debug & World Environment Controls */}
-        <div className="flex items-center gap-2 pointer-events-auto">
-          {/* Autonomous Vehicle Navigation Graph Debug Toggle */}
-          <button
-            onClick={toggleNavDebug}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-mono font-bold backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95 ${
-              showNavDebug
+          {/* Right: Camera Mode Switcher, Presets Drawer, Nav Debug & Environment Controls */}
+          <div className="flex items-center gap-1.5 pointer-events-auto ml-auto">
+            {/* Autonomous Vehicle Navigation Graph Debug Toggle */}
+            <button
+              onClick={toggleNavDebug}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-mono font-bold backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95 ${showNavDebug
                 ? 'bg-gradient-to-r from-amber-600 to-orange-600 border-amber-400 text-white shadow-amber-500/30'
                 : 'bg-zinc-950/80 border-white/10 text-zinc-400 hover:text-white'
-            }`}
-            title="Toggle Autonomous Vehicle Lanes, Turns, Pedestrian & A* Routing Debug"
-          >
-            <GitFork className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">NAV GRAPH</span>
-          </button>
+                }`}
+              title="Toggle Autonomous Vehicle & Pedestrian Navigation Graph"
+            >
+              <GitFork className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">NAV GRAPH</span>
+            </button>
 
-          {/* Camera Mode Toggle: Orbit vs Avatar (Playable Walk) vs Story View */}
-          <button
-            onClick={toggleCameraMode}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold font-mono tracking-wider backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95 ${
-              cameraMode === 'avatar'
+            {/* Camera Mode Toggle: Orbit vs Avatar (Playable Walk) vs Story View */}
+            <button
+              onClick={toggleCameraMode}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold font-mono tracking-wider backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95 ${cameraMode === 'avatar'
                 ? 'bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-400 text-white shadow-emerald-600/30 ring-2 ring-emerald-400/50'
                 : cameraMode === 'orbit'
-                ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 border-cyan-400/40 text-white shadow-indigo-600/30'
-                : 'bg-gradient-to-r from-purple-600 to-pink-600 border-purple-400/40 text-white shadow-purple-600/30'
-            }`}
-            title="Switch between Orbit overview, Playable Avatar mode, and Story view"
-          >
-            <Camera className="w-3.5 h-3.5" />
-            <span>
-              {cameraMode === 'avatar'
-                ? 'AVATAR MODE'
-                : cameraMode === 'orbit'
-                ? 'ORBIT MODE'
-                : 'STORY VIEW'}
-            </span>
-          </button>
+                  ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 border-cyan-400/40 text-white shadow-indigo-600/30'
+                  : 'bg-gradient-to-r from-purple-600 to-pink-600 border-purple-400/40 text-white shadow-purple-600/30'
+                }`}
+              title="Switch between Playable Avatar mode, Orbit overview, and Story view"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>
+                {cameraMode === 'avatar'
+                  ? 'AVATAR MODE'
+                  : cameraMode === 'orbit'
+                    ? 'ORBIT MODE'
+                    : 'STORY VIEW'}
+              </span>
+            </button>
 
-          {/* Failsafe Camera Recovery Button */}
-          <button
-            onClick={() => {
-              if (cameraMode === 'avatar') {
-                avatarGameplayState.initializeSpawn(0);
-                window.dispatchEvent(new CustomEvent('reset-avatar-camera'));
-              } else {
-                setCameraPreset(null);
-                window.dispatchEvent(new CustomEvent('reset-camera'));
-              }
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-950/80 hover:bg-zinc-900 border border-amber-500/30 hover:border-amber-400 text-amber-300 hover:text-white text-xs font-mono font-bold backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95"
-            title="Reset Camera to default center perspective (Shortcut: R)"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">RESET CAM</span>
-          </button>
+            {/* Camera Presets Menu Flyout Toggle */}
+            <button
+              onClick={toggleCameraPresetMenu}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-mono font-bold backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95 ${isCameraPresetMenuOpen
+                ? 'bg-cyan-500/30 border-cyan-400 text-cyan-200 shadow-cyan-500/20'
+                : 'bg-zinc-950/80 border-white/10 text-zinc-300 hover:text-white hover:border-cyan-400/40'
+                }`}
+              title="Toggle Camera Presets Menu (Curated angles and aerials)"
+            >
+              <Camera className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden md:inline">PRESETS</span>
+            </button>
 
-          {/* Time of Day Toggle */}
-          <button
-            onClick={handleToggleTimeOfDay}
-            className="p-2 rounded-xl bg-zinc-950/80 hover:bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95"
-            title={`Current: ${timeOfDay}. Click to change lighting.`}
-          >
-            {timeOfDay === 'day' ? (
-              <Sun className="w-4 h-4 text-amber-400" />
-            ) : timeOfDay === 'sunset' ? (
-              <Sunset className="w-4 h-4 text-orange-400" />
-            ) : (
-              <Moon className="w-4 h-4 text-cyan-400" />
-            )}
-          </button>
+            {/* Failsafe Camera Recovery Button */}
+            <button
+              onClick={() => {
+                if (cameraMode === 'avatar') {
+                  avatarGameplayState.initializeSpawn(0);
+                  window.dispatchEvent(new CustomEvent('reset-avatar-camera'));
+                } else {
+                  setCameraPreset(null);
+                  window.dispatchEvent(new CustomEvent('reset-camera'));
+                }
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-zinc-950/80 hover:bg-zinc-900 border border-amber-500/30 hover:border-amber-400 text-amber-300 hover:text-white text-xs font-mono font-bold backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95"
+              title="Reset Camera to default center perspective (Shortcut: R)"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden lg:inline">RESET</span>
+            </button>
 
-          {/* Telemetry Toggle */}
-          <button
-            onClick={togglePerfMonitor}
-            className={`p-2 rounded-xl border backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95 ${
-              showPerfMonitor
+            {/* Time of Day Toggle */}
+            <button
+              onClick={handleToggleTimeOfDay}
+              className="p-1.5 rounded-xl bg-zinc-950/80 hover:bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95"
+              title={`Current: ${timeOfDay}. Click to change lighting.`}
+            >
+              {timeOfDay === 'day' ? (
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+              ) : timeOfDay === 'sunset' ? (
+                <Sunset className="w-3.5 h-3.5 text-orange-400" />
+              ) : (
+                <Moon className="w-3.5 h-3.5 text-cyan-400" />
+              )}
+            </button>
+
+            {/* Telemetry Toggle */}
+            <button
+              onClick={togglePerfMonitor}
+              className={`p-1.5 rounded-xl border backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95 ${showPerfMonitor
                 ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-400'
                 : 'bg-zinc-950/80 border-white/10 text-zinc-400 hover:text-white'
-            }`}
-            title="Toggle Engine Diagnostics"
-          >
-            <Activity className="w-4 h-4" />
-          </button>
+                }`}
+              title="Toggle Engine Diagnostics"
+            >
+              <Activity className="w-3.5 h-3.5" />
+            </button>
 
-          {/* Graphics Quality Profile Toggle */}
-          <button
-            onClick={() => {
-              const current = qualityProfile;
-              const next = current === 'high' ? 'medium' : current === 'medium' ? 'low' : 'high';
-              setQualityProfile(next);
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-950/80 hover:bg-zinc-900 border border-white/10 hover:border-cyan-400/40 text-xs font-mono backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95"
-            title="Toggle Graphics Quality Profile (High / Medium / Low)"
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                qualityProfile === 'high'
-                  ? 'bg-emerald-400'
-                  : qualityProfile === 'medium'
-                  ? 'bg-amber-400'
-                  : 'bg-rose-400'
-              }`}
-            />
-            <span className="font-bold text-zinc-300">
-              {qualityProfile.toUpperCase()}
-            </span>
-          </button>
+            {/* Graphics Quality Profile Toggle (Auto / High / Medium / Low) */}
+            <button
+              onClick={toggleQualityProfile}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-950/80 hover:bg-zinc-900 border border-white/10 hover:border-cyan-400/40 text-xs font-mono backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95"
+              title={`Graphics Quality: ${qualityProfile.toUpperCase()} (Effective: ${effectiveQuality.toUpperCase()}). Click to toggle.`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${qualityProfile === 'auto'
+                  ? 'bg-cyan-400 animate-pulse'
+                  : effectiveQuality === 'high'
+                    ? 'bg-emerald-400'
+                    : effectiveQuality === 'medium'
+                      ? 'bg-amber-400'
+                      : 'bg-rose-400'
+                  }`}
+              />
+              <span className="font-bold text-zinc-300">
+                {qualityProfile === 'auto' ? 'AUTO' : qualityProfile.toUpperCase()}
+              </span>
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* 2b. TASK 4: Persistent Landmark Name in HUD when selected */}
+        {/* Row 2: Responsive Clickable Landmark Directory Bar (Horizontally Scrollable, Non-Wrapping) */}
+        <div className="flex justify-center w-full">
+          <div className="flex items-center gap-1 p-1 rounded-2xl bg-zinc-950/90 border border-white/15 backdrop-blur-md pointer-events-auto shadow-xl max-w-full overflow-x-auto no-scrollbar whitespace-nowrap">
+            <span className="px-2 py-0.5 text-[10px] font-mono text-zinc-400 font-bold tracking-wider shrink-0 hidden sm:inline">
+              LANDMARKS:
+            </span>
+            <button
+              onClick={() => {
+                setSelectedLandmark('hq');
+                setCameraView('orbit', 'central_hq_overview');
+              }}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 shrink-0 ${selectedLandmark === 'hq'
+                ? 'bg-cyan-500/30 border border-cyan-400 text-cyan-200 shadow-md shadow-cyan-500/20'
+                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
+                }`}
+              title="Select & Focus Developer HQ (City Center [0, 0])"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span>DEVELOPER HQ</span>
+            </button>
+            <button
+              onClick={() => {
+                setSelectedLandmark('innovation');
+                setCameraView('orbit', 'innovation_three_quarter');
+              }}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 shrink-0 ${selectedLandmark === 'innovation'
+                ? 'bg-purple-500/30 border border-purple-400 text-purple-200 shadow-md shadow-purple-500/20'
+                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
+                }`}
+              title="Select & Focus Innovation & Projects Center ([40, -40])"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+              <span>INNOVATION CENTER</span>
+            </button>
+            <button
+              onClick={() => {
+                setSelectedLandmark('skills');
+                setCameraView('orbit', 'skills_three_quarter');
+              }}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 shrink-0 ${selectedLandmark === 'skills'
+                ? 'bg-emerald-500/30 border border-emerald-400 text-emerald-200 shadow-md shadow-emerald-500/20'
+                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
+                }`}
+              title="Select & Focus Skills & Technology Tower ([-40, 0])"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>SKILLS TOWER</span>
+            </button>
+            <button
+              onClick={() => {
+                setSelectedLandmark('career');
+                setCameraView('orbit', 'career_three_quarter');
+              }}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 shrink-0 ${selectedLandmark === 'career'
+                ? 'bg-amber-500/30 border border-amber-400 text-amber-200 shadow-md shadow-amber-500/20'
+                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
+                }`}
+              title="Select & Focus Career & Experience Center ([40, 0])"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              <span>CAREER CENTER</span>
+            </button>
+            <button
+              onClick={() => {
+                setSelectedLandmark('about');
+                setCameraView('orbit', 'about_three_quarter');
+              }}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 shrink-0 ${selectedLandmark === 'about'
+                ? 'bg-orange-500/30 border border-orange-400 text-orange-200 shadow-md shadow-orange-500/20'
+                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
+                }`}
+              title="Select & Focus About Me Studio ([0, -40])"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+              <span>ABOUT STUDIO</span>
+            </button>
+            <button
+              onClick={() => {
+                setSelectedLandmark('contact');
+                setCameraView('orbit', 'contact_three_quarter');
+              }}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 shrink-0 ${selectedLandmark === 'contact'
+                ? 'bg-cyan-500/30 border border-cyan-400 text-cyan-200 shadow-md shadow-cyan-500/20'
+                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
+                }`}
+              title="Select & Focus Contact & Collaboration Hub ([-40, 40])"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span>CONTACT HUB</span>
+            </button>
+            <button
+              onClick={() => {
+                setSelectedLandmark('ai');
+                setCameraView('orbit', 'ai_three_quarter');
+              }}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 shrink-0 ${selectedLandmark === 'ai'
+                ? 'bg-purple-500/30 border border-purple-400 text-purple-200 shadow-md shadow-purple-500/20'
+                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
+                }`}
+              title="Select & Focus AI Research & Innovation Center ([0, 40])"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+              <span>AI RESEARCH</span>
+            </button>
+            <button
+              onClick={() => {
+                setSelectedLandmark('cloud');
+                setCameraView('orbit', 'cloud_three_quarter');
+              }}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 shrink-0 ${selectedLandmark === 'cloud'
+                ? 'bg-cyan-500/30 border border-cyan-400 text-cyan-200 shadow-md shadow-cyan-500/20'
+                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
+                }`}
+              title="Select & Focus Cloud & Systems Engineering Hub ([40, 40])"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span>CLOUD HUB</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* 2b. Right-Side Camera Presets Flyout Menu (Non-overlapping, responsive, scrollable) */}
+      {isCameraPresetMenuOpen && (
+        <aside
+          aria-label="Camera Presets Menu"
+          className="fixed top-24 sm:top-28 right-3 sm:right-4 z-40 w-72 max-h-[min(380px,calc(100vh-440px))] overflow-y-auto rounded-2xl bg-zinc-950/95 border border-cyan-500/30 backdrop-blur-xl p-3 shadow-2xl pointer-events-auto text-zinc-300 animate-in fade-in slide-in-from-right-4 duration-200"
+        >
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
+            <div className="flex items-center gap-2">
+              <Camera className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="font-mono text-xs font-bold text-white tracking-wider uppercase">Camera Presets</span>
+            </div>
+            <button
+              onClick={toggleCameraPresetMenu}
+              className="p-1 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white text-xs font-mono transition-colors"
+              title="Close Presets Menu"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="space-y-3 font-mono text-[11px]">
+            {/* Group 1: 8 Landmark Buildings */}
+            <div>
+              <div className="text-[10px] uppercase font-bold text-cyan-400/80 px-1 mb-1 tracking-wider">
+                Landmark Perspectives
+              </div>
+              <div className="space-y-1">
+                {[
+                  { id: 'central_hq_overview', label: '1. Central HQ Overview', landmark: 'hq' as const },
+                  { id: 'hq_front_entrance', label: '2. HQ Grand Entrance', landmark: 'hq' as const },
+                  { id: 'hq_three_quarter', label: '3. HQ 3/4 Exterior', landmark: 'hq' as const },
+                  { id: 'innovation_front_entrance', label: '4. Innovation Entrance', landmark: 'innovation' as const },
+                  { id: 'innovation_three_quarter', label: '5. Innovation 3/4 View', landmark: 'innovation' as const },
+                  { id: 'skills_three_quarter', label: '6. Skills Tower 3/4 View', landmark: 'skills' as const },
+                  { id: 'career_three_quarter', label: '7. Career Center 3/4 View', landmark: 'career' as const },
+                  { id: 'about_three_quarter', label: '8. About Studio 3/4 View', landmark: 'about' as const },
+                  { id: 'contact_three_quarter', label: '9. Contact Hub 3/4 View', landmark: 'contact' as const },
+                  { id: 'ai_three_quarter', label: '10. AI Research 3/4 View', landmark: 'ai' as const },
+                  { id: 'cloud_three_quarter', label: '11. Cloud Hub 3/4 View', landmark: 'cloud' as const },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setSelectedLandmark(item.landmark);
+                      setCameraView('orbit', item.id as any);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-xl transition-all flex items-center justify-between ${cameraPreset === item.id
+                      ? 'bg-cyan-500/20 border border-cyan-400 text-cyan-200 font-bold'
+                      : 'hover:bg-white/5 text-zinc-300 hover:text-white border border-transparent'
+                      }`}
+                  >
+                    <span>{item.label}</span>
+                    {cameraPreset === item.id && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Group 2: Aerials & City Scenery */}
+            <div className="pt-2 border-t border-white/10">
+              <div className="text-[10px] uppercase font-bold text-amber-400/80 px-1 mb-1 tracking-wider">
+                Aerial & City Scenery
+              </div>
+              <div className="space-y-1">
+                {[
+                  { id: 'both_landmarks_elevated', label: '12. Both Central Landmarks' },
+                  { id: 'all_nine_landmarks_aerial', label: '13. All 9 Districts Aerial' },
+                  { id: 'full_island_aerial', label: '14. Full Island Aerial' },
+                  { id: 'downtown_skyline', label: '15. Downtown Skyline' },
+                  { id: 'waterfront_street_level', label: '16. Waterfront Promenade' },
+                  { id: 'street_level_downtown', label: '17. Street-Level Canyon' },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setCameraView('orbit', item.id as any);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-xl transition-all flex items-center justify-between ${cameraPreset === item.id
+                      ? 'bg-amber-500/20 border border-amber-400 text-amber-200 font-bold'
+                      : 'hover:bg-white/5 text-zinc-300 hover:text-white border border-transparent'
+                      }`}
+                  >
+                    <span>{item.label}</span>
+                    {cameraPreset === item.id && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </aside>
+      )}
+
+      {/* 2c. Persistent Selected Landmark HUD Bar (Positioned below the landmark row with guaranteed clearance) */}
       {selectedLandmark && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
-          <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-zinc-950/95 border border-cyan-400/60 backdrop-blur-md shadow-2xl shadow-cyan-500/20">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-            <div className="flex flex-col">
-              <span className="text-xs font-mono font-bold text-white tracking-wider flex items-center gap-2">
-                <span>★ SELECTED LANDMARK:</span>
-                <span className="text-cyan-400 font-extrabold">
+        <div className="fixed top-28 sm:top-28 left-1/2 -translate-x-1/2 z-30 pointer-events-auto max-w-[calc(100vw-32px)]">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2 rounded-2xl bg-zinc-950/95 border border-cyan-400/60 backdrop-blur-md shadow-2xl shadow-cyan-500/20">
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping shrink-0" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-mono font-bold text-white tracking-wider flex items-center gap-2 truncate">
+                <span className="hidden sm:inline text-zinc-400">★ SELECTED:</span>
+                <span className="text-cyan-400 font-extrabold truncate">
                   {selectedLandmark === 'hq'
                     ? 'DEVELOPER HQ'
                     : selectedLandmark === 'skills'
-                    ? 'SKILLS & TECHNOLOGY TOWER'
-                    : selectedLandmark === 'career'
-                    ? 'CAREER & EXPERIENCE CENTER'
-                    : selectedLandmark === 'about'
-                    ? 'ABOUT ME STUDIO'
-                    : selectedLandmark === 'contact'
-                    ? 'CONTACT & COLLABORATION HUB'
-                    : selectedLandmark === 'ai'
-                    ? 'AI RESEARCH CENTER'
-                    : selectedLandmark === 'cloud'
-                    ? 'CLOUD ECOSYSTEM HUB'
-                    : 'INNOVATION & PROJECTS CENTER'}
+                      ? 'SKILLS & TECHNOLOGY TOWER'
+                      : selectedLandmark === 'career'
+                        ? 'CAREER & EXPERIENCE CENTER'
+                        : selectedLandmark === 'about'
+                          ? 'ABOUT ME STUDIO'
+                          : selectedLandmark === 'contact'
+                            ? 'CONTACT & COLLABORATION HUB'
+                            : selectedLandmark === 'ai'
+                              ? 'AI RESEARCH CENTER'
+                              : selectedLandmark === 'cloud'
+                                ? 'CLOUD ECOSYSTEM HUB'
+                                : 'INNOVATION & PROJECTS CENTER'}
                 </span>
               </span>
-              <span className="text-[10px] font-mono text-zinc-400">
+              <span className="text-[10px] font-mono text-zinc-400 truncate hidden md:inline">
                 {selectedLandmark === 'hq'
                   ? 'City Center [0, 0] • Full Stack • Web • Mobile'
                   : selectedLandmark === 'skills'
-                  ? 'West Parcel [-40, 0] • Full Stack • Mobile • Cloud • AI'
-                  : selectedLandmark === 'career'
-                  ? 'East Parcel [40, 0] • Software Engineering • Professional Journey'
-                  : selectedLandmark === 'about'
-                  ? 'North Parcel [0, -40] • My Story • Education • Developer Journey'
-                  : selectedLandmark === 'contact'
-                  ? 'Northwest Parcel [-40, 40] • Let\'s Connect • Build • Innovate'
-                  : selectedLandmark === 'ai'
-                  ? 'North Central Parcel [0, 40] • Artificial Intelligence • Python • Research'
-                  : selectedLandmark === 'cloud'
-                  ? 'Southeast Parcel [40, 40] • Connect • Build • Deploy • Cloud Architecture'
-                  : 'Southeast Parcel [40, -40] • Projects • Research • Development'}
+                    ? 'West Parcel [-40, 0] • Full Stack • Mobile • Cloud • AI'
+                    : selectedLandmark === 'career'
+                      ? 'East Parcel [40, 0] • Software Engineering • Professional Journey'
+                      : selectedLandmark === 'about'
+                        ? 'North Parcel [0, -40] • My Story • Education • Developer Journey'
+                        : selectedLandmark === 'contact'
+                          ? 'Northwest Parcel [-40, 40] • Let\'s Connect • Build • Innovate'
+                          : selectedLandmark === 'ai'
+                            ? 'North Central Parcel [0, 40] • Artificial Intelligence • Python • Research'
+                            : selectedLandmark === 'cloud'
+                              ? 'Southeast Parcel [40, 40] • Connect • Build • Deploy • Cloud Architecture'
+                              : 'Southeast Parcel [40, -40] • Projects • Research • Development'}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 ml-2">
+            <div className="flex items-center gap-1.5 ml-auto shrink-0">
               <button
                 onClick={() => {
                   if (selectedLandmark === 'hq') {
@@ -755,9 +864,9 @@ export const WorldScene: React.FC = () => {
                     setCameraView('orbit', 'innovation_front_entrance');
                   }
                 }}
-                className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-[10px] font-mono text-cyan-200 transition-all font-bold"
+                className="px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-[10px] font-mono text-cyan-200 transition-all font-bold"
               >
-                Entrance View
+                Entrance
               </button>
               <button
                 onClick={() => {
@@ -773,18 +882,20 @@ export const WorldScene: React.FC = () => {
                     setCameraView('orbit', 'contact_three_quarter');
                   } else if (selectedLandmark === 'ai') {
                     setCameraView('orbit', 'ai_three_quarter');
+                  } else if (selectedLandmark === 'cloud') {
+                    setCameraView('orbit', 'cloud_three_quarter');
                   } else {
                     setCameraView('orbit', 'innovation_three_quarter');
                   }
                 }}
-                className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-[10px] font-mono text-zinc-200 transition-all"
+                className="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-[10px] font-mono text-zinc-200 transition-all"
               >
                 Overview
               </button>
               {selectedLandmark === 'skills' && (
                 <button
                   onClick={() => setSelectedOverlay('skills')}
-                  className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-[10px] font-mono text-emerald-200 transition-all font-bold"
+                  className="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-[10px] font-mono text-emerald-200 transition-all font-bold"
                 >
                   Floor Directory
                 </button>
@@ -792,7 +903,7 @@ export const WorldScene: React.FC = () => {
               {selectedLandmark === 'career' && (
                 <button
                   onClick={() => setSelectedOverlay('career')}
-                  className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-[10px] font-mono text-amber-200 transition-all font-bold"
+                  className="px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-[10px] font-mono text-amber-200 transition-all font-bold"
                 >
                   Career Dashboard
                 </button>
@@ -800,7 +911,7 @@ export const WorldScene: React.FC = () => {
               {selectedLandmark === 'about' && (
                 <button
                   onClick={() => setSelectedOverlay('about')}
-                  className="px-2.5 py-1 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 border border-orange-400/40 text-[10px] font-mono text-orange-200 transition-all font-bold"
+                  className="px-2 py-1 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 border border-orange-400/40 text-[10px] font-mono text-orange-200 transition-all font-bold"
                 >
                   About Exhibition
                 </button>
@@ -808,7 +919,7 @@ export const WorldScene: React.FC = () => {
               {selectedLandmark === 'contact' && (
                 <button
                   onClick={() => setSelectedOverlay('contact')}
-                  className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-[10px] font-mono text-cyan-200 transition-all font-bold"
+                  className="px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-[10px] font-mono text-cyan-200 transition-all font-bold"
                 >
                   Contact Terminal
                 </button>
@@ -816,7 +927,7 @@ export const WorldScene: React.FC = () => {
               {selectedLandmark === 'ai' && (
                 <button
                   onClick={() => setSelectedOverlay('ai')}
-                  className="px-2.5 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-[10px] font-mono text-purple-200 transition-all font-bold"
+                  className="px-2 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-[10px] font-mono text-purple-200 transition-all font-bold"
                 >
                   AI Dashboard
                 </button>
@@ -824,9 +935,17 @@ export const WorldScene: React.FC = () => {
               {selectedLandmark === 'cloud' && (
                 <button
                   onClick={() => setSelectedOverlay('cloud')}
-                  className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-[10px] font-mono text-cyan-200 transition-all font-bold"
+                  className="px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-[10px] font-mono text-cyan-200 transition-all font-bold"
                 >
                   Cloud Dashboard
+                </button>
+              )}
+              {selectedLandmark === 'innovation' && (
+                <button
+                  onClick={() => setSelectedOverlay('projects')}
+                  className="px-2 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-[10px] font-mono text-purple-200 transition-all font-bold"
+                >
+                  Projects Gallery
                 </button>
               )}
               <button
@@ -850,18 +969,18 @@ export const WorldScene: React.FC = () => {
               {hoveredLandmark === 'hq'
                 ? 'DEVELOPER HQ'
                 : hoveredLandmark === 'skills'
-                ? 'SKILLS & TECHNOLOGY TOWER'
-                : hoveredLandmark === 'career'
-                ? 'CAREER & EXPERIENCE CENTER'
-                : hoveredLandmark === 'about'
-                ? 'ABOUT ME STUDIO'
-                : hoveredLandmark === 'contact'
-                ? 'CONTACT & COLLABORATION HUB'
-                : hoveredLandmark === 'ai'
-                ? 'AI RESEARCH CENTER'
-                : hoveredLandmark === 'cloud'
-                ? 'CLOUD ECOSYSTEM HUB'
-                : 'INNOVATION & PROJECTS CENTER'}
+                  ? 'SKILLS & TECHNOLOGY TOWER'
+                  : hoveredLandmark === 'career'
+                    ? 'CAREER & EXPERIENCE CENTER'
+                    : hoveredLandmark === 'about'
+                      ? 'ABOUT ME STUDIO'
+                      : hoveredLandmark === 'contact'
+                        ? 'CONTACT & COLLABORATION HUB'
+                        : hoveredLandmark === 'ai'
+                          ? 'AI RESEARCH CENTER'
+                          : hoveredLandmark === 'cloud'
+                            ? 'CLOUD ECOSYSTEM HUB'
+                            : 'INNOVATION & PROJECTS CENTER'}
             </span>
             <span className="text-zinc-400">— Click to Select & Focus Camera</span>
           </div>

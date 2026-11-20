@@ -10,11 +10,19 @@ import { Activity, Minimize2, Maximize2 } from 'lucide-react';
 export const PerformanceMetricsCollector: React.FC = () => {
   const { gl } = useThree();
   const frameCountRef = useRef<number>(0);
-  const lastTimeRef = useRef<number>(performance.now());
+  const lastTimeRef = useRef<number>(0);
+  const sustainedLowFpsRef = useRef<number>(0);
+  const sustainedHighFpsRef = useRef<number>(0);
+  const lastQualityChangeTimeRef = useRef<number>(0);
 
   useFrame(() => {
     frameCountRef.current += 1;
     const now = performance.now();
+    if (lastTimeRef.current === 0) {
+      lastTimeRef.current = now;
+      lastQualityChangeTimeRef.current = now;
+      return;
+    }
     const elapsed = now - lastTimeRef.current;
 
     // Sample every 250ms (4Hz)
@@ -28,6 +36,49 @@ export const PerformanceMetricsCollector: React.FC = () => {
         memoryMB = Math.round(
           (performance as any).memory.usedJSHeapSize / (1024 * 1024)
         );
+      }
+
+      const currentState = worldStore.getState();
+
+      // Adaptive Graphics Quality logic for 'auto' profile
+      if (currentState.qualityProfile === 'auto') {
+        const timeSinceChange = now - lastQualityChangeTimeRef.current;
+        if (fps < 38) {
+          sustainedLowFpsRef.current += elapsed;
+          sustainedHighFpsRef.current = 0;
+        } else if (fps >= 55) {
+          sustainedHighFpsRef.current += elapsed;
+          sustainedLowFpsRef.current = 0;
+        } else {
+          sustainedLowFpsRef.current = Math.max(0, sustainedLowFpsRef.current - elapsed * 0.5);
+          sustainedHighFpsRef.current = Math.max(0, sustainedHighFpsRef.current - elapsed * 0.5);
+        }
+
+        // Stepping down on sustained low framerate (> 3.0s)
+        if (sustainedLowFpsRef.current >= 3000 && timeSinceChange >= 5000) {
+          if (currentState.effectiveQuality === 'high') {
+            worldStore.getState().setEffectiveQuality('medium');
+            lastQualityChangeTimeRef.current = now;
+            sustainedLowFpsRef.current = 0;
+          } else if (currentState.effectiveQuality === 'medium') {
+            worldStore.getState().setEffectiveQuality('low');
+            lastQualityChangeTimeRef.current = now;
+            sustainedLowFpsRef.current = 0;
+          }
+        }
+
+        // Stepping up on sustained high framerate (> 6.0s)
+        if (sustainedHighFpsRef.current >= 6000 && timeSinceChange >= 5000) {
+          if (currentState.effectiveQuality === 'low') {
+            worldStore.getState().setEffectiveQuality('medium');
+            lastQualityChangeTimeRef.current = now;
+            sustainedHighFpsRef.current = 0;
+          } else if (currentState.effectiveQuality === 'medium') {
+            worldStore.getState().setEffectiveQuality('high');
+            lastQualityChangeTimeRef.current = now;
+            sustainedHighFpsRef.current = 0;
+          }
+        }
       }
 
       worldStore.getState().setPerformanceStats({
@@ -55,6 +106,8 @@ export const PerformanceMonitorHUD: React.FC = () => {
   const stats = useWorldStore((s) => s.performanceStats);
   const show = useWorldStore((s) => s.showPerfMonitor);
   const toggle = useWorldStore((s) => s.togglePerfMonitor);
+  const qualityProfile = useWorldStore((s) => s.qualityProfile);
+  const effectiveQuality = useWorldStore((s) => s.effectiveQuality);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
 
   if (!show) return null;
@@ -69,9 +122,9 @@ export const PerformanceMonitorHUD: React.FC = () => {
   return (
     <aside
       aria-label="3D Engine Performance Diagnostics"
-      className="fixed bottom-5 right-5 z-40 font-mono text-xs select-none"
+      className="fixed bottom-4 right-4 z-30 font-mono text-xs select-none max-w-[calc(100vw-32px)]"
     >
-      <div className="bg-zinc-950/90 backdrop-blur-md border border-white/10 rounded-2xl p-3.5 shadow-2xl shadow-black/60 text-zinc-300 w-64 transition-all">
+      <div className="bg-zinc-950/90 backdrop-blur-md border border-white/10 rounded-2xl p-3 shadow-2xl shadow-black/60 text-zinc-300 w-60 sm:w-64 transition-all">
         {/* Header */}
         <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
           <div className="flex items-center gap-2">
@@ -128,12 +181,17 @@ export const PerformanceMonitorHUD: React.FC = () => {
         {!isMinimized && (
           <div className="space-y-1.5 pt-1 text-[11px]">
             <div className="flex justify-between items-center text-zinc-400">
+              <span>Quality Tier:</span>
+              <span className="font-bold text-cyan-300">
+                {qualityProfile === 'auto'
+                  ? `AUTO (${effectiveQuality.toUpperCase()})`
+                  : qualityProfile.toUpperCase()}
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-zinc-400">
               <span>Draw Calls:</span>
               <span className="font-bold text-emerald-300">
-                {stats.drawCalls}{' '}
-                <span className="text-[9px] text-zinc-500 font-normal">
-                  (prev 6,134)
-                </span>
+                {stats.drawCalls}
               </span>
             </div>
             <div className="flex justify-between items-center text-zinc-400">
@@ -159,7 +217,7 @@ export const PerformanceMonitorHUD: React.FC = () => {
               </div>
             )}
             <div className="mt-2 pt-2 border-t border-white/10 text-[9px] text-zinc-400 leading-tight">
-              Phase 1 Clean Foundation: Zero loose meshes, shared materials.
+              Phase 2.10 Engine Telemetry
             </div>
           </div>
         )}

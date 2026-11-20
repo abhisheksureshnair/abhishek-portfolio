@@ -24,7 +24,7 @@ export function useLandmarkInteriorLOD(
   const selectedLandmark = useWorldStore((s) => s.selectedLandmark);
   const cameraMode = useWorldStore((s) => s.cameraMode);
   const cameraPreset = useWorldStore((s) => s.cameraPreset);
-  const qualityProfile = useWorldStore((s) => s.qualityProfile);
+  const effectiveQuality = useWorldStore((s) => s.effectiveQuality);
   const isInteracting = useWorldStore((s) => s.isInteracting);
 
   // If this building is currently selected or user opened its modal, always render interior
@@ -76,7 +76,7 @@ export function useLandmarkInteriorLOD(
     if (now - lastSampleTimeRef.current < 0.35) return; // Sample at ~3Hz
     lastSampleTimeRef.current = now;
 
-    const threshold = qualityProfile === 'low' ? 18.0 : qualityProfile === 'medium' ? 28.0 : 38.0;
+    const threshold = effectiveQuality === 'low' ? 18.0 : effectiveQuality === 'medium' ? 28.0 : 38.0;
 
     // Use camera position to calculate distance to landmark
     const camX = camera.position.x;
@@ -90,7 +90,7 @@ export function useLandmarkInteriorLOD(
   });
 
   // Low quality profile only mounts interior if explicitly selected
-  if (qualityProfile === 'low') {
+  if (effectiveQuality === 'low') {
     return isExplicitlyFocused || isPresetFocused;
   }
 

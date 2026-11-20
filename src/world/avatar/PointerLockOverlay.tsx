@@ -23,10 +23,10 @@ export const PointerLockOverlay: React.FC = () => {
     <>
       {/* 1. Pointer Lock Resume / Activate Prompt (shown when cursor is free) */}
       {!isPointerLocked && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-auto select-none animate-in fade-in slide-in-from-top-4 duration-200">
+        <div className="fixed top-24 sm:top-28 left-1/2 -translate-x-1/2 z-30 pointer-events-auto select-none animate-in fade-in slide-in-from-top-4 duration-200 max-w-[calc(100vw-32px)]">
           <button
             onClick={handleRequestLock}
-            className="group flex items-center gap-3.5 px-5 py-2.5 rounded-full bg-zinc-950/85 hover:bg-zinc-900/95 backdrop-blur-xl border border-cyan-500/40 hover:border-cyan-400 text-white shadow-2xl shadow-cyan-950/50 transition-all duration-200 hover:scale-[1.02] active:scale-98 cursor-pointer"
+            className="group flex items-center gap-3.5 px-5 py-2 rounded-full bg-zinc-950/85 hover:bg-zinc-900/95 backdrop-blur-xl border border-cyan-500/40 hover:border-cyan-400 text-white shadow-2xl shadow-cyan-950/50 transition-all duration-200 hover:scale-[1.02] active:scale-98 cursor-pointer"
           >
             <div className="w-6 h-6 rounded-full bg-cyan-500/20 border border-cyan-400/60 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/30 transition-colors">
               <Eye className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />

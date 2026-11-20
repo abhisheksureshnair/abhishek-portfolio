@@ -10,6 +10,7 @@ export const OrbitCamera: React.FC = () => {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const { camera } = useThree();
   const preset = useWorldStore((s) => s.cameraPreset);
+  const isInteracting = useWorldStore((s) => s.isInteracting);
 
   const targetPos = useRef<THREE.Vector3>(new THREE.Vector3(...WORLD_CONFIG.camera.orbitSpawn));
   const targetLook = useRef<THREE.Vector3>(new THREE.Vector3(...WORLD_CONFIG.camera.orbitTarget));
@@ -491,10 +492,11 @@ export const OrbitCamera: React.FC = () => {
     <OrbitControls
       ref={controlsRef}
       makeDefault
+      enabled={!isInteracting}
       enableDamping
       dampingFactor={0.06}
       minDistance={10}
-      maxDistance={1400}
+      maxDistance={1200}
       maxPolarAngle={Math.PI / 2 - 0.04} // Never sink below ground or water
       minPolarAngle={0.04}
       onStart={() => {

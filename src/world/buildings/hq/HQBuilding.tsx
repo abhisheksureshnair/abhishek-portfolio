@@ -29,6 +29,10 @@ interface HQBuildingProps {
  * - Visible minimalist lobby interior with warm vertical oak acoustic slats & reception desk
  * - Highly optimized single-pass PBR materials (zero transmission passes) for solid 60-90+ FPS
  */
+// Pre-allocated static geometries for zero-allocation hover / selection highlights
+const _hqHighlightPlaneGeo = new THREE.PlaneGeometry(24.2, 24.2);
+const _hqHighlightEdgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(24.0, 0.12, 24.0));
+
 export const HQBuilding: React.FC<HQBuildingProps> = ({ onInteract }) => {
   const materials = useMemo(() => getSharedHQMaterials(), []);
   const revolvingRef = useRef<THREE.Group>(null);
@@ -76,8 +80,7 @@ export const HQBuilding: React.FC<HQBuildingProps> = ({ onInteract }) => {
       {/* Selection / Hover Outline Highlight Box */}
       {(isSelected || isHovered) && (
         <group position={[0, 0.26, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[24.2, 24.2]} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} geometry={_hqHighlightPlaneGeo}>
             <meshBasicMaterial
               color={isSelected ? '#38bdf8' : '#67e8f9'}
               wireframe
@@ -86,8 +89,7 @@ export const HQBuilding: React.FC<HQBuildingProps> = ({ onInteract }) => {
             />
           </mesh>
           {/* Glowing Ground Perimeter Marker */}
-          <lineSegments>
-            <edgesGeometry args={[new THREE.BoxGeometry(24.0, 0.12, 24.0)]} />
+          <lineSegments geometry={_hqHighlightEdgesGeo}>
             <lineBasicMaterial
               color={isSelected ? '#38bdf8' : '#67e8f9'}
               linewidth={2}

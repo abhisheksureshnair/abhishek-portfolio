@@ -63,7 +63,7 @@ export const WorldCanvas: React.FC<WorldCanvasProps> = ({
   onCloudInteract,
 }) => {
   const cameraMode = useWorldStore((s) => s.cameraMode);
-  const qualityProfile = useWorldStore((s) => s.qualityProfile);
+  const effectiveQuality = useWorldStore((s) => s.effectiveQuality);
   const downtownMode = useWorldStore((s) => s.downtownMode);
   const isRefOnly = referenceBlockOnly !== undefined ? referenceBlockOnly : downtownMode === 'reference';
 
@@ -103,7 +103,7 @@ export const WorldCanvas: React.FC<WorldCanvasProps> = ({
         near: WORLD_CONFIG.camera.near,
         far: WORLD_CONFIG.camera.far,
       }}
-      dpr={qualityProfile === 'high' ? [1, 1.25] : 1.0}
+      dpr={effectiveQuality === 'high' ? [1, 1.25] : effectiveQuality === 'medium' ? [1, 1.1] : 1.0}
       gl={{
         antialias: true,
         alpha: false,

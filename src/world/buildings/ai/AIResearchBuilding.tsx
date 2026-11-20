@@ -35,6 +35,10 @@ interface AIResearchBuildingProps {
  *      "AI RESEARCH CENTER // INTELLIGENCE • AUTOMATION • INNOVATION"
  *   7. Full LOD and memory efficiency maintaining 60+ FPS
  */
+// Pre-allocated static geometries for zero-allocation hover / selection highlights
+const _aiHighlightPlaneGeo = new THREE.PlaneGeometry(24.2, 24.2);
+const _aiHighlightEdgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(24.2, 0.1, 24.2));
+
 export const AIResearchBuilding: React.FC<AIResearchBuildingProps> = ({
   position = [0.0, 0, 40.0],
   onInteract,
@@ -94,8 +98,7 @@ export const AIResearchBuilding: React.FC<AIResearchBuildingProps> = ({
       {/* 0. Selection / Hover Outline Highlight Box */}
       {(isSelected || isHovered) && (
         <group position={[0, 0.26, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[24.2, 24.2]} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} geometry={_aiHighlightPlaneGeo}>
             <meshBasicMaterial
               color="#00f0ff"
               transparent
@@ -104,8 +107,7 @@ export const AIResearchBuilding: React.FC<AIResearchBuildingProps> = ({
               depthWrite={false}
             />
           </mesh>
-          <lineSegments>
-            <edgesGeometry args={[new THREE.BoxGeometry(24.2, 0.1, 24.2)]} />
+          <lineSegments geometry={_aiHighlightEdgesGeo}>
             <lineBasicMaterial color="#00f0ff" linewidth={2} />
           </lineSegments>
         </group>

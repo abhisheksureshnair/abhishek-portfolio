@@ -33,6 +33,10 @@ interface AboutStudioBuildingProps {
  *   10. Street-level physical directory board on the sidewalk
  *   11. Built-in LOD optimization for 60+ FPS performance
  */
+// Pre-allocated static geometries for zero-allocation hover / selection highlights
+const _aboutHighlightPlaneGeo = new THREE.PlaneGeometry(24.2, 24.2);
+const _aboutHighlightEdgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(24.0, 0.12, 24.0));
+
 export const AboutStudioBuilding: React.FC<AboutStudioBuildingProps> = ({
   position = [0.0, 0, -40.0],
   onInteract,
@@ -74,8 +78,7 @@ export const AboutStudioBuilding: React.FC<AboutStudioBuildingProps> = ({
       {/* 0. Selection / Hover Outline Highlight Box */}
       {(isSelected || isHovered) && (
         <group position={[0, 0.26, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[24.2, 24.2]} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} geometry={_aboutHighlightPlaneGeo}>
             <meshBasicMaterial
               color={isSelected ? '#f97316' : '#fdba74'}
               wireframe
@@ -83,8 +86,7 @@ export const AboutStudioBuilding: React.FC<AboutStudioBuildingProps> = ({
               opacity={isSelected ? 0.9 : 0.45}
             />
           </mesh>
-          <lineSegments>
-            <edgesGeometry args={[new THREE.BoxGeometry(24.0, 0.12, 24.0)]} />
+          <lineSegments geometry={_aboutHighlightEdgesGeo}>
             <lineBasicMaterial
               color={isSelected ? '#f97316' : '#fdba74'}
               linewidth={2}

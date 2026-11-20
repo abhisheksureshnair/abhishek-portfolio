@@ -116,7 +116,8 @@ export type PerformanceStats = {
   frameTimeMs: number;
 };
 
-export type QualityProfile = 'high' | 'medium' | 'low';
+export type QualityProfile = 'auto' | 'high' | 'medium' | 'low';
+export type EffectiveQuality = 'high' | 'medium' | 'low';
 
 export type LandmarkId = 'hq' | 'innovation' | 'skills' | 'career' | 'about' | 'contact' | 'ai' | 'cloud' | null;
 
@@ -126,6 +127,8 @@ export interface WorldState {
   downtownMode: DowntownMode;
   timeOfDay: TimeOfDay;
   qualityProfile: QualityProfile;
+  effectiveQuality: EffectiveQuality;
+  isCameraPresetMenuOpen: boolean;
   selectedPlotId: string | null;
   selectedLandmark: LandmarkId;
   hoveredLandmark: LandmarkId;
@@ -145,7 +148,10 @@ export interface WorldState {
   toggleCameraMode: () => void;
   setTimeOfDay: (time: TimeOfDay) => void;
   setQualityProfile: (profile: QualityProfile) => void;
+  setEffectiveQuality: (quality: EffectiveQuality) => void;
   toggleQualityProfile: () => void;
+  toggleCameraPresetMenu: () => void;
+  setIsCameraPresetMenuOpen: (open: boolean) => void;
   setSelectedPlotId: (id: string | null) => void;
   setSelectedLandmark: (landmark: LandmarkId) => void;
   setHoveredLandmark: (landmark: LandmarkId) => void;
@@ -168,6 +174,8 @@ let state: WorldState = {
   downtownMode: 'full', // Default to FULL DOWNTOWN for Phase 2.0.2!
   timeOfDay: 'day',
   qualityProfile: 'high',
+  effectiveQuality: 'high',
+  isCameraPresetMenuOpen: false,
   selectedPlotId: null,
   selectedLandmark: null,
   hoveredLandmark: null,
@@ -203,16 +211,27 @@ let state: WorldState = {
           : 'orbit',
     }),
   setTimeOfDay: (timeOfDay) => update({ timeOfDay }),
-  setQualityProfile: (qualityProfile) => update({ qualityProfile }),
+  setQualityProfile: (qualityProfile) => {
+    const effective = qualityProfile === 'auto' ? state.effectiveQuality : qualityProfile;
+    update({ qualityProfile, effectiveQuality: effective });
+  },
+  setEffectiveQuality: (effectiveQuality) => update({ effectiveQuality }),
   toggleQualityProfile: () => {
     const next: QualityProfile =
-      state.qualityProfile === 'high'
+      state.qualityProfile === 'auto'
+        ? 'high'
+        : state.qualityProfile === 'high'
         ? 'medium'
         : state.qualityProfile === 'medium'
         ? 'low'
-        : 'high';
-    update({ qualityProfile: next });
+        : 'auto';
+    const effective = next === 'auto' ? state.effectiveQuality : next;
+    update({ qualityProfile: next, effectiveQuality: effective });
   },
+  toggleCameraPresetMenu: () =>
+    update({ isCameraPresetMenuOpen: !state.isCameraPresetMenuOpen }),
+  setIsCameraPresetMenuOpen: (isCameraPresetMenuOpen) =>
+    update({ isCameraPresetMenuOpen }),
   setSelectedPlotId: (selectedPlotId) => update({ selectedPlotId }),
   setSelectedLandmark: (selectedLandmark) => update({ selectedLandmark }),
   setHoveredLandmark: (hoveredLandmark) => update({ hoveredLandmark }),

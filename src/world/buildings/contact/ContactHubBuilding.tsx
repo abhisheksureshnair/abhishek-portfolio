@@ -31,6 +31,10 @@ interface ContactHubBuildingProps {
  *   8. Street-level physical directory board on the sidewalk plaza.
  *   9. Full LOD and memory efficiency maintaining 60+ FPS.
  */
+// Pre-allocated static geometries for zero-allocation hover / selection highlights
+const _contactHighlightPlaneGeo = new THREE.PlaneGeometry(24.2, 24.2);
+const _contactHighlightEdgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(24.2, 0.1, 24.2));
+
 export const ContactHubBuilding: React.FC<ContactHubBuildingProps> = ({
   position = [-40.0, 0, 40.0],
   onInteract,
@@ -118,8 +122,7 @@ export const ContactHubBuilding: React.FC<ContactHubBuildingProps> = ({
       {/* 0. Selection / Hover Outline Highlight Box */}
       {(isSelected || isHovered) && (
         <group position={[0, 0.26, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[24.2, 24.2]} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} geometry={_contactHighlightPlaneGeo}>
             <meshBasicMaterial
               color="#00f0ff"
               transparent
@@ -128,8 +131,7 @@ export const ContactHubBuilding: React.FC<ContactHubBuildingProps> = ({
               depthWrite={false}
             />
           </mesh>
-          <lineSegments>
-            <edgesGeometry args={[new THREE.BoxGeometry(24.2, 0.1, 24.2)]} />
+          <lineSegments geometry={_contactHighlightEdgesGeo}>
             <lineBasicMaterial color="#00f0ff" linewidth={2} />
           </lineSegments>
         </group>
