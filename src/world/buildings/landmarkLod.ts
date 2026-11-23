@@ -84,9 +84,7 @@ export function useLandmarkInteriorLOD(
     const distToBuilding = Math.hypot(camX - buildingCenter[0], camZ - buildingCenter[1]);
 
     const shouldShow = distToBuilding <= threshold;
-    if (shouldShow !== isNearAvatar) {
-      setIsNearAvatar(shouldShow);
-    }
+    setIsNearAvatar((prev) => (prev !== shouldShow ? shouldShow : prev));
   });
 
   // Low quality profile only mounts interior if explicitly selected

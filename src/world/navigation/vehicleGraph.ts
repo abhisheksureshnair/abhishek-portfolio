@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-
 export interface LaneWaypoint {
   x: number;
   y: number;

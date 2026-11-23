@@ -100,6 +100,7 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
   const velocityRef = useRef<{ x: number; z: number }>({ x: 0, z: 0 });
   const speedRef = useRef<number>(0);
   const stepTimerRef = useRef<number>(0);
+  const proximityTimerRef = useRef<number>(0);
   const keysPressedRef = useRef<Record<string, boolean>>({});
 
   // Initialize camera gameplay state behind avatar at spawn
@@ -352,21 +353,25 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
     posRef.current.x = constraint.x;
     posRef.current.z = constraint.z;
 
-    // Check Landmark Proximity for [E] Interaction Prompt
-    const nearbyLandmark = navigator.checkLandmarkProximity(
-      posRef.current.x,
-      posRef.current.z
-    );
-    const curPrompt = worldStore.getState().activeLandmarkPrompt;
+    // Check Landmark Proximity for [E] Interaction Prompt (throttled to ~6Hz for optimal CPU frame budget)
+    proximityTimerRef.current += dt;
+    if (proximityTimerRef.current >= 0.16) {
+      proximityTimerRef.current = 0;
+      const nearbyLandmark = navigator.checkLandmarkProximity(
+        posRef.current.x,
+        posRef.current.z
+      );
+      const curPrompt = worldStore.getState().activeLandmarkPrompt;
 
-    if (nearbyLandmark && (!curPrompt || curPrompt.id !== nearbyLandmark.id)) {
-      worldStore.getState().setActiveLandmarkPrompt({
-        id: nearbyLandmark.id,
-        name: nearbyLandmark.name,
-        subtitle: nearbyLandmark.subtitle,
-      });
-    } else if (!nearbyLandmark && curPrompt) {
-      worldStore.getState().setActiveLandmarkPrompt(null);
+      if (nearbyLandmark && (!curPrompt || curPrompt.id !== nearbyLandmark.id)) {
+        worldStore.getState().setActiveLandmarkPrompt({
+          id: nearbyLandmark.id,
+          name: nearbyLandmark.name,
+          subtitle: nearbyLandmark.subtitle,
+        });
+      } else if (!nearbyLandmark && curPrompt) {
+        worldStore.getState().setActiveLandmarkPrompt(null);
+      }
     }
 
     // Sync 3D transforms

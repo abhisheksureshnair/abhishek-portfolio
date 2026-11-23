@@ -36,7 +36,8 @@ export const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
   const distanceRef = useRef<number>(avatarGameplayState.cameraDistance);
   const isPointerLockedRef = useRef<boolean>(false);
   const isDraggingRef = useRef<boolean>(false);
-  const lastMousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const lastMouseXRef = useRef<number>(0);
+  const lastMouseYRef = useRef<number>(0);
   const isFirstMountRef = useRef<boolean>(true);
 
   // 1. Field of View Management (70° for third-person open world, restore on exit)
@@ -107,16 +108,17 @@ export const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
       worldStore.getState().setIsPointerLocked(false);
     };
 
-    // Mouse look: Pointer Lock or Fallback Drag
+    // Mouse look: Pointer Lock or Fallback Drag (Zero GC heap allocations)
     const onMouseMove = (e: MouseEvent) => {
       if (worldStore.getState().isInteracting) return;
 
       if (isPointerLockedRef.current) {
         avatarGameplayState.handleMouseMove(e.movementX, e.movementY, 0.0022);
       } else if (isDraggingRef.current) {
-        const dx = e.clientX - lastMousePosRef.current.x;
-        const dy = e.clientY - lastMousePosRef.current.y;
-        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+        const dx = e.clientX - lastMouseXRef.current;
+        const dy = e.clientY - lastMouseYRef.current;
+        lastMouseXRef.current = e.clientX;
+        lastMouseYRef.current = e.clientY;
         avatarGameplayState.handleMouseMove(dx, dy, 0.0035);
       }
     };
@@ -125,7 +127,8 @@ export const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
       if (worldStore.getState().isInteracting) return;
       if (e.button === 0 || e.pointerType === 'touch') {
         isDraggingRef.current = true;
-        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+        lastMouseXRef.current = e.clientX;
+        lastMouseYRef.current = e.clientY;
       }
     };
 

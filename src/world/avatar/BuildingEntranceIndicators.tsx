@@ -45,6 +45,13 @@ function getEntrancePortalTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+// Shared static geometries and materials to eliminate duplicate GC allocations
+const _decalPlaneGeo = new THREE.PlaneGeometry(2.5, 2.5);
+const _beaconPillarGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.7, 8);
+const _beaconCapGeo = new THREE.SphereGeometry(0.06, 8, 8);
+const _beaconPillarMat = new THREE.MeshStandardMaterial({ color: '#1e293b', metalness: 0.9, roughness: 0.2 });
+const _beaconCapMat = new THREE.MeshBasicMaterial({ color: '#38bdf8' });
+
 export const BuildingEntranceIndicators: React.FC = () => {
   const portalTex = useMemo(() => {
     if (typeof document === 'undefined') return null;
@@ -56,7 +63,9 @@ export const BuildingEntranceIndicators: React.FC = () => {
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
     const pulseOpacity = 0.55 + Math.sin(t * 2.5) * 0.2;
-    for (const mat of materialsRef.current) {
+    const mats = materialsRef.current;
+    for (let i = 0; i < mats.length; i++) {
+      const mat = mats[i];
       if (mat) mat.opacity = pulseOpacity;
     }
   });
@@ -68,8 +77,7 @@ export const BuildingEntranceIndicators: React.FC = () => {
       {LANDMARK_PORTALS.map((portal, idx) => (
         <group key={portal.id} position={[portal.portalX, 0.025, portal.portalZ]}>
           {/* Subtle Ground-level Glowing Interaction Decal Ring */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[2.5, 2.5]} />
+          <mesh geometry={_decalPlaneGeo} rotation={[-Math.PI / 2, 0, 0]}>
             <meshBasicMaterial
               ref={(el) => {
                 if (el) materialsRef.current[idx] = el;
@@ -82,24 +90,12 @@ export const BuildingEntranceIndicators: React.FC = () => {
             />
           </mesh>
 
-          {/* Dual Sleek Architectural Entrance Beacon Accents */}
-          <mesh position={[-1.1, 0.35, 0]}>
-            <cylinderGeometry args={[0.04, 0.04, 0.7, 8]} />
-            <meshStandardMaterial color="#1e293b" metalness={0.9} roughness={0.2} />
-          </mesh>
-          <mesh position={[-1.1, 0.72, 0]}>
-            <sphereGeometry args={[0.06, 8, 8]} />
-            <meshBasicMaterial color="#38bdf8" />
-          </mesh>
+          {/* Dual Sleek Architectural Entrance Beacon Accents (Shared Meshes) */}
+          <mesh geometry={_beaconPillarGeo} material={_beaconPillarMat} position={[-1.1, 0.35, 0]} />
+          <mesh geometry={_beaconCapGeo} material={_beaconCapMat} position={[-1.1, 0.72, 0]} />
 
-          <mesh position={[1.1, 0.35, 0]}>
-            <cylinderGeometry args={[0.04, 0.04, 0.7, 8]} />
-            <meshStandardMaterial color="#1e293b" metalness={0.9} roughness={0.2} />
-          </mesh>
-          <mesh position={[1.1, 0.72, 0]}>
-            <sphereGeometry args={[0.06, 8, 8]} />
-            <meshBasicMaterial color="#38bdf8" />
-          </mesh>
+          <mesh geometry={_beaconPillarGeo} material={_beaconPillarMat} position={[1.1, 0.35, 0]} />
+          <mesh geometry={_beaconCapGeo} material={_beaconCapMat} position={[1.1, 0.72, 0]} />
         </group>
       ))}
     </group>

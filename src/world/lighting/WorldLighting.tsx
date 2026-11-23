@@ -19,6 +19,7 @@ export const WorldLighting: React.FC = () => {
 
   // Sync shadow map enabled state with quality profile
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     gl.shadowMap.enabled = effectiveQuality !== 'low';
   }, [gl, effectiveQuality]);
 

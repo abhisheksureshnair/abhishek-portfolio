@@ -54,16 +54,6 @@ export const UrbanExtensionZoneB: React.FC = () => {
     });
   }, []);
 
-  const whiteLineMat = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      color: '#e2e8f0', // Lane divider marking
-      roughness: 0.6,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-      polygonOffsetUnits: -2,
-    });
-  }, []);
-
   const parkTurfMat = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       color: '#3f6212', // Coastal park grass lawn
@@ -72,7 +62,7 @@ export const UrbanExtensionZoneB: React.FC = () => {
     });
   }, []);
 
-  const { batches, stats } = useMemo(() => {
+  const { batches } = useMemo(() => {
     const centerlines = [
       -380, -340, -300, -260, -220, -180, -140, -100, -60, -20,
       20, 60, 100, 140, 180, 220, 260, 300, 340, 380

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useWorldStore, worldStore } from '../stores/worldStore';
 import { Activity, Minimize2, Maximize2 } from 'lucide-react';

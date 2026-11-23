@@ -28,11 +28,11 @@ import { HeroBuildingOverlay } from '@/components/three-world/HeroBuildingOverla
 import { AboutBuildingOverlay } from '@/components/three-world/AboutBuildingOverlay';
 import { ProjectsBuildingOverlay } from '@/components/three-world/ProjectsBuildingOverlay';
 import { SkillsBuildingOverlay } from '@/components/three-world/SkillsBuildingOverlay';
-import { ExperienceBuildingOverlay } from '@/components/three-world/ExperienceBuildingOverlay';
 import { CareerBuildingOverlay } from '@/components/three-world/CareerBuildingOverlay';
 import { ContactBuildingOverlay } from '@/components/three-world/ContactBuildingOverlay';
 import { AIResearchOverlay } from '@/components/three-world/AIResearchOverlay';
 import { CloudHubOverlay } from '@/components/three-world/CloudHubOverlay';
+import { WorldLoadingScreen } from './loading/WorldLoadingScreen';
 
 interface WorldSceneProps {
   onSwitchToStory?: () => void;
@@ -67,6 +67,18 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
   const qualityProfile = useWorldStore((s) => s.qualityProfile);
   const effectiveQuality = useWorldStore((s) => s.effectiveQuality);
   const toggleQualityProfile = useWorldStore((s) => s.toggleQualityProfile);
+
+  // Overlay state for the reserved portfolio plots
+  const [activePlot, setActivePlot] = useState<CityBlockData | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedSkillFloor, setSelectedSkillFloor] = useState<number | null>(null);
+  const [selectedOverlay, setSelectedOverlay] = useState<
+    'hero' | 'about' | 'projects' | 'skills' | 'experience' | 'career' | 'contact' | 'ai' | 'cloud' | null
+  >(null);
+  const [careerInitialTab, setCareerInitialTab] = useState<'experience' | 'education' | 'timeline' | 'resume'>('experience');
+  const [aboutInitialTab, setAboutInitialTab] = useState<'intro' | 'journey' | 'education' | 'media'>('intro');
+  const [contactInitialTab, setContactInitialTab] = useState<'form' | 'socials' | 'collaboration' | 'resume'>('form');
+  const [aiInitialTab, setAiInitialTab] = useState<'overview' | 'topics' | 'demos' | 'projects'>('overview');
 
   // Synchronize view and mode query params
   useEffect(() => {
@@ -315,18 +327,6 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
     }
   }, [searchParams, setCameraView, setDowntownMode, setSelectedLandmark, setTimeOfDay]);
 
-  // Overlay state for the 6 reserved portfolio plots
-  const [activePlot, setActivePlot] = useState<CityBlockData | null>(null);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [selectedSkillFloor, setSelectedSkillFloor] = useState<number | null>(null);
-  const [selectedOverlay, setSelectedOverlay] = useState<
-    'hero' | 'about' | 'projects' | 'skills' | 'experience' | 'career' | 'contact' | 'ai' | 'cloud' | null
-  >(null);
-  const [careerInitialTab, setCareerInitialTab] = useState<'experience' | 'education' | 'timeline' | 'resume'>('experience');
-  const [aboutInitialTab, setAboutInitialTab] = useState<'intro' | 'journey' | 'education' | 'media'>('intro');
-  const [contactInitialTab, setContactInitialTab] = useState<'form' | 'socials' | 'collaboration' | 'resume'>('form');
-  const [aiInitialTab, setAiInitialTab] = useState<'overview' | 'topics' | 'demos' | 'projects'>('overview');
-
   const handleSelectPlot = useCallback((block: CityBlockData) => {
     setActivePlot(block);
     const pId = block.reservedPlot?.id;
@@ -371,6 +371,9 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
 
   return (
     <div className="relative w-full h-screen min-h-screen overflow-hidden select-none bg-[#090d16]">
+      {/* 0. Polished Futuristic Loading Screen with Measurable Asset Telemetry */}
+      <WorldLoadingScreen onSwitchToStory={onSwitchToStory} />
+
       {/* 1. Main 3D WebGL Canvas */}
       <WorldCanvas
         referenceBlockOnly={downtownMode === 'reference'}
@@ -438,7 +441,7 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
               </button>
             )}
 
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-950/70 border border-white/10 text-white text-xs font-mono backdrop-blur-md">
+            <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-950/70 border border-white/10 text-white text-xs font-mono backdrop-blur-md">
               <span
                 className={`w-2 h-2 rounded-full ${downtownMode === 'full' ? 'bg-emerald-400' : 'bg-amber-400'
                   } animate-pulse`}
@@ -480,7 +483,7 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
               title="Toggle Autonomous Vehicle & Pedestrian Navigation Graph"
             >
               <GitFork className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">NAV GRAPH</span>
+              <span className="hidden 2xl:inline">NAV GRAPH</span>
             </button>
 
             {/* Camera Mode Toggle: Orbit vs Avatar (Playable Walk) vs Story View */}
@@ -532,7 +535,7 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
               title="Reset Camera to default center perspective (Shortcut: R)"
             >
               <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden lg:inline">RESET</span>
+              <span className="hidden xl:inline">RESET</span>
             </button>
 
             {/* Time of Day Toggle */}
@@ -694,7 +697,7 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
                 setSelectedLandmark('cloud');
                 setCameraView('orbit', 'cloud_three_quarter');
               }}
-              className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 shrink-0 ${selectedLandmark === 'cloud'
+              className={`px-2 sm:px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 shrink-0 ${selectedLandmark === 'cloud'
                 ? 'bg-cyan-500/30 border border-cyan-400 text-cyan-200 shadow-md shadow-cyan-500/20'
                 : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/5'
                 }`}
@@ -705,13 +708,174 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
             </button>
           </div>
         </div>
+
+        {/* Row 3: Selected Landmark Interactive Detail & Directory HUD (Naturally flows below Row 2 with zero overlap) */}
+        {selectedLandmark && (
+          <div className="flex justify-center w-full animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2 rounded-2xl bg-zinc-950/95 border border-cyan-400/60 backdrop-blur-md shadow-2xl shadow-cyan-500/20 pointer-events-auto max-w-[calc(100vw-24px)]">
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-mono font-bold text-white tracking-wider flex items-center gap-2 truncate">
+                  <span className="hidden sm:inline text-zinc-400">★ SELECTED:</span>
+                  <span className="text-cyan-400 font-extrabold truncate">
+                    {selectedLandmark === 'hq'
+                      ? 'DEVELOPER HQ'
+                      : selectedLandmark === 'skills'
+                        ? 'SKILLS & TECHNOLOGY TOWER'
+                        : selectedLandmark === 'career'
+                          ? 'CAREER & EXPERIENCE CENTER'
+                          : selectedLandmark === 'about'
+                            ? 'ABOUT ME STUDIO'
+                            : selectedLandmark === 'contact'
+                              ? 'CONTACT & COLLABORATION HUB'
+                              : selectedLandmark === 'ai'
+                                ? 'AI RESEARCH CENTER'
+                                : selectedLandmark === 'cloud'
+                                  ? 'CLOUD ECOSYSTEM HUB'
+                                  : 'INNOVATION & PROJECTS CENTER'}
+                  </span>
+                </span>
+                <span className="text-[10px] font-mono text-zinc-400 truncate hidden md:inline">
+                  {selectedLandmark === 'hq'
+                    ? 'City Center [0, 0] • Full Stack • Web • Mobile'
+                    : selectedLandmark === 'skills'
+                      ? 'West Parcel [-40, 0] • Full Stack • Mobile • Cloud • AI'
+                      : selectedLandmark === 'career'
+                        ? 'East Parcel [40, 0] • Software Engineering • Professional Journey'
+                        : selectedLandmark === 'about'
+                          ? 'North Parcel [0, -40] • My Story • Education • Developer Journey'
+                          : selectedLandmark === 'contact'
+                            ? 'Northwest Parcel [-40, 40] • Let\'s Connect • Build • Innovate'
+                            : selectedLandmark === 'ai'
+                              ? 'North Central Parcel [0, 40] • Artificial Intelligence • Python • Research'
+                              : selectedLandmark === 'cloud'
+                                ? 'Southeast Parcel [40, 40] • Connect • Build • Deploy • Cloud Architecture'
+                                : 'Southeast Parcel [40, -40] • Projects • Research • Development'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 ml-auto shrink-0 flex-wrap">
+                <button
+                  onClick={() => {
+                    if (selectedLandmark === 'hq') {
+                      setCameraView('orbit', 'hq_front_entrance');
+                    } else if (selectedLandmark === 'skills') {
+                      setCameraView('orbit', 'skills_front_entrance');
+                    } else if (selectedLandmark === 'career') {
+                      setCameraView('orbit', 'career_front_entrance');
+                    } else if (selectedLandmark === 'about') {
+                      setCameraView('orbit', 'about_front_entrance');
+                    } else if (selectedLandmark === 'contact') {
+                      setCameraView('orbit', 'contact_front_entrance');
+                    } else if (selectedLandmark === 'ai') {
+                      setCameraView('orbit', 'ai_front_entrance');
+                    } else if (selectedLandmark === 'cloud') {
+                      setCameraView('orbit', 'cloud_front_entrance');
+                    } else {
+                      setCameraView('orbit', 'innovation_front_entrance');
+                    }
+                  }}
+                  className="px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-[10px] font-mono text-cyan-200 transition-all font-bold"
+                >
+                  Entrance
+                </button>
+                <button
+                  onClick={() => {
+                    if (selectedLandmark === 'hq') {
+                      setCameraView('orbit', 'central_hq_overview');
+                    } else if (selectedLandmark === 'skills') {
+                      setCameraView('orbit', 'skills_three_quarter');
+                    } else if (selectedLandmark === 'career') {
+                      setCameraView('orbit', 'career_three_quarter');
+                    } else if (selectedLandmark === 'about') {
+                      setCameraView('orbit', 'about_three_quarter');
+                    } else if (selectedLandmark === 'contact') {
+                      setCameraView('orbit', 'contact_three_quarter');
+                    } else if (selectedLandmark === 'ai') {
+                      setCameraView('orbit', 'ai_three_quarter');
+                    } else if (selectedLandmark === 'cloud') {
+                      setCameraView('orbit', 'cloud_three_quarter');
+                    } else {
+                      setCameraView('orbit', 'innovation_three_quarter');
+                    }
+                  }}
+                  className="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-[10px] font-mono text-zinc-200 transition-all"
+                >
+                  Overview
+                </button>
+                {selectedLandmark === 'skills' && (
+                  <button
+                    onClick={() => setSelectedOverlay('skills')}
+                    className="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-[10px] font-mono text-emerald-200 transition-all font-bold"
+                  >
+                    Floor Directory
+                  </button>
+                )}
+                {selectedLandmark === 'career' && (
+                  <button
+                    onClick={() => setSelectedOverlay('career')}
+                    className="px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-[10px] font-mono text-amber-200 transition-all font-bold"
+                  >
+                    Career Dashboard
+                  </button>
+                )}
+                {selectedLandmark === 'about' && (
+                  <button
+                    onClick={() => setSelectedOverlay('about')}
+                    className="px-2 py-1 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 border border-orange-400/40 text-[10px] font-mono text-orange-200 transition-all font-bold"
+                  >
+                    About Exhibition
+                  </button>
+                )}
+                {selectedLandmark === 'contact' && (
+                  <button
+                    onClick={() => setSelectedOverlay('contact')}
+                    className="px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-[10px] font-mono text-cyan-200 transition-all font-bold"
+                  >
+                    Contact Terminal
+                  </button>
+                )}
+                {selectedLandmark === 'ai' && (
+                  <button
+                    onClick={() => setSelectedOverlay('ai')}
+                    className="px-2 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-[10px] font-mono text-purple-200 transition-all font-bold"
+                  >
+                    AI Dashboard
+                  </button>
+                )}
+                {selectedLandmark === 'cloud' && (
+                  <button
+                    onClick={() => setSelectedOverlay('cloud')}
+                    className="px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-[10px] font-mono text-cyan-200 transition-all font-bold"
+                  >
+                    Cloud Dashboard
+                  </button>
+                )}
+                {selectedLandmark === 'innovation' && (
+                  <button
+                    onClick={() => setSelectedOverlay('projects')}
+                    className="px-2 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-[10px] font-mono text-purple-200 transition-all font-bold"
+                  >
+                    Projects Gallery
+                  </button>
+                )}
+                <button
+                  onClick={() => setSelectedLandmark(null)}
+                  className="px-2 py-1 rounded-lg bg-red-950/60 hover:bg-red-900 border border-red-500/30 text-[10px] font-mono text-red-300 transition-all"
+                  title="Deselect Landmark"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* 2b. Right-Side Camera Presets Flyout Menu (Non-overlapping, responsive, scrollable) */}
       {isCameraPresetMenuOpen && (
         <aside
           aria-label="Camera Presets Menu"
-          className="fixed top-24 sm:top-28 right-3 sm:right-4 z-40 w-72 max-h-[min(380px,calc(100vh-440px))] overflow-y-auto rounded-2xl bg-zinc-950/95 border border-cyan-500/30 backdrop-blur-xl p-3 shadow-2xl pointer-events-auto text-zinc-300 animate-in fade-in slide-in-from-right-4 duration-200"
+          className="fixed top-24 sm:top-28 right-3 sm:right-4 z-40 w-72 max-h-[min(480px,calc(100vh-140px))] overflow-y-auto rounded-2xl bg-zinc-950/95 border border-cyan-500/30 backdrop-blur-xl p-3 shadow-2xl pointer-events-auto text-zinc-300 animate-in fade-in slide-in-from-right-4 duration-200"
         >
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
             <div className="flex items-center gap-2">
@@ -797,167 +961,6 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
             </div>
           </div>
         </aside>
-      )}
-
-      {/* 2c. Persistent Selected Landmark HUD Bar (Positioned below the landmark row with guaranteed clearance) */}
-      {selectedLandmark && (
-        <div className="fixed top-28 sm:top-28 left-1/2 -translate-x-1/2 z-30 pointer-events-auto max-w-[calc(100vw-32px)]">
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2 rounded-2xl bg-zinc-950/95 border border-cyan-400/60 backdrop-blur-md shadow-2xl shadow-cyan-500/20">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping shrink-0" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-mono font-bold text-white tracking-wider flex items-center gap-2 truncate">
-                <span className="hidden sm:inline text-zinc-400">★ SELECTED:</span>
-                <span className="text-cyan-400 font-extrabold truncate">
-                  {selectedLandmark === 'hq'
-                    ? 'DEVELOPER HQ'
-                    : selectedLandmark === 'skills'
-                      ? 'SKILLS & TECHNOLOGY TOWER'
-                      : selectedLandmark === 'career'
-                        ? 'CAREER & EXPERIENCE CENTER'
-                        : selectedLandmark === 'about'
-                          ? 'ABOUT ME STUDIO'
-                          : selectedLandmark === 'contact'
-                            ? 'CONTACT & COLLABORATION HUB'
-                            : selectedLandmark === 'ai'
-                              ? 'AI RESEARCH CENTER'
-                              : selectedLandmark === 'cloud'
-                                ? 'CLOUD ECOSYSTEM HUB'
-                                : 'INNOVATION & PROJECTS CENTER'}
-                </span>
-              </span>
-              <span className="text-[10px] font-mono text-zinc-400 truncate hidden md:inline">
-                {selectedLandmark === 'hq'
-                  ? 'City Center [0, 0] • Full Stack • Web • Mobile'
-                  : selectedLandmark === 'skills'
-                    ? 'West Parcel [-40, 0] • Full Stack • Mobile • Cloud • AI'
-                    : selectedLandmark === 'career'
-                      ? 'East Parcel [40, 0] • Software Engineering • Professional Journey'
-                      : selectedLandmark === 'about'
-                        ? 'North Parcel [0, -40] • My Story • Education • Developer Journey'
-                        : selectedLandmark === 'contact'
-                          ? 'Northwest Parcel [-40, 40] • Let\'s Connect • Build • Innovate'
-                          : selectedLandmark === 'ai'
-                            ? 'North Central Parcel [0, 40] • Artificial Intelligence • Python • Research'
-                            : selectedLandmark === 'cloud'
-                              ? 'Southeast Parcel [40, 40] • Connect • Build • Deploy • Cloud Architecture'
-                              : 'Southeast Parcel [40, -40] • Projects • Research • Development'}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 ml-auto shrink-0">
-              <button
-                onClick={() => {
-                  if (selectedLandmark === 'hq') {
-                    setCameraView('orbit', 'hq_front_entrance');
-                  } else if (selectedLandmark === 'skills') {
-                    setCameraView('orbit', 'skills_front_entrance');
-                  } else if (selectedLandmark === 'career') {
-                    setCameraView('orbit', 'career_front_entrance');
-                  } else if (selectedLandmark === 'about') {
-                    setCameraView('orbit', 'about_front_entrance');
-                  } else if (selectedLandmark === 'contact') {
-                    setCameraView('orbit', 'contact_front_entrance');
-                  } else if (selectedLandmark === 'ai') {
-                    setCameraView('orbit', 'ai_front_entrance');
-                  } else if (selectedLandmark === 'cloud') {
-                    setCameraView('orbit', 'cloud_front_entrance');
-                  } else {
-                    setCameraView('orbit', 'innovation_front_entrance');
-                  }
-                }}
-                className="px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-[10px] font-mono text-cyan-200 transition-all font-bold"
-              >
-                Entrance
-              </button>
-              <button
-                onClick={() => {
-                  if (selectedLandmark === 'hq') {
-                    setCameraView('orbit', 'central_hq_overview');
-                  } else if (selectedLandmark === 'skills') {
-                    setCameraView('orbit', 'skills_three_quarter');
-                  } else if (selectedLandmark === 'career') {
-                    setCameraView('orbit', 'career_three_quarter');
-                  } else if (selectedLandmark === 'about') {
-                    setCameraView('orbit', 'about_three_quarter');
-                  } else if (selectedLandmark === 'contact') {
-                    setCameraView('orbit', 'contact_three_quarter');
-                  } else if (selectedLandmark === 'ai') {
-                    setCameraView('orbit', 'ai_three_quarter');
-                  } else if (selectedLandmark === 'cloud') {
-                    setCameraView('orbit', 'cloud_three_quarter');
-                  } else {
-                    setCameraView('orbit', 'innovation_three_quarter');
-                  }
-                }}
-                className="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-[10px] font-mono text-zinc-200 transition-all"
-              >
-                Overview
-              </button>
-              {selectedLandmark === 'skills' && (
-                <button
-                  onClick={() => setSelectedOverlay('skills')}
-                  className="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-[10px] font-mono text-emerald-200 transition-all font-bold"
-                >
-                  Floor Directory
-                </button>
-              )}
-              {selectedLandmark === 'career' && (
-                <button
-                  onClick={() => setSelectedOverlay('career')}
-                  className="px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-[10px] font-mono text-amber-200 transition-all font-bold"
-                >
-                  Career Dashboard
-                </button>
-              )}
-              {selectedLandmark === 'about' && (
-                <button
-                  onClick={() => setSelectedOverlay('about')}
-                  className="px-2 py-1 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 border border-orange-400/40 text-[10px] font-mono text-orange-200 transition-all font-bold"
-                >
-                  About Exhibition
-                </button>
-              )}
-              {selectedLandmark === 'contact' && (
-                <button
-                  onClick={() => setSelectedOverlay('contact')}
-                  className="px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-[10px] font-mono text-cyan-200 transition-all font-bold"
-                >
-                  Contact Terminal
-                </button>
-              )}
-              {selectedLandmark === 'ai' && (
-                <button
-                  onClick={() => setSelectedOverlay('ai')}
-                  className="px-2 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-[10px] font-mono text-purple-200 transition-all font-bold"
-                >
-                  AI Dashboard
-                </button>
-              )}
-              {selectedLandmark === 'cloud' && (
-                <button
-                  onClick={() => setSelectedOverlay('cloud')}
-                  className="px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-[10px] font-mono text-cyan-200 transition-all font-bold"
-                >
-                  Cloud Dashboard
-                </button>
-              )}
-              {selectedLandmark === 'innovation' && (
-                <button
-                  onClick={() => setSelectedOverlay('projects')}
-                  className="px-2 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-[10px] font-mono text-purple-200 transition-all font-bold"
-                >
-                  Projects Gallery
-                </button>
-              )}
-              <button
-                onClick={() => setSelectedLandmark(null)}
-                className="px-2 py-1 rounded-lg bg-red-950/60 hover:bg-red-900 border border-red-500/30 text-[10px] font-mono text-red-300 transition-all"
-                title="Deselect Landmark"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* 2c. TASK 4: Lightweight Floating UI Identification Label on Hover */}

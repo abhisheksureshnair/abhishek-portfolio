@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { Metadata } from 'next';
 import { WorldScene } from '@/world/WorldScene';
+import { WorldLoadingFallback } from '@/world/loading/WorldLoadingScreen';
 
 export const metadata: Metadata = {
   title: 'Abhishek // Developer Universe (3D World Simulation)',
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function WorldPage() {
   return (
-    <Suspense fallback={<div className="w-full h-screen bg-[#090d16]" />}>
+    <Suspense fallback={<WorldLoadingFallback />}>
       <WorldScene />
     </Suspense>
   );

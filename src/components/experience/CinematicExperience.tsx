@@ -31,6 +31,17 @@ export const CinematicExperience: React.FC = () => {
     }
   }, [initialViewParam]);
 
+  // Lock root document scrolling during 3D open-world simulation to eliminate scroll wheel frame drops
+  useEffect(() => {
+    if (currentView === 'world') {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [currentView]);
+
   return (
     <ExperienceModeProvider>
       <ExperienceSoundProvider>

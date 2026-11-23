@@ -8,6 +8,7 @@ export const PointerLockOverlay: React.FC = () => {
   const cameraMode = useWorldStore((s) => s.cameraMode);
   const isInteracting = useWorldStore((s) => s.isInteracting);
   const isPointerLocked = useWorldStore((s) => s.isPointerLocked);
+  const selectedLandmark = useWorldStore((s) => s.selectedLandmark);
 
   // Only active in avatar third-person mode when modal overlays are closed
   if (cameraMode !== 'avatar' || isInteracting) return null;
@@ -21,30 +22,34 @@ export const PointerLockOverlay: React.FC = () => {
 
   return (
     <>
-      {/* 1. Pointer Lock Resume / Activate Prompt (shown when cursor is free) */}
+      {/* 1. Pointer Lock Resume / Activate Prompt (shown when cursor is free, offset safely below landmark HUD) */}
       {!isPointerLocked && (
-        <div className="fixed top-24 sm:top-28 left-1/2 -translate-x-1/2 z-30 pointer-events-auto select-none animate-in fade-in slide-in-from-top-4 duration-200 max-w-[calc(100vw-32px)]">
+        <div
+          className={`fixed left-1/2 -translate-x-1/2 z-30 pointer-events-auto select-none animate-in fade-in duration-200 max-w-[calc(100vw-32px)] transition-all ${
+            selectedLandmark ? 'top-44 sm:top-48' : 'top-28 sm:top-32'
+          }`}
+        >
           <button
             onClick={handleRequestLock}
-            className="group flex items-center gap-3.5 px-5 py-2 rounded-full bg-zinc-950/85 hover:bg-zinc-900/95 backdrop-blur-xl border border-cyan-500/40 hover:border-cyan-400 text-white shadow-2xl shadow-cyan-950/50 transition-all duration-200 hover:scale-[1.02] active:scale-98 cursor-pointer"
+            className="group flex items-center gap-3 px-4 sm:px-5 py-2 rounded-full bg-zinc-950/90 hover:bg-zinc-900/95 backdrop-blur-xl border border-cyan-500/40 hover:border-cyan-400 text-white shadow-2xl shadow-cyan-950/50 transition-all duration-200 hover:scale-[1.02] active:scale-98 cursor-pointer"
           >
-            <div className="w-6 h-6 rounded-full bg-cyan-500/20 border border-cyan-400/60 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/30 transition-colors">
-              <Eye className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
+            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-cyan-500/20 border border-cyan-400/60 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/30 transition-colors">
+              <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-300 animate-pulse" />
             </div>
 
-            <div className="flex items-center gap-2 text-xs font-mono tracking-wide">
+            <div className="flex items-center gap-2 text-[11px] sm:text-xs font-mono tracking-wide">
               <span className="font-bold text-cyan-300 uppercase">Click to Look & Control</span>
-              <span className="text-zinc-500">|</span>
-              <span className="text-zinc-400 flex items-center gap-1.5">
+              <span className="hidden md:inline text-zinc-500">|</span>
+              <span className="hidden md:flex items-center gap-1.5 text-zinc-400">
                 <kbd className="bg-zinc-800 text-zinc-300 px-1 py-0.5 rounded text-[10px] font-sans border border-zinc-700">W,A,S,D</kbd> Move
               </span>
-              <span className="text-zinc-500">|</span>
-              <span className="text-zinc-400 flex items-center gap-1.5">
+              <span className="hidden lg:inline text-zinc-500">|</span>
+              <span className="hidden lg:flex items-center gap-1.5 text-zinc-400">
                 <kbd className="bg-zinc-800 text-zinc-300 px-1 py-0.5 rounded text-[10px] font-sans border border-zinc-700">Shift</kbd> Sprint
               </span>
-              <span className="text-zinc-500">|</span>
-              <span className="text-zinc-400 flex items-center gap-1.5">
-                <kbd className="bg-zinc-800 text-zinc-300 px-1 py-0.5 rounded text-[10px] font-sans border border-zinc-700">Esc</kbd> Pause
+              <span className="hidden sm:inline text-zinc-500">|</span>
+              <span className="hidden sm:flex items-center gap-1.5 text-zinc-400">
+                <kbd className="bg-zinc-800 text-zinc-300 px-1 py-0.5 rounded text-[10px] font-sans border border-zinc-700">Esc</kbd> Unlock
               </span>
             </div>
           </button>

@@ -6,10 +6,6 @@ import {
   getCityIntersections,
   getCityRoadSegments,
   getCityCrosswalks,
-  BlockBoundary,
-  RoadSegmentGeometry,
-  IntersectionGeometry,
-  CrosswalkGeometry,
 } from '../layout/cityLayoutConfig';
 import { getSharedAsphaltMaterial } from './AsphaltMaterials';
 import { getSharedSidewalkMaterial } from '../sidewalks/SidewalkMaterials';
@@ -83,7 +79,6 @@ export const UnifiedCityRoads: React.FC<UnifiedCityRoadsProps> = ({ onRoadClick 
       roadSurfaces.push(dummy.matrix.clone());
 
       // Centerline & Edge Lines
-      const halfL = seg.length / 2;
       const margin = 5.0; // Stop markings 5m before intersection to leave clear room for crosswalk & stop bar
       const markLength = Math.max(1, seg.length - margin * 2);
 

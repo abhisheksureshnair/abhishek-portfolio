@@ -7,7 +7,6 @@ import {
   LaneWaypoint,
 } from './vehicleGraph';
 import { CITY_CONFIG } from '../config/cityConfig';
-import { PORTFOLIO_BUILDING_REGISTRY, isCoordinateInProtectedDistrict } from '../buildings/portfolioRegistry';
 
 export interface GridDimensions {
   avenueXs: number[];   // North-South Avenues X-coordinates

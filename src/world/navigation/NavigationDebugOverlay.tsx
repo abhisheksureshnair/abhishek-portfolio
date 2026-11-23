@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 import { getCityRoadNetwork } from './cityGridBuilder';
 import { getPedestrianGraph } from './pedestrianGraph';
-import { findVehicleRoute } from './vehicleGraph';
 import { LANDMARK_PORTALS } from '../avatar/pedestrianNavigator';
 import { useWorldStore } from '../stores/worldStore';
 
@@ -12,31 +11,17 @@ export const NavigationDebugOverlay: React.FC = () => {
   const network = useMemo(() => getCityRoadNetwork(), []);
   const pedGraph = useMemo(() => getPedestrianGraph(network), [network]);
 
-  // Demo sample A* route between HQ and Career districts
-  const demoRoute = useMemo(() => {
-    return findVehicleRoute(network.vehicleGraph, 'lane-road-h-1-1-eb', 'lane-road-v-2-3-sb');
-  }, [network]);
 
   // Vehicle Lane Line Geometries
-  const { straightLines, turnCurves, laneArrows } = useMemo(() => {
+  const { straightLines, turnCurves } = useMemo(() => {
     const sPts: THREE.Vector3[] = [];
     const tPts: THREE.Vector3[] = [];
-    const arrows: { pos: [number, number, number]; rotY: number; type: string }[] = [];
 
     network.vehicleGraph.laneArray.forEach((lane) => {
       const pts = lane.waypoints.map((w) => new THREE.Vector3(w.x, w.y + 0.05, w.z));
 
       if (lane.turnType === 'road-lane') {
         sPts.push(...pts);
-        const midIdx = Math.floor(lane.waypoints.length / 2);
-        const p1 = lane.waypoints[Math.max(0, midIdx - 1)];
-        const p2 = lane.waypoints[Math.min(lane.waypoints.length - 1, midIdx + 1)];
-        const angle = Math.atan2(p2.x - p1.x, p2.z - p1.z);
-        arrows.push({
-          pos: [lane.waypoints[midIdx].x, lane.waypoints[midIdx].y + 0.08, lane.waypoints[midIdx].z],
-          rotY: angle,
-          type: 'road',
-        });
       } else {
         for (let i = 0; i < pts.length - 1; i++) {
           tPts.push(pts[i], pts[i + 1]);
@@ -44,7 +29,7 @@ export const NavigationDebugOverlay: React.FC = () => {
       }
     });
 
-    return { straightLines: sPts, turnCurves: tPts, laneArrows: arrows };
+    return { straightLines: sPts, turnCurves: tPts };
   }, [network]);
 
   // Pedestrian Sidewalk, Crosswalk & Entrance Line Geometries
@@ -100,12 +85,6 @@ export const NavigationDebugOverlay: React.FC = () => {
       corridorBoundaries: bPts,
     };
   }, [pedGraph]);
-
-  // Demo Vehicle Route Line
-  const demoRouteLine = useMemo(() => {
-    if (!demoRoute) return [];
-    return demoRoute.waypoints.map((w) => new THREE.Vector3(w.x, w.y + 0.12, w.z));
-  }, [demoRoute]);
 
   if (!showNavDebug) return null;
 
