@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWorldStore } from '../stores/worldStore';
 import { Zap, Hand } from 'lucide-react';
 
@@ -18,11 +18,8 @@ export const AvatarMobileControls: React.FC<AvatarMobileControlsProps> = ({
 
   useEffect(() => {
     const checkTouch = () => {
-      setIsTouchDevice(
-        'ontouchstart' in window ||
-        navigator.maxTouchPoints > 0 ||
-        window.innerWidth < 1024
-      );
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      setIsTouchDevice(hasTouch && window.innerWidth < 1024);
     };
     checkTouch();
     window.addEventListener('resize', checkTouch);
