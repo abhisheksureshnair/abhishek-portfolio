@@ -466,8 +466,8 @@ export const OrbitCamera: React.FC = () => {
 
     if (!isTransitioning.current) return;
 
-    // Frame-rate independent exponential damping for smooth cinematics
-    const factor = 1.0 - Math.exp(-delta * 4.5);
+    // Frame-rate independent exponential damping for smooth cinematics (clamped delta prevents snapping on lag spikes)
+    const factor = 1.0 - Math.exp(-Math.min(delta, 0.1) * 4.5);
     camera.position.lerp(targetPos.current, factor);
 
     if (controlsRef.current) {

@@ -505,7 +505,7 @@ export const UrbanExtensionZoneB: React.FC = () => {
         totalExtensionBuildings: totalBuildings,
       },
     };
-  }, [asphaltMat, sidewalkMat, materials]);
+  }, []);
 
   // Mesh Refs
   const roadRef = useRef<THREE.InstancedMesh>(null);

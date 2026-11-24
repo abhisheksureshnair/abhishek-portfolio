@@ -250,6 +250,12 @@ export const UnifiedCityRoads: React.FC<UnifiedCityRoadsProps> = ({ onRoadClick 
           ref={roadRef}
           args={[planeGeo, asphaltMaterial, batches.roadSurfaces.length]}
           receiveShadow
+          onClick={(e) => {
+            if (onRoadClick && e.point) {
+              e.stopPropagation();
+              onRoadClick(e.point);
+            }
+          }}
         />
       )}
 
@@ -259,6 +265,12 @@ export const UnifiedCityRoads: React.FC<UnifiedCityRoadsProps> = ({ onRoadClick 
           ref={interRef}
           args={[planeGeo, asphaltMaterial, batches.intersectionSurfaces.length]}
           receiveShadow
+          onClick={(e) => {
+            if (onRoadClick && e.point) {
+              e.stopPropagation();
+              onRoadClick(e.point);
+            }
+          }}
         />
       )}
 

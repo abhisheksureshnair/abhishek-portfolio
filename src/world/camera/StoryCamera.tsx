@@ -34,7 +34,8 @@ export const StoryCamera: React.FC = () => {
   const pitchRef = useRef<number>(initPitch);
 
   const isMouseDownRef = useRef<boolean>(false);
-  const lastMousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const lastMouseXRef = useRef<number>(0);
+  const lastMouseYRef = useRef<number>(0);
   const keysPressedRef = useRef<Record<string, boolean>>({});
 
   const sidewalkZones = useMemo(() => {
@@ -176,15 +177,17 @@ export const StoryCamera: React.FC = () => {
     const onMouseDown = (e: MouseEvent) => {
       if (e.button === 0 || e.button === 2) {
         isMouseDownRef.current = true;
-        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+        lastMouseXRef.current = e.clientX;
+        lastMouseYRef.current = e.clientY;
       }
     };
 
     const onMouseMove = (e: MouseEvent) => {
       if (!isMouseDownRef.current) return;
-      const dx = e.clientX - lastMousePosRef.current.x;
-      const dy = e.clientY - lastMousePosRef.current.y;
-      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      const dx = e.clientX - lastMouseXRef.current;
+      const dy = e.clientY - lastMouseYRef.current;
+      lastMouseXRef.current = e.clientX;
+      lastMouseYRef.current = e.clientY;
 
       const sensitivity = 0.0032;
       yawRef.current -= dx * sensitivity;
@@ -197,9 +200,15 @@ export const StoryCamera: React.FC = () => {
       isMouseDownRef.current = false;
     };
 
+    const onBlur = () => {
+      keysPressedRef.current = {};
+      isMouseDownRef.current = false;
+    };
+
     const canvas = gl.domElement;
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
     canvas.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
@@ -207,6 +216,7 @@ export const StoryCamera: React.FC = () => {
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
       canvas.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);

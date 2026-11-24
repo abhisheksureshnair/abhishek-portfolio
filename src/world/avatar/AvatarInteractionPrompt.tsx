@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useWorldStore } from '../stores/worldStore';
+import { useWorldStore, worldStore } from '../stores/worldStore';
 import { Building2, ArrowRight } from 'lucide-react';
 
 interface AvatarInteractionPromptProps {
@@ -38,14 +38,19 @@ export const AvatarInteractionPrompt: React.FC<AvatarInteractionPromptProps> = (
 
         {/* Enter Building Action Button ([E] ENTER — BUILDING NAME per Requirement 6) */}
         <button
-          onClick={() => onInteract && onInteract(prompt.id)}
+          onClick={() => {
+            worldStore.getState().setIsInteracting(true);
+            if (onInteract) {
+              onInteract(prompt.id);
+            }
+          }}
           className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-extrabold text-xs tracking-wider transition-all duration-150 shadow-lg shadow-cyan-500/30 active:scale-95 cursor-pointer shrink-0 font-mono"
         >
           <kbd className="bg-black/25 text-black px-1.5 py-0.5 rounded text-[11px] font-black border border-black/10">
             E
           </kbd>
-          <span>ENTER — {prompt.name}</span>
-          <ArrowRight className="w-3.5 h-3.5" />
+          <span className="truncate max-w-[140px] sm:max-w-[200px]">ENTER — {prompt.name}</span>
+          <ArrowRight className="w-3.5 h-3.5 shrink-0" />
         </button>
       </div>
     </div>

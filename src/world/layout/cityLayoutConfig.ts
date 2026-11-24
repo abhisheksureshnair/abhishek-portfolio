@@ -355,7 +355,7 @@ export function getCityCrosswalks(): CrosswalkGeometry[] {
       });
     }
 
-    approaches.forEach((app, idx) => {
+    approaches.forEach((app) => {
       const stripes: { center: [number, number]; size: [number, number] }[] = [];
       const numStripes = 8;
       const step = stripeWidth + stripeGap; // 1.0m
