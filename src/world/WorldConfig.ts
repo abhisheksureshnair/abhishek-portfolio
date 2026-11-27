@@ -13,6 +13,8 @@ export interface WorldConfigType {
     orbitTarget: [number, number, number];
     storySpawn: [number, number, number];
     storyTarget: [number, number, number];
+    avatarIntroSpawn: [number, number, number];
+    avatarFov: number;
     near: number;
     far: number;
     fov: number;
@@ -32,6 +34,8 @@ export const WORLD_CONFIG: WorldConfigType = {
     orbitTarget: [0, 0, 0],
     storySpawn: [-20, 1.72, -45], // 1st Avenue ground level in central Zone A
     storyTarget: [-20, 1.72, 0],
+    avatarIntroSpawn: [0, 4.7, 19.01], // Slightly above and behind default HQ avatar spawn [0, 0.22, 13.8]
+    avatarFov: 70,
     near: 0.5,
     far: 2500,
     fov: 48,

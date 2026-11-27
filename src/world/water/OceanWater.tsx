@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { WATER_ELEVATION } from '../island/islandCoastline';
@@ -90,15 +90,21 @@ const OceanFragmentShader = `
 
   void main() {
     vec3 normal = normalize(vNormal);
-    vec3 viewDir = normalize(cameraPosition - vWorldPosition);
-    vec3 sunDir = normalize(uSunDirection);
+    vec3 toCamera = cameraPosition - vWorldPosition;
+    float toCamLenSq = dot(toCamera, toCamera);
+    vec3 viewDir = toCamLenSq > 1e-6 ? toCamera * inversesqrt(toCamLenSq) : vec3(0.0, 1.0, 0.0);
+
+    float sunLenSq = dot(uSunDirection, uSunDirection);
+    vec3 sunDir = sunLenSq > 1e-6 ? uSunDirection * inversesqrt(sunLenSq) : vec3(0.0, 1.0, 0.0);
 
     // Fresnel reflectance factor: water reflects significantly more at grazing angles
     float ndotv = max(dot(normal, viewDir), 0.0);
     float fresnel = 0.04 + 0.96 * pow(1.0 - ndotv, 4.5);
 
     // Dual-specular sunlight reflection:
-    vec3 halfVec = normalize(sunDir + viewDir);
+    vec3 halfSum = sunDir + viewDir;
+    float halfLenSq = dot(halfSum, halfSum);
+    vec3 halfVec = halfLenSq > 1e-6 ? halfSum * inversesqrt(halfLenSq) : normal;
     float ndoth = max(dot(normal, halfVec), 0.0);
     // 1. Sharp sparkling core highlight
     float sharpSpec = pow(ndoth, 140.0) * 2.2;
@@ -129,9 +135,10 @@ const OceanFragmentShader = `
     vec3 skyReflectColor = mix(uFogColor, vec3(0.88, 0.94, 1.0), 0.65);
     vec3 finalColor = mix(waterColor, skyReflectColor, fresnel * 0.70) + specular;
 
-    // Smooth atmospheric horizon blending
+    // Smooth atmospheric horizon blending (safe denominator prevents X4008 division-by-zero)
     float dist = length(vWorldPosition - cameraPosition);
-    float fogFactor = clamp((dist - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
+    float fogRange = max(uFogFar - uFogNear, 0.0001);
+    float fogFactor = clamp((dist - uFogNear) / fogRange, 0.0, 1.0);
     fogFactor = fogFactor * fogFactor; // Quadratic ease
 
     gl_FragColor = vec4(mix(finalColor, uFogColor, fogFactor), 1.0);
@@ -185,16 +192,30 @@ export const OceanWater: React.FC = () => {
   const uniforms = useMemo(() => {
     return {
       uTime: { value: 0 },
-      uSunDirection: { value: sunPosition },
-      uSunColor: { value: colors.sun },
-      uDeepColor: { value: colors.deep },
-      uMidColor: { value: colors.mid },
-      uShallowColor: { value: colors.shallow },
-      uFoamColor: { value: colors.foam },
-      uFogColor: { value: colors.fog },
+      uSunDirection: { value: sunPosition.clone() },
+      uSunColor: { value: colors.sun.clone() },
+      uDeepColor: { value: colors.deep.clone() },
+      uMidColor: { value: colors.mid.clone() },
+      uShallowColor: { value: colors.shallow.clone() },
+      uFoamColor: { value: colors.foam.clone() },
+      uFogColor: { value: colors.fog.clone() },
       uFogNear: { value: 800.0 },
       uFogFar: { value: 4500.0 },
     };
+    // Keep uniform object identity stable across timeOfDay changes to prevent shader re-binding
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const mat = materialRef.current;
+    if (!mat) return;
+    mat.uniforms.uSunDirection.value.copy(sunPosition);
+    mat.uniforms.uSunColor.value.copy(colors.sun);
+    mat.uniforms.uDeepColor.value.copy(colors.deep);
+    mat.uniforms.uMidColor.value.copy(colors.mid);
+    mat.uniforms.uShallowColor.value.copy(colors.shallow);
+    mat.uniforms.uFoamColor.value.copy(colors.foam);
+    mat.uniforms.uFogColor.value.copy(colors.fog);
   }, [sunPosition, colors]);
 
   useFrame((_, delta) => {

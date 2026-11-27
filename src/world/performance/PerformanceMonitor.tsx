@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useWorldStore, worldStore } from '../stores/worldStore';
 import { Activity, Minimize2, Maximize2 } from 'lucide-react';
@@ -108,7 +108,17 @@ export const PerformanceMonitorHUD: React.FC = () => {
   const toggle = useWorldStore((s) => s.togglePerfMonitor);
   const qualityProfile = useWorldStore((s) => s.qualityProfile);
   const effectiveQuality = useWorldStore((s) => s.effectiveQuality);
+  const hqInteriorPhase = useWorldStore((s) => s.hqInteriorPhase);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
+
+  // Auto-collapse telemetry inside HQ so spatial panels stay unobstructed
+  useEffect(() => {
+    if (hqInteriorPhase === 'inside') {
+      setIsMinimized(true);
+    } else if (hqInteriorPhase === 'outside') {
+      setIsMinimized(false);
+    }
+  }, [hqInteriorPhase]);
 
   if (!show) return null;
 

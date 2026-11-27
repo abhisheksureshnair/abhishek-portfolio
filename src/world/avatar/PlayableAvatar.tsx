@@ -102,6 +102,14 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
   const stepTimerRef = useRef<number>(0);
   const proximityTimerRef = useRef<number>(0);
   const keysPressedRef = useRef<Record<string, boolean>>({});
+  const hqSeqRef = useRef<{ step: number; doorX: number; doorWait: number }>({
+    step: 0,
+    doorX: 2.5,
+    doorWait: 0,
+  });
+  const hqExitCooldownUntilRef = useRef<number>(0);
+  const stuckTimerRef = useRef<number>(0);
+  const hasLoggedStuckRef = useRef<boolean>(false);
 
   // Initialize camera gameplay state behind avatar at spawn
   useEffect(() => {
@@ -112,6 +120,10 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
   useEffect(() => {
     if (externalPosRef) externalPosRef.current = posRef.current;
     if (externalQuatRef) externalQuatRef.current = quatRef.current;
+    if (rootGroupRef.current) {
+      rootGroupRef.current.position.copy(posRef.current);
+      rootGroupRef.current.quaternion.copy(quatRef.current);
+    }
   }, [externalPosRef, externalQuatRef]);
 
   // Load 3D Rigged Human Model & Modern Casual Textures
@@ -153,6 +165,12 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
     return cloned;
   }, [scene, developerDiffuseMap]);
 
+  useEffect(() => {
+    if (avatarScene) {
+      worldStore.getState().setIsAvatarReady(true);
+    }
+  }, [avatarScene]);
+
   // Animation Mixer and Locomotion Actions
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
   const actionsRef = useRef<{
@@ -186,8 +204,41 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
     };
   }, [avatarScene, animations]);
 
-  // Keyboard Event Listeners with focus and blur guards
+  // Keyboard & HQ Enter/Exit Event Listeners with focus and blur guards
   useEffect(() => {
+    const startHQEntry = () => {
+      const { hqInteriorPhase, isInteracting, isAvatarControlsEnabled } = worldStore.getState();
+      if (hqInteriorPhase !== 'outside' || isInteracting || !isAvatarControlsEnabled) return;
+      if (performance.now() < hqExitCooldownUntilRef.current) return;
+
+      const doorX = posRef.current.x >= 0 ? 2.5 : -2.5;
+      hqSeqRef.current = { step: 0, doorX, doorWait: 0.38 };
+      velocityRef.current.x = 0;
+      velocityRef.current.z = 0;
+      speedRef.current = 0;
+      worldStore.getState().setActiveLandmarkPrompt(null);
+      worldStore.getState().setHqDoorsOpen(true);
+      worldStore.getState().setHqInteriorPhase('entering');
+    };
+
+    const startHQExit = () => {
+      const { hqInteriorPhase } = worldStore.getState();
+      if (hqInteriorPhase !== 'inside') return;
+      const doorX = posRef.current.x >= 0 ? 2.5 : -2.5;
+      hqSeqRef.current = { step: 0, doorX, doorWait: 0.38 };
+      velocityRef.current.x = 0;
+      velocityRef.current.z = 0;
+      speedRef.current = 0;
+      if (rootGroupRef.current) {
+        rootGroupRef.current.visible = true;
+      }
+      worldStore.getState().setHqNearExit(false);
+      worldStore.getState().setHqHighlightedPanel(null);
+      worldStore.getState().setHqExpandedPanel(null);
+      worldStore.getState().setHqDoorsOpen(true);
+      worldStore.getState().setHqInteriorPhase('exiting');
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Disregard if user is typing in an input field or text area
       if (
@@ -200,11 +251,27 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
       keysPressedRef.current[e.key.toLowerCase()] = true;
       keysPressedRef.current[e.code] = true;
 
-      // [E] Key: Interact with nearby portfolio landmark
+      // [E] Key: Interact with nearby portfolio landmark, HQ spatial panel, or HQ exit doorway
       if (e.key.toLowerCase() === 'e' || e.code === 'KeyE') {
-        const isInteracting = worldStore.getState().isInteracting;
-        if (isInteracting) return; // Guard against repeated trigger
+        const { isInteracting, isAvatarControlsEnabled, hqInteriorPhase, hqNearExit } =
+          worldStore.getState();
+        if (isInteracting || !isAvatarControlsEnabled) return;
+
+        if (hqInteriorPhase === 'inside') {
+          if (hqNearExit) {
+            startHQExit();
+          } else {
+            window.dispatchEvent(new CustomEvent('hq-panel-interact'));
+          }
+          return;
+        }
+
+        if (hqInteriorPhase !== 'outside') return;
         const prompt = worldStore.getState().activeLandmarkPrompt;
+        if (prompt?.id === 'hq') {
+          startHQEntry();
+          return;
+        }
         if (prompt && onInteractLandmark) {
           worldStore.getState().setIsInteracting(true);
           worldStore.getState().setSavedAvatarState({
@@ -235,12 +302,16 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('blur', handleBlur);
     window.addEventListener('focus', handleFocus);
+    window.addEventListener('hq-enter-trigger', startHQEntry);
+    window.addEventListener('hq-exit-trigger', startHQExit);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('hq-enter-trigger', startHQEntry);
+      window.removeEventListener('hq-exit-trigger', startHQExit);
     };
   }, [onInteractLandmark]);
 
@@ -249,14 +320,19 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
     if (typeof document !== 'undefined' && document.hidden) return;
     const dt = Math.min(delta, 0.05);
 
-    // If a portfolio dashboard or modal interface is currently open, freeze avatar locomotion
-    const isInteracting = worldStore.getState().isInteracting;
-    if (isInteracting) {
+    // If a portfolio dashboard/modal is open or initial camera intro is still settling, freeze avatar locomotion
+    const { isInteracting, isAvatarControlsEnabled, hqInteriorPhase } = worldStore.getState();
+    if (isInteracting || !isAvatarControlsEnabled) {
       velocityRef.current.x = 0;
       velocityRef.current.z = 0;
       speedRef.current = 0;
       avatarGameplayState.isMoving = false;
       avatarGameplayState.currentSpeed = 0;
+
+      if (rootGroupRef.current) {
+        rootGroupRef.current.position.set(posRef.current.x, posRef.current.y, posRef.current.z);
+        rootGroupRef.current.quaternion.copy(quatRef.current);
+      }
 
       if (activeActionNameRef.current !== 'idle') {
         const curAct = actionsRef.current[activeActionNameRef.current];
@@ -268,6 +344,102 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
       }
       mixerRef.current?.update(dt);
       return;
+    }
+
+    // Automated physical walk-in / walk-out sequence for Flagship Headquarters
+    if (hqInteriorPhase === 'entering' || hqInteriorPhase === 'exiting') {
+      const seq = hqSeqRef.current;
+
+      // Wait briefly for glass doors to swing open before crossing doorway
+      if (seq.doorWait > 0) {
+        seq.doorWait = Math.max(0, seq.doorWait - dt);
+        if (rootGroupRef.current) {
+          rootGroupRef.current.position.set(posRef.current.x, posRef.current.y, posRef.current.z);
+          rootGroupRef.current.quaternion.copy(quatRef.current);
+        }
+        mixerRef.current?.update(dt);
+        return;
+      }
+
+      const enterWaypoints: [number, number, number][] = [
+        [seq.doorX, 0.22, 9.3],
+        [seq.doorX, 0.22, 7.0],
+        [0, 0.28, 3.8],
+      ];
+      const exitWaypoints: [number, number, number][] = [
+        [seq.doorX, 0.22, 7.2],
+        [seq.doorX, 0.22, 10.6],
+      ];
+      const waypoints = hqInteriorPhase === 'entering' ? enterWaypoints : exitWaypoints;
+      const target = waypoints[Math.min(seq.step, waypoints.length - 1)];
+
+      const dx = target[0] - posRef.current.x;
+      const dz = target[2] - posRef.current.z;
+      const dist = Math.hypot(dx, dz);
+      const walkSpeed = 2.5;
+
+      if (dist > 0.12) {
+        const stepDist = Math.min(dist, walkSpeed * dt);
+        const nx = dx / dist;
+        const nz = dz / dist;
+        posRef.current.x += nx * stepDist;
+        posRef.current.z += nz * stepDist;
+        posRef.current.y += (target[1] - posRef.current.y) * Math.min(1, dt * 8.0);
+
+        const heading = Math.atan2(nx, nz);
+        _targetQuat.setFromAxisAngle(_upAxis, heading);
+        quatRef.current.rotateTowards(_targetQuat, ROTATION_SPEED * dt);
+
+        avatarGameplayState.isMoving = true;
+        avatarGameplayState.isMovingForward = true;
+        avatarGameplayState.currentSpeed = walkSpeed;
+
+        if (activeActionNameRef.current !== 'walk') {
+          const curAct = actionsRef.current[activeActionNameRef.current];
+          const walkAct = actionsRef.current.walk;
+          if (curAct && walkAct && curAct !== walkAct) {
+            walkAct.reset().crossFadeFrom(curAct, CROSSFADE_DURATION, true).play();
+            activeActionNameRef.current = 'walk';
+          }
+        }
+      } else {
+        posRef.current.set(target[0], target[1], target[2]);
+        if (seq.step < waypoints.length - 1) {
+          seq.step += 1;
+        } else if (hqInteriorPhase === 'entering') {
+          // Arrived at center presentation platform: face North (-Z) and enter first-person immersive view
+          _targetQuat.setFromAxisAngle(_upAxis, Math.PI);
+          quatRef.current.copy(_targetQuat);
+          avatarGameplayState.isMoving = false;
+          avatarGameplayState.currentSpeed = 0;
+          if (rootGroupRef.current) {
+            rootGroupRef.current.visible = false;
+          }
+          worldStore.getState().setHqDoorsOpen(false);
+          worldStore.getState().setHqInteriorPhase('inside');
+        } else {
+          // Arrived outside doorway: restore normal city exploration with re-entry cooldown
+          hqExitCooldownUntilRef.current = performance.now() + 1500;
+          avatarGameplayState.isMoving = false;
+          avatarGameplayState.currentSpeed = 0;
+          if (rootGroupRef.current) {
+            rootGroupRef.current.visible = true;
+          }
+          worldStore.getState().setHqDoorsOpen(false);
+          worldStore.getState().setHqInteriorPhase('outside');
+        }
+      }
+
+      if (rootGroupRef.current) {
+        rootGroupRef.current.position.set(posRef.current.x, posRef.current.y, posRef.current.z);
+        rootGroupRef.current.quaternion.copy(quatRef.current);
+      }
+      mixerRef.current?.update(dt);
+      return;
+    }
+
+    if (rootGroupRef.current) {
+      rootGroupRef.current.visible = hqInteriorPhase !== 'inside';
     }
 
     const keys = keysPressedRef.current;
@@ -341,37 +513,97 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
       quatRef.current.rotateTowards(_targetQuat, ROTATION_SPEED * dt);
     }
 
-    // 4. Central 3x3 District Free-Roaming Constraint & Building Collision
-    const constraint = navigator.constrainMovement(
-      posRef.current.x,
-      posRef.current.z,
-      velocityRef.current.x,
-      velocityRef.current.z,
-      dt
-    );
+    // 4. Collision & Surface Elevation (HQ Interior vs Central 3x3 District)
+    const prevX = posRef.current.x;
+    const prevZ = posRef.current.z;
+    let constraintResult;
 
-    posRef.current.x = constraint.x;
-    posRef.current.z = constraint.z;
-
-    // Check Landmark Proximity for [E] Interaction Prompt (throttled to ~6Hz for optimal CPU frame budget)
-    proximityTimerRef.current += dt;
-    if (proximityTimerRef.current >= 0.16) {
-      proximityTimerRef.current = 0;
-      const nearbyLandmark = navigator.checkLandmarkProximity(
-        posRef.current.x,
-        posRef.current.z
+    if (hqInteriorPhase === 'inside') {
+      constraintResult = navigator.constrainHQInteriorMovement(
+        prevX,
+        prevZ,
+        velocityRef.current.x,
+        velocityRef.current.z,
+        dt
       );
-      const curPrompt = worldStore.getState().activeLandmarkPrompt;
+      posRef.current.x = constraintResult.x;
+      posRef.current.z = constraintResult.z;
+      const targetFloorY = navigator.getHQInteriorFloorY(posRef.current.x, posRef.current.z);
+      posRef.current.y += (targetFloorY - posRef.current.y) * Math.min(1, dt * 12.0);
 
-      if (nearbyLandmark && (!curPrompt || curPrompt.id !== nearbyLandmark.id)) {
-        worldStore.getState().setActiveLandmarkPrompt({
-          id: nearbyLandmark.id,
-          name: nearbyLandmark.name,
-          subtitle: nearbyLandmark.subtitle,
-        });
-      } else if (!nearbyLandmark && curPrompt) {
-        worldStore.getState().setActiveLandmarkPrompt(null);
+      // Update exit doorway proximity only when boolean state changes
+      const nearExit =
+        posRef.current.z >= 6.4 &&
+        (Math.abs(posRef.current.x - 2.5) <= 1.6 || Math.abs(posRef.current.x + 2.5) <= 1.6);
+      if (worldStore.getState().hqNearExit !== nearExit) {
+        worldStore.getState().setHqNearExit(nearExit);
       }
+    } else {
+      constraintResult = navigator.constrainMovement(
+        prevX,
+        prevZ,
+        velocityRef.current.x,
+        velocityRef.current.z,
+        dt
+      );
+
+      posRef.current.x = constraintResult.x;
+      posRef.current.z = constraintResult.z;
+      posRef.current.y = 0.22;
+
+      // Check Landmark Proximity for [E] Interaction Prompt (throttled to ~6Hz for optimal CPU frame budget)
+      proximityTimerRef.current += dt;
+      if (proximityTimerRef.current >= 0.16) {
+        proximityTimerRef.current = 0;
+        const nearbyLandmark = navigator.checkLandmarkProximity(
+          posRef.current.x,
+          posRef.current.z
+        );
+        const curPrompt = worldStore.getState().activeLandmarkPrompt;
+        const isHqCooldown =
+          nearbyLandmark?.id === 'hq' && performance.now() < hqExitCooldownUntilRef.current;
+
+        if (nearbyLandmark && !isHqCooldown && (!curPrompt || curPrompt.id !== nearbyLandmark.id)) {
+          worldStore.getState().setActiveLandmarkPrompt({
+            id: nearbyLandmark.id,
+            name: nearbyLandmark.name,
+            subtitle: nearbyLandmark.subtitle,
+          });
+        } else if ((!nearbyLandmark || isHqCooldown) && curPrompt) {
+          worldStore.getState().setActiveLandmarkPrompt(null);
+        }
+      }
+    }
+
+    // Publish collision telemetry & detect sustained stuck states
+    avatarGameplayState.isColliding = constraintResult.isBlocked;
+    avatarGameplayState.lastColliderId = constraintResult.colliderId;
+    avatarGameplayState.lastContactX = constraintResult.contactX;
+    avatarGameplayState.lastContactZ = constraintResult.contactZ;
+    avatarGameplayState.lastNormalX = constraintResult.normalX;
+    avatarGameplayState.lastNormalZ = constraintResult.normalZ;
+    avatarGameplayState.lastMoveDirX = hasInput ? _moveVec.x : 0;
+    avatarGameplayState.lastMoveDirZ = hasInput ? _moveVec.z : 0;
+
+    const actualDisp = Math.hypot(posRef.current.x - prevX, posRef.current.z - prevZ);
+    if (hasInput && curSpeed > 0.4 && actualDisp < 0.08 * dt) {
+      stuckTimerRef.current += dt;
+      if (stuckTimerRef.current >= 0.75 && !hasLoggedStuckRef.current) {
+        hasLoggedStuckRef.current = true;
+        const dotNormal =
+          _moveVec.x * constraintResult.normalX + _moveVec.z * constraintResult.normalZ;
+        const isDirectWallBlock = constraintResult.isBlocked && dotNormal < -0.75;
+        console.warn('[PlayableAvatar] Sustained zero displacement detected', {
+          colliderId: constraintResult.colliderId,
+          isDirectWallBlock,
+          position: [posRef.current.x.toFixed(2), posRef.current.z.toFixed(2)],
+          attemptedDir: [_moveVec.x.toFixed(2), _moveVec.z.toFixed(2)],
+          normal: [constraintResult.normalX.toFixed(2), constraintResult.normalZ.toFixed(2)],
+        });
+      }
+    } else {
+      stuckTimerRef.current = 0;
+      hasLoggedStuckRef.current = false;
     }
 
     // Sync 3D transforms
@@ -391,8 +623,8 @@ export const PlayableAvatar: React.FC<PlayableAvatarProps> = ({
     const targetAction: 'idle' | 'walk' | 'run' = !isMoving
       ? 'idle'
       : isSprinting
-      ? 'run'
-      : 'walk';
+        ? 'run'
+        : 'walk';
 
     if (activeActionNameRef.current !== targetAction) {
       const curAct = actionsRef.current[activeActionNameRef.current];

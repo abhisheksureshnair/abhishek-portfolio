@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 export type CameraMode = 'orbit' | 'story' | 'avatar';
+export type HQInteriorPhase = 'outside' | 'entering' | 'inside' | 'exiting';
 export type TimeOfDay = 'day' | 'sunset' | 'night';
 export type DowntownMode = 'full' | 'reference';
 export type CameraPreset =
@@ -134,12 +135,22 @@ export interface WorldState {
   hoveredLandmark: LandmarkId;
   showPerfMonitor: boolean;
   showNavDebug: boolean;
+  showCollisionDebug: boolean;
   activeLandmarkPrompt: { id: string; name: string; subtitle: string } | null;
   isInteracting: boolean;
   isPointerLocked: boolean;
   savedAvatarState: { x: number; y: number; z: number; heading: number } | null;
   performanceStats: PerformanceStats;
   isSceneReady: boolean;
+  isAvatarReady: boolean;
+  isWorldRevealed: boolean;
+  isAvatarControlsEnabled: boolean;
+  hasCompletedInitialIntro: boolean;
+  hqInteriorPhase: HQInteriorPhase;
+  hqDoorsOpen: boolean;
+  hqNearExit: boolean;
+  hqHighlightedPanel: string | null;
+  hqExpandedPanel: string | null;
   setCameraMode: (mode: CameraMode) => void;
   setCameraPreset: (preset: CameraPreset) => void;
   setCameraView: (mode: CameraMode, preset: CameraPreset) => void;
@@ -162,14 +173,24 @@ export interface WorldState {
   setShowPerfMonitor: (show: boolean) => void;
   togglePerfMonitor: () => void;
   toggleNavDebug: () => void;
+  toggleCollisionDebug: () => void;
   setPerformanceStats: (stats: Partial<PerformanceStats>) => void;
   setIsSceneReady: (ready: boolean) => void;
+  setIsAvatarReady: (ready: boolean) => void;
+  setIsWorldRevealed: (revealed: boolean) => void;
+  setIsAvatarControlsEnabled: (enabled: boolean) => void;
+  setHasCompletedInitialIntro: (completed: boolean) => void;
+  setHqInteriorPhase: (phase: HQInteriorPhase) => void;
+  setHqDoorsOpen: (open: boolean) => void;
+  setHqNearExit: (near: boolean) => void;
+  setHqHighlightedPanel: (id: string | null) => void;
+  setHqExpandedPanel: (id: string | null) => void;
 }
 
 type Listener = () => void;
 
 let state: WorldState = {
-  cameraMode: 'orbit',
+  cameraMode: 'avatar',
   cameraPreset: null,
   downtownMode: 'full', // Default to FULL DOWNTOWN for Phase 2.0.2!
   timeOfDay: 'day',
@@ -181,11 +202,21 @@ let state: WorldState = {
   hoveredLandmark: null,
   showPerfMonitor: true,
   showNavDebug: false,
+  showCollisionDebug: false,
   activeLandmarkPrompt: null,
   isInteracting: false,
   isPointerLocked: false,
   savedAvatarState: null,
   isSceneReady: false,
+  isAvatarReady: false,
+  isWorldRevealed: false,
+  isAvatarControlsEnabled: false,
+  hasCompletedInitialIntro: false,
+  hqInteriorPhase: 'outside',
+  hqDoorsOpen: false,
+  hqNearExit: false,
+  hqHighlightedPanel: null,
+  hqExpandedPanel: null,
   performanceStats: {
     fps: 60,
     drawCalls: 0,
@@ -242,9 +273,19 @@ let state: WorldState = {
   setShowPerfMonitor: (showPerfMonitor) => update({ showPerfMonitor }),
   togglePerfMonitor: () => update({ showPerfMonitor: !state.showPerfMonitor }),
   toggleNavDebug: () => update({ showNavDebug: !state.showNavDebug }),
+  toggleCollisionDebug: () => update({ showCollisionDebug: !state.showCollisionDebug }),
   setPerformanceStats: (partial) =>
     update({ performanceStats: { ...state.performanceStats, ...partial } }),
   setIsSceneReady: (isSceneReady) => update({ isSceneReady }),
+  setIsAvatarReady: (isAvatarReady) => update({ isAvatarReady }),
+  setIsWorldRevealed: (isWorldRevealed) => update({ isWorldRevealed }),
+  setIsAvatarControlsEnabled: (isAvatarControlsEnabled) => update({ isAvatarControlsEnabled }),
+  setHasCompletedInitialIntro: (hasCompletedInitialIntro) => update({ hasCompletedInitialIntro }),
+  setHqInteriorPhase: (hqInteriorPhase) => update({ hqInteriorPhase }),
+  setHqDoorsOpen: (hqDoorsOpen) => update({ hqDoorsOpen }),
+  setHqNearExit: (hqNearExit) => update({ hqNearExit }),
+  setHqHighlightedPanel: (hqHighlightedPanel) => update({ hqHighlightedPanel }),
+  setHqExpandedPanel: (hqExpandedPanel) => update({ hqExpandedPanel }),
 };
 
 const listeners = new Set<Listener>();

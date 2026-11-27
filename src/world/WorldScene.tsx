@@ -64,6 +64,9 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
   const selectedLandmark = useWorldStore((s) => s.selectedLandmark);
   const hoveredLandmark = useWorldStore((s) => s.hoveredLandmark);
   const setSelectedLandmark = useWorldStore((s) => s.setSelectedLandmark);
+  const hqInteriorPhase = useWorldStore((s) => s.hqInteriorPhase);
+  const hqNearExit = useWorldStore((s) => s.hqNearExit);
+  const hqHighlightedPanel = useWorldStore((s) => s.hqHighlightedPanel);
   const qualityProfile = useWorldStore((s) => s.qualityProfile);
   const effectiveQuality = useWorldStore((s) => s.effectiveQuality);
   const toggleQualityProfile = useWorldStore((s) => s.toggleQualityProfile);
@@ -325,6 +328,11 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
     } else if (v === 'ref_elevated_overview' || v === 'ref_orbit') {
       setCameraView('orbit', 'ref_elevated_overview');
     }
+
+    if (worldStore.getState().cameraMode !== 'avatar') {
+      worldStore.getState().setHasCompletedInitialIntro(true);
+      worldStore.getState().setIsAvatarControlsEnabled(true);
+    }
   }, [searchParams, setCameraView, setDowntownMode, setSelectedLandmark, setTimeOfDay]);
 
   const handleSelectPlot = useCallback((block: CityBlockData) => {
@@ -348,9 +356,18 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
     worldStore.getState().setIsInteracting(selectedOverlay !== null);
   }, [selectedOverlay]);
 
-  // Global Escape key listener: closes any active portfolio modal, preset menu and restores avatar mode
+  // Global Escape & F8 Debug key listener: closes active modal/preset, exits HQ, or toggles F8 collision debug
   useEffect(() => {
     const handleGlobalEsc = (e: KeyboardEvent) => {
+      if (
+        e.key === 'F8' &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLTextAreaElement)
+      ) {
+        e.preventDefault();
+        worldStore.getState().toggleCollisionDebug();
+        return;
+      }
       if (e.key === 'Escape' || e.code === 'Escape') {
         if (isCameraPresetMenuOpen) {
           worldStore.getState().setIsCameraPresetMenuOpen(false);
@@ -358,6 +375,9 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
         if (selectedOverlay !== null) {
           setSelectedOverlay(null);
           worldStore.getState().setIsInteracting(false);
+        } else if (worldStore.getState().hqInteriorPhase === 'inside') {
+          // Esc releases pointer lock (browser) and collapses any expanded spatial panel
+          window.dispatchEvent(new CustomEvent('hq-panel-collapse'));
         }
       }
     };
@@ -588,8 +608,9 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
           </div>
         </div>
 
-        {/* Row 2: Responsive Clickable Landmark Directory Bar (Horizontally Scrollable, Non-Wrapping) */}
-        <div className="flex justify-center w-full">
+        {/* Row 2: Responsive Clickable Landmark Directory Bar (hidden inside HQ interior) */}
+        {hqInteriorPhase === 'outside' && (
+          <div className="flex justify-center w-full">
           <div className="flex items-center gap-1 p-1 rounded-2xl bg-zinc-950/90 border border-white/15 backdrop-blur-md pointer-events-auto shadow-xl max-w-full overflow-x-auto no-scrollbar whitespace-nowrap">
             <span className="px-2 py-0.5 text-[10px] font-mono text-zinc-400 font-bold tracking-wider shrink-0 hidden sm:inline">
               LANDMARKS:
@@ -708,6 +729,7 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
             </button>
           </div>
         </div>
+        )}
 
         {/* Row 3: Selected Landmark Interactive Detail & Directory HUD (Naturally flows below Row 2 with zero overlap) */}
         {selectedLandmark && (
@@ -992,7 +1014,8 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
 
 
 
-      {/* 3. Bottom Controls Helper Overlay */}
+      {/* 3. Bottom Controls Helper Overlay (hidden inside HQ interior) */}
+      {hqInteriorPhase === 'outside' && (
       <div className="absolute bottom-5 left-5 z-30 pointer-events-none hidden sm:block">
         <div className="bg-zinc-950/85 backdrop-blur-md border border-white/10 rounded-2xl px-4 py-2.5 text-zinc-400 font-mono text-[11px] space-y-1 shadow-xl">
           <div className="flex items-center gap-1.5 text-white font-bold text-[10px] uppercase tracking-wider">
@@ -1044,6 +1067,7 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
           )}
         </div>
       </div>
+      )}
 
       {/* 4. Real-Time Performance Monitor Overlay */}
       <PerformanceMonitorHUD />
@@ -1099,7 +1123,29 @@ export const WorldScene: React.FC<WorldSceneProps> = ({ onSwitchToStory }) => {
         onClose={() => setSelectedOverlay(null)}
       />
 
-      {/* 6. Phase 3.0 Avatar Interaction Prompt & Mobile Touch Controls */}
+      {/* 6. Phase 3.1 HQ Interior HUD & Avatar Interaction Prompt */}
+      {hqInteriorPhase === 'inside' && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 pointer-events-none select-none">
+          <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-zinc-950/90 backdrop-blur-xl border border-cyan-400/40 text-xs font-mono text-zinc-200 shadow-2xl shadow-cyan-950/50">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            {hqNearExit ? (
+              <span className="font-bold text-emerald-300">
+                Press E to Exit Headquarters
+              </span>
+            ) : hqHighlightedPanel ? (
+              <span className="font-bold text-cyan-300">
+                Press [E] or Click to Expand Panel
+              </span>
+            ) : (
+              <span className="font-bold text-cyan-300">DEVELOPER HQ INTERIOR</span>
+            )}
+            <span className="hidden sm:inline text-zinc-500">•</span>
+            <span className="hidden sm:inline text-zinc-300">
+              WASD Move • Mouse Look • ESC Free Cursor
+            </span>
+          </div>
+        </div>
+      )}
       <PointerLockOverlay />
       <AvatarInteractionPrompt
         onInteract={(id) => {

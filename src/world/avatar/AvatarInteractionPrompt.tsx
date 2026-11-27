@@ -14,9 +14,15 @@ export const AvatarInteractionPrompt: React.FC<AvatarInteractionPromptProps> = (
   const prompt = useWorldStore((s) => s.activeLandmarkPrompt);
   const cameraMode = useWorldStore((s) => s.cameraMode);
   const isInteracting = useWorldStore((s) => s.isInteracting);
+  const isAvatarControlsEnabled = useWorldStore((s) => s.isAvatarControlsEnabled);
+  const hqInteriorPhase = useWorldStore((s) => s.hqInteriorPhase);
 
-  // Hide prompt if no nearby entrance, not in avatar mode, or already inside a building modal
-  if (!prompt || cameraMode !== 'avatar' || isInteracting) return null;
+  // Hide prompt if no nearby entrance, not in avatar mode, intro/HQ transition active, or modal open
+  if (!prompt || cameraMode !== 'avatar' || isInteracting || !isAvatarControlsEnabled || hqInteriorPhase !== 'outside') {
+    return null;
+  }
+
+  const isHQ = prompt.id === 'hq';
 
   return (
     <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 pointer-events-auto select-none animate-in fade-in zoom-in-95 duration-200">
@@ -32,13 +38,17 @@ export const AvatarInteractionPrompt: React.FC<AvatarInteractionPromptProps> = (
             {prompt.name}
           </span>
           <span className="text-[11px] text-zinc-400 font-sans line-clamp-1">
-            {prompt.subtitle}
+            {isHQ ? 'Press E to Enter Headquarters' : prompt.subtitle}
           </span>
         </div>
 
-        {/* Enter Building Action Button ([E] ENTER — BUILDING NAME per Requirement 6) */}
+        {/* Enter Building Action Button */}
         <button
           onClick={() => {
+            if (isHQ) {
+              window.dispatchEvent(new CustomEvent('hq-enter-trigger'));
+              return;
+            }
             worldStore.getState().setIsInteracting(true);
             if (onInteract) {
               onInteract(prompt.id);
@@ -49,7 +59,9 @@ export const AvatarInteractionPrompt: React.FC<AvatarInteractionPromptProps> = (
           <kbd className="bg-black/25 text-black px-1.5 py-0.5 rounded text-[11px] font-black border border-black/10">
             E
           </kbd>
-          <span className="truncate max-w-[140px] sm:max-w-[200px]">ENTER — {prompt.name}</span>
+          <span className="truncate max-w-[160px] sm:max-w-[220px]">
+            {isHQ ? 'Enter Headquarters' : `ENTER — ${prompt.name}`}
+          </span>
           <ArrowRight className="w-3.5 h-3.5 shrink-0" />
         </button>
       </div>

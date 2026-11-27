@@ -68,7 +68,9 @@ export const WorldCanvas: React.FC<WorldCanvasProps> = ({
   const isRefOnly = referenceBlockOnly !== undefined ? referenceBlockOnly : downtownMode === 'reference';
 
   const avatarPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0.22, 13.8));
-  const avatarQuatRef = useRef<THREE.Quaternion>(new THREE.Quaternion());
+  const avatarQuatRef = useRef<THREE.Quaternion>(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
+  const initialCameraModeRef = useRef(worldStore.getState().cameraMode);
+  const isInitialAvatar = initialCameraModeRef.current === 'avatar';
 
   const handleLandmarkInteract = useCallback(
     (landmarkId: string) => {
@@ -98,8 +100,8 @@ export const WorldCanvas: React.FC<WorldCanvasProps> = ({
     <Canvas
       shadows
       camera={{
-        position: WORLD_CONFIG.camera.orbitSpawn,
-        fov: WORLD_CONFIG.camera.fov,
+        position: isInitialAvatar ? WORLD_CONFIG.camera.avatarIntroSpawn : WORLD_CONFIG.camera.orbitSpawn,
+        fov: isInitialAvatar ? WORLD_CONFIG.camera.avatarFov : WORLD_CONFIG.camera.fov,
         near: WORLD_CONFIG.camera.near,
         far: WORLD_CONFIG.camera.far,
       }}
@@ -118,6 +120,20 @@ export const WorldCanvas: React.FC<WorldCanvasProps> = ({
           (window as any).__gl = gl;
           (window as any).__camera = camera;
           (window as any).__r3fState = state;
+        }
+        if (worldStore.getState().cameraMode === 'avatar') {
+          const persCam = camera as THREE.PerspectiveCamera;
+          if (persCam.isPerspectiveCamera) {
+            persCam.fov = WORLD_CONFIG.camera.avatarFov;
+            persCam.updateProjectionMatrix();
+          }
+          const [ix, iy, iz] = WORLD_CONFIG.camera.avatarIntroSpawn;
+          camera.position.set(ix, iy, iz);
+          camera.lookAt(
+            avatarPosRef.current.x,
+            avatarPosRef.current.y + 1.5,
+            avatarPosRef.current.z
+          );
         }
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         gl.toneMappingExposure = 1.05;

@@ -161,8 +161,12 @@ export const RealisticEarth: React.FC<RealisticEarthProps> = ({
           vec4 specColor = texture2D(uSpecularTexture, vUv);
 
           // Specular glint on daylight ocean water
-          vec3 viewDir = normalize(cameraPosition - vPosition);
-          vec3 halfDir = normalize(sunDir + viewDir);
+          vec3 toCam = cameraPosition - vPosition;
+          float toCamLenSq = dot(toCam, toCam);
+          vec3 viewDir = toCamLenSq > 1e-6 ? toCam * inversesqrt(toCamLenSq) : vec3(0.0, 0.0, 1.0);
+          vec3 halfSum = sunDir + viewDir;
+          float halfLenSq = dot(halfSum, halfSum);
+          vec3 halfDir = halfLenSq > 1e-6 ? halfSum * inversesqrt(halfLenSq) : normal;
           float specAngle = max(0.0, dot(normal, halfDir));
           float specular = pow(specAngle, 45.0) * specColor.r * 1.5;
 

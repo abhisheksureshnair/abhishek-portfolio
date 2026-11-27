@@ -13,6 +13,7 @@ export const AvatarMobileControls: React.FC<AvatarMobileControlsProps> = ({
 }) => {
   const cameraMode = useWorldStore((s) => s.cameraMode);
   const prompt = useWorldStore((s) => s.activeLandmarkPrompt);
+  const isAvatarControlsEnabled = useWorldStore((s) => s.isAvatarControlsEnabled);
   const [isTouchDevice, setIsTouchDevice] = useState<boolean>(false);
   const [isSprinting, setIsSprinting] = useState<boolean>(false);
 
@@ -26,7 +27,7 @@ export const AvatarMobileControls: React.FC<AvatarMobileControlsProps> = ({
     return () => window.removeEventListener('resize', checkTouch);
   }, []);
 
-  if (cameraMode !== 'avatar' || !isTouchDevice) return null;
+  if (cameraMode !== 'avatar' || !isTouchDevice || !isAvatarControlsEnabled) return null;
 
   const simulateKey = (key: string, isDown: boolean) => {
     const eventType = isDown ? 'keydown' : 'keyup';

@@ -36,23 +36,39 @@ const _hqHighlightEdgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(24.0,
 export const HQBuilding: React.FC<HQBuildingProps> = ({ onInteract }) => {
   const materials = useMemo(() => getSharedHQMaterials(), []);
   const revolvingRef = useRef<THREE.Group>(null);
+  const leftDoorPivotRef = useRef<THREE.Group>(null);
+  const rightDoorPivotRef = useRef<THREE.Group>(null);
+  const doorAngleRef = useRef<number>(0);
   const selectedLandmark = useWorldStore((s) => s.selectedLandmark);
   const hoveredLandmark = useWorldStore((s) => s.hoveredLandmark);
+  const hqInteriorPhase = useWorldStore((s) => s.hqInteriorPhase);
   const isSelected = selectedLandmark === 'hq';
   const isHovered = hoveredLandmark === 'hq';
 
-  const showInterior = useLandmarkInteriorLOD([0, 0], 'hq');
+  const lodShowInterior = useLandmarkInteriorLOD([0, 0], 'hq');
+  const showInterior = lodShowInterior || hqInteriorPhase !== 'outside';
   const isFarView = !showInterior;
 
-  // Subtle continuous revolving door rotation
+  // Subtle continuous revolving door rotation & smooth swinging door animation
   useFrame((_, delta) => {
+    const dt = Math.min(delta, 0.05);
     if (revolvingRef.current) {
-      revolvingRef.current.rotation.y += delta * 0.45;
+      revolvingRef.current.rotation.y += dt * 0.45;
+    }
+    const doorsOpen = worldStore.getState().hqDoorsOpen;
+    const targetAngle = doorsOpen ? Math.PI * 0.48 : 0;
+    doorAngleRef.current += (targetAngle - doorAngleRef.current) * Math.min(1, dt * 6.0);
+    if (leftDoorPivotRef.current) {
+      leftDoorPivotRef.current.rotation.y = doorAngleRef.current;
+    }
+    if (rightDoorPivotRef.current) {
+      rightDoorPivotRef.current.rotation.y = -doorAngleRef.current;
     }
   });
 
   const handleClick = (e: any) => {
     e.stopPropagation();
+    if (worldStore.getState().cameraMode === 'avatar') return;
     worldStore.getState().setSelectedLandmark('hq');
     worldStore.getState().setCameraView('orbit', 'central_hq_overview');
     if (onInteract) {
@@ -147,9 +163,27 @@ export const HQBuilding: React.FC<HQBuildingProps> = ({ onInteract }) => {
       {/* Footprint: X in [-10.0, 10.0], Z in [0, 8.5]             */}
       {/* ======================================================== */}
       <group position={[0, 4.3, 4.25]}>
-        {/* Clear Low-Iron Glass Curtain Facade (South Face at Z = 4.25) */}
-        <mesh position={[0, 0, 4.25]} receiveShadow>
-          <boxGeometry args={[19.8, 8.2, 0.08]} />
+        {/* Clear Low-Iron Glass Curtain Facade (South Face at Z = 4.25, split for real doorways at X = ±2.5) */}
+        <mesh position={[-6.55, 0, 4.25]} receiveShadow>
+          <boxGeometry args={[6.7, 8.2, 0.08]} />
+          <primitive object={materials.lobbyGlass} attach="material" />
+        </mesh>
+        <mesh position={[6.55, 0, 4.25]} receiveShadow>
+          <boxGeometry args={[6.7, 8.2, 0.08]} />
+          <primitive object={materials.lobbyGlass} attach="material" />
+        </mesh>
+        {/* Upper Transom Glass above Entrance Portal (Y > 3.6m) */}
+        <mesh position={[0, 1.8, 4.25]} receiveShadow>
+          <boxGeometry args={[6.4, 4.6, 0.08]} />
+          <primitive object={materials.lobbyGlass} attach="material" />
+        </mesh>
+        {/* Narrow Glass Piers flanking Revolving Drum */}
+        <mesh position={[-1.55, -2.3, 4.25]} receiveShadow>
+          <boxGeometry args={[0.5, 3.6, 0.08]} />
+          <primitive object={materials.lobbyGlass} attach="material" />
+        </mesh>
+        <mesh position={[1.55, -2.3, 4.25]} receiveShadow>
+          <boxGeometry args={[0.5, 3.6, 0.08]} />
           <primitive object={materials.lobbyGlass} attach="material" />
         </mesh>
 
@@ -278,26 +312,30 @@ export const HQBuilding: React.FC<HQBuildingProps> = ({ onInteract }) => {
               </group>
             </group>
 
-            {/* Flanking Commercial Glass Swinging Doors */}
-            {/* Left Door */}
-            <mesh position={[-2.5, 1.7, 0.1]}>
-              <boxGeometry args={[1.4, 3.4, 0.06]} />
-              <primitive object={materials.lobbyGlass} attach="material" />
-            </mesh>
-            <mesh position={[-2.5, 1.7, 0.15]}>
-              <boxGeometry args={[1.1, 0.05, 0.06]} />
-              <primitive object={materials.stainlessSteel} attach="material" />
-            </mesh>
+            {/* Flanking Commercial Glass Swinging Doors (Pivoted on outer edges for real 3D entry) */}
+            {/* Left Door (Hinge at X = -3.2) */}
+            <group ref={leftDoorPivotRef} position={[-3.2, 1.7, 0.1]}>
+              <mesh position={[0.7, 0, 0]}>
+                <boxGeometry args={[1.4, 3.4, 0.06]} />
+                <primitive object={materials.lobbyGlass} attach="material" />
+              </mesh>
+              <mesh position={[0.7, 0, 0.05]}>
+                <boxGeometry args={[1.1, 0.05, 0.06]} />
+                <primitive object={materials.stainlessSteel} attach="material" />
+              </mesh>
+            </group>
 
-            {/* Right Door */}
-            <mesh position={[2.5, 1.7, 0.1]}>
-              <boxGeometry args={[1.4, 3.4, 0.06]} />
-              <primitive object={materials.lobbyGlass} attach="material" />
-            </mesh>
-            <mesh position={[2.5, 1.7, 0.15]}>
-              <boxGeometry args={[1.1, 0.05, 0.06]} />
-              <primitive object={materials.stainlessSteel} attach="material" />
-            </mesh>
+            {/* Right Door (Hinge at X = +3.2) */}
+            <group ref={rightDoorPivotRef} position={[3.2, 1.7, 0.1]}>
+              <mesh position={[-0.7, 0, 0]}>
+                <boxGeometry args={[1.4, 3.4, 0.06]} />
+                <primitive object={materials.lobbyGlass} attach="material" />
+              </mesh>
+              <mesh position={[-0.7, 0, 0.05]}>
+                <boxGeometry args={[1.1, 0.05, 0.06]} />
+                <primitive object={materials.stainlessSteel} attach="material" />
+              </mesh>
+            </group>
           </group>
         )}
 
@@ -313,20 +351,26 @@ export const HQBuilding: React.FC<HQBuildingProps> = ({ onInteract }) => {
       {/* Footprint: X in [-6.0, 11.0] (17m), Z in [-11.0, 4.0](15m)*/}
       {/* ======================================================== */}
       <group position={[2.5, 0.20, -3.5]}>
-        {/* Lower Storeys 1 to 5 (Height 20.0m) */}
-        <mesh position={[0, 10.0, 0]} castShadow receiveShadow>
-          <boxGeometry args={[17.0, 20.0, 15.0]} />
+        {/* Lower Storeys 1 to 2 behind double-height lobby (Z in [-11.0, -1.5], leaving lobby Z in [-1.4, 8.5] completely open) */}
+        <mesh position={[0, 4.1, -2.75]} castShadow receiveShadow>
+          <boxGeometry args={[17.0, 8.2, 9.5]} />
+          <primitive object={materials.curtainGlass} attach="material" />
+        </mesh>
+
+        {/* Upper Storeys 3 to 5 above lobby roof (Y in [8.2, 20.0], full 15m depth) */}
+        <mesh position={[0, 14.1, 0]} castShadow receiveShadow>
+          <boxGeometry args={[17.0, 11.8, 15.0]} />
           <primitive object={materials.curtainGlass} attach="material" />
         </mesh>
 
         {/* White Limestone Corner Vertical Landmark Spine (SE Corner - terminates flush at terrace slab Y = 24m) */}
-        <mesh position={[8.35, 12.0, 7.35]} receiveShadow>
-          <boxGeometry args={[0.60, 24.0, 0.60]} />
+        <mesh position={[8.35, 16.0, 7.35]} receiveShadow>
+          <boxGeometry args={[0.60, 16.0, 0.60]} />
           <primitive object={materials.whiteLimestone} attach="material" />
         </mesh>
 
-        {/* Horizontal Floor Slab Reveal Bands (Every 4.0m) */}
-        {[4, 8, 12, 16, 20, 24, 28].map((fy) => (
+        {/* Horizontal Floor Slab Reveal Bands (Every 4.0m above lobby ceiling) */}
+        {[8, 12, 16, 20, 24, 28].map((fy) => (
           <mesh key={`slab-${fy}`} position={[0, fy, 0]}>
             <boxGeometry args={[17.15, 0.24, 15.15]} />
             <primitive object={materials.structuralFraming} attach="material" />

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { useProgress } from '@react-three/drei';
-import { useWorldStore } from '../stores/worldStore';
+import { useWorldStore, worldStore } from '../stores/worldStore';
 import { Compass, AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 interface WorldLoadingScreenProps {
@@ -16,6 +16,7 @@ export const WorldLoadingScreen: React.FC<WorldLoadingScreenProps> = ({
 }) => {
   const { active, progress, errors, item, loaded, total } = useProgress();
   const isSceneReady = useWorldStore((s) => s.isSceneReady);
+  const isAvatarReady = useWorldStore((s) => s.isAvatarReady);
 
   const [displayProgress, setDisplayProgress] = useState<number>(0);
   const [isFadingOut, setIsFadingOut] = useState<boolean>(false);
@@ -24,7 +25,7 @@ export const WorldLoadingScreen: React.FC<WorldLoadingScreenProps> = ({
 
   // Smoothly interpolate displayed progress toward target progress
   useEffect(() => {
-    const target = active ? Math.min(95, Math.max(progress, 15)) : isSceneReady ? 100 : 90;
+    const target = active ? Math.min(95, Math.max(progress, 15)) : isSceneReady && isAvatarReady ? 100 : 90;
     const interval = setInterval(() => {
       setDisplayProgress((prev) => {
         if (prev < target) {
@@ -36,15 +37,16 @@ export const WorldLoadingScreen: React.FC<WorldLoadingScreenProps> = ({
     }, 30);
 
     return () => clearInterval(interval);
-  }, [active, progress, isSceneReady]);
+  }, [active, progress, isSceneReady, isAvatarReady]);
 
-  // Determine readiness: asset loading done, scene initialized, progress reached 100%
-  const isFullyReady = (isSceneReady && !active && displayProgress >= 99) || forceEnter;
+  // Determine readiness: asset loading done, scene & avatar initialized, progress reached 100%
+  const isFullyReady = (isSceneReady && isAvatarReady && !active && displayProgress >= 99) || forceEnter;
 
   useEffect(() => {
     if (isFullyReady && !isFadingOut && !hasFinished) {
       const fadeTimer = setTimeout(() => {
         setIsFadingOut(true);
+        worldStore.getState().setIsWorldRevealed(true);
       }, 50);
       const finishTimer = setTimeout(() => {
         setHasFinished(true);
@@ -157,6 +159,7 @@ export const WorldLoadingScreen: React.FC<WorldLoadingScreenProps> = ({
             <button
               onClick={() => {
                 setForceEnter(true);
+                worldStore.getState().setIsWorldRevealed(true);
                 onEnterWorldOverride?.();
               }}
               className="px-3.5 py-1.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/15 text-zinc-300 hover:text-white text-xs font-mono transition-all hover:scale-105 active:scale-95"

@@ -9,9 +9,11 @@ export const PointerLockOverlay: React.FC = () => {
   const isInteracting = useWorldStore((s) => s.isInteracting);
   const isPointerLocked = useWorldStore((s) => s.isPointerLocked);
   const selectedLandmark = useWorldStore((s) => s.selectedLandmark);
+  const isAvatarControlsEnabled = useWorldStore((s) => s.isAvatarControlsEnabled);
+  const hqInteriorPhase = useWorldStore((s) => s.hqInteriorPhase);
 
-  // Only active in avatar third-person mode when modal overlays are closed
-  if (cameraMode !== 'avatar' || isInteracting) return null;
+  // Only active in avatar third-person mode after intro settles and when modal overlays are closed
+  if (cameraMode !== 'avatar' || isInteracting || !isAvatarControlsEnabled) return null;
 
   const handleRequestLock = () => {
     const canvas = document.querySelector('canvas');
@@ -38,7 +40,11 @@ export const PointerLockOverlay: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2 text-[11px] sm:text-xs font-mono tracking-wide">
-              <span className="font-bold text-cyan-300 uppercase">Click to Look & Control</span>
+              <span className="font-bold text-cyan-300 uppercase">
+                {hqInteriorPhase === 'inside'
+                  ? 'Click to Look • Click Panel to Select'
+                  : 'Click to Look & Control'}
+              </span>
               <span className="hidden md:inline text-zinc-500">|</span>
               <span className="hidden md:flex items-center gap-1.5 text-zinc-400">
                 <kbd className="bg-zinc-800 text-zinc-300 px-1 py-0.5 rounded text-[10px] font-sans border border-zinc-700">W,A,S,D</kbd> Move

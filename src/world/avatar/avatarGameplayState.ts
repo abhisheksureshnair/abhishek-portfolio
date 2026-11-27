@@ -24,6 +24,16 @@ export class AvatarGameplayState {
   public currentSpeed: number = 0;
   public hasInitialized: boolean = false;
 
+  // Collision Debug Telemetry (mutated in-place, zero GC)
+  public isColliding: boolean = false;
+  public lastColliderId: string | null = null;
+  public lastContactX: number = 0;
+  public lastContactZ: number = 0;
+  public lastNormalX: number = 0;
+  public lastNormalZ: number = 0;
+  public lastMoveDirX: number = 0;
+  public lastMoveDirZ: number = 0;
+
   /**
    * Initialize camera directly behind the avatar on spawn or mode reset.
    * When avatar faces heading theta, camera is positioned at theta + PI, looking along theta.
@@ -40,11 +50,18 @@ export class AvatarGameplayState {
   /**
    * Handle mouse look with sensitivity.
    */
-  public handleMouseMove(movementX: number, movementY: number, sensitivity: number = 0.0022) {
+  public handleMouseMove(
+    movementX: number,
+    movementY: number,
+    sensitivity: number = 0.0022,
+    isFirstPerson: boolean = false
+  ) {
     this.cameraYaw -= movementX * sensitivity;
+    const minP = isFirstPerson ? -0.95 : this.minPitch;
+    const maxP = isFirstPerson ? 0.95 : this.maxPitch;
     this.cameraPitch = Math.max(
-      this.minPitch,
-      Math.min(this.maxPitch, this.cameraPitch - movementY * sensitivity)
+      minP,
+      Math.min(maxP, this.cameraPitch - movementY * sensitivity)
     );
     this.lastMouseInputTime = performance.now();
   }
